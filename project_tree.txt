@@ -1,0 +1,194 @@
+prompthub
+ ┣ app
+ ┃ ┣ (auth)
+ ┃ ┃ ┣ login
+ ┃ ┃ ┃ ┗ page.tsx
+ ┃ ┃ ┗ register
+ ┃ ┃ ┃ ┗ page.tsx
+ ┃ ┣ community
+ ┃ ┃ ┗ page.tsx
+ ┃ ┣ dashboard
+ ┃ ┃ ┗ page.tsx
+ ┃ ┣ extension
+ ┃ ┃ ┗ page.tsx
+ ┃ ┣ my-reviews
+ ┃ ┃ ┗ page.tsx
+ ┃ ┣ profile
+ ┃ ┃ ┗ page.tsx
+ ┃ ┣ trending
+ ┃ ┃ ┗ page.tsx
+ ┃ ┣ globals.css
+ ┃ ┣ layout.tsx
+ ┃ ┗ page.tsx
+ ┣ backend
+ ┃ ┣ accounts
+ ┃ ┃ ┣ migrations
+ ┃ ┃ ┃ ┗ __init__.py
+ ┃ ┃ ┣ models
+ ┃ ┃ ┃ ┗ user.py
+ ┃ ┃ ┣ serializers
+ ┃ ┃ ┃ ┗ auth.py
+ ┃ ┃ ┣ views
+ ┃ ┃ ┃ ┗ auth.py
+ ┃ ┃ ┣ __init__.py
+ ┃ ┃ ┣ admin.py
+ ┃ ┃ ┣ apps.py
+ ┃ ┃ ┗ urls.py
+ ┃ ┣ apps
+ ┃ ┃ ┣ accounts
+ ┃ ┃ ┃ ┣ __init__.py
+ ┃ ┃ ┃ ┣ apps.py
+ ┃ ┃ ┃ ┣ models.py
+ ┃ ┃ ┃ ┗ signals.py
+ ┃ ┃ ┣ core
+ ┃ ┃ ┃ ┣ __init__.py
+ ┃ ┃ ┃ ┗ pagination.py
+ ┃ ┃ ┗ __init__.py
+ ┃ ┣ backend
+ ┃ ┃ ┣ __init__.py
+ ┃ ┃ ┣ asgi.py
+ ┃ ┃ ┗ wsgi.py
+ ┃ ┣ config
+ ┃ ┃ ┣ settings
+ ┃ ┃ ┃ ┣ __init__.py
+ ┃ ┃ ┃ ┣ base.py
+ ┃ ┃ ┃ ┗ development.py
+ ┃ ┃ ┣ __init__.py
+ ┃ ┃ ┗ urls.py
+ ┃ ┣ core
+ ┃ ┃ ┣ __init__.py
+ ┃ ┃ ┗ utils.py
+ ┃ ┣ logs
+ ┃ ┣ media
+ ┃ ┣ requirements
+ ┃ ┃ ┣ base.txt
+ ┃ ┃ ┣ development.txt
+ ┃ ┃ ┗ production.txt
+ ┃ ┣ scripts
+ ┃ ┃ ┗ setup_project.py
+ ┃ ┣ settings
+ ┃ ┃ ┣ __init__.py
+ ┃ ┃ ┣ base.py
+ ┃ ┃ ┣ development.py
+ ┃ ┃ ┗ production.py
+ ┃ ┣ static
+ ┃ ┣ __init__.py
+ ┃ ┣ asgi.py
+ ┃ ┣ manage.py
+ ┃ ┣ urls.py
+ ┃ ┗ wsgi.py
+ ┣ components
+ ┃ ┣ auth
+ ┃ ┃ ┗ auth-form.tsx
+ ┃ ┣ charts
+ ┃ ┃ ┣ accuracy-hallucination-chart.tsx
+ ┃ ┃ ┣ price-satisfaction-chart.tsx
+ ┃ ┃ ┗ user-growth-chart.tsx
+ ┃ ┣ community
+ ┃ ┃ ┣ community-filters.tsx
+ ┃ ┃ ┣ community-header.tsx
+ ┃ ┃ ┣ create-post-dialog.tsx
+ ┃ ┃ ┗ post-list.tsx
+ ┃ ┣ forms
+ ┃ ┃ ┗ auth
+ ┃ ┃ ┃ ┣ login-form.tsx
+ ┃ ┃ ┃ ┗ register-form.tsx
+ ┃ ┣ layout
+ ┃ ┃ ┣ footer.tsx
+ ┃ ┃ ┗ header.tsx
+ ┃ ┣ providers
+ ┃ ┃ ┗ auth-provider.tsx
+ ┃ ┣ sections
+ ┃ ┃ ┣ charts-section.tsx
+ ┃ ┃ ┣ hero-section.tsx
+ ┃ ┃ ┣ prompt-community.tsx
+ ┃ ┃ ┣ prompt-comparison.tsx
+ ┃ ┃ ┗ prompt-optimizer.tsx
+ ┃ ┣ ui
+ ┃ ┃ ┣ accordion.tsx
+ ┃ ┃ ┣ alert-dialog.tsx
+ ┃ ┃ ┣ alert.tsx
+ ┃ ┃ ┣ aspect-ratio.tsx
+ ┃ ┃ ┣ avatar.tsx
+ ┃ ┃ ┣ badge.tsx
+ ┃ ┃ ┣ breadcrumb.tsx
+ ┃ ┃ ┣ button.tsx
+ ┃ ┃ ┣ calendar.tsx
+ ┃ ┃ ┣ card.tsx
+ ┃ ┃ ┣ carousel.tsx
+ ┃ ┃ ┣ chart.tsx
+ ┃ ┃ ┣ checkbox.tsx
+ ┃ ┃ ┣ collapsible.tsx
+ ┃ ┃ ┣ command.tsx
+ ┃ ┃ ┣ context-menu.tsx
+ ┃ ┃ ┣ dialog.tsx
+ ┃ ┃ ┣ drawer.tsx
+ ┃ ┃ ┣ dropdown-menu.tsx
+ ┃ ┃ ┣ form.tsx
+ ┃ ┃ ┣ hover-card.tsx
+ ┃ ┃ ┣ input-otp.tsx
+ ┃ ┃ ┣ input.tsx
+ ┃ ┃ ┣ label.tsx
+ ┃ ┃ ┣ menubar.tsx
+ ┃ ┃ ┣ navigation-menu.tsx
+ ┃ ┃ ┣ pagination.tsx
+ ┃ ┃ ┣ popover.tsx
+ ┃ ┃ ┣ progress.tsx
+ ┃ ┃ ┣ radio-group.tsx
+ ┃ ┃ ┣ resizable.tsx
+ ┃ ┃ ┣ scroll-area.tsx
+ ┃ ┃ ┣ select.tsx
+ ┃ ┃ ┣ separator.tsx
+ ┃ ┃ ┣ sheet.tsx
+ ┃ ┃ ┣ sidebar.tsx
+ ┃ ┃ ┣ skeleton.tsx
+ ┃ ┃ ┣ slider.tsx
+ ┃ ┃ ┣ sonner.tsx
+ ┃ ┃ ┣ switch.tsx
+ ┃ ┃ ┣ table.tsx
+ ┃ ┃ ┣ tabs.tsx
+ ┃ ┃ ┣ textarea.tsx
+ ┃ ┃ ┣ toast.tsx
+ ┃ ┃ ┣ toaster.tsx
+ ┃ ┃ ┣ toggle-group.tsx
+ ┃ ┃ ┣ toggle.tsx
+ ┃ ┃ ┣ tooltip.tsx
+ ┃ ┃ ┣ use-mobile.tsx
+ ┃ ┃ ┗ use-toast.ts
+ ┃ ┣ prompt-community.tsx
+ ┃ ┣ prompt-comparison.tsx
+ ┃ ┣ prompt-optimizer.tsx
+ ┃ ┗ theme-provider.tsx
+ ┣ hooks
+ ┃ ┣ use-auth.ts
+ ┃ ┣ use-mobile.tsx
+ ┃ ┗ use-toast.ts
+ ┣ lib
+ ┃ ┣ api
+ ┃ ┃ ┣ auth.ts
+ ┃ ┃ ┗ client.ts
+ ┃ ┣ utils
+ ┃ ┃ ┗ auth.ts
+ ┃ ┣ api.ts
+ ┃ ┗ utils.ts
+ ┣ public
+ ┃ ┣ placeholder-logo.png
+ ┃ ┣ placeholder-logo.svg
+ ┃ ┣ placeholder-user.jpg
+ ┃ ┣ placeholder.jpg
+ ┃ ┗ placeholder.svg
+ ┣ styles
+ ┃ ┗ globals.css
+ ┣ types
+ ┃ ┗ auth.ts
+ ┣ .gitignore
+ ┣ README.md
+ ┣ SETUP_GUIDE.md
+ ┣ components.json
+ ┣ next.config.mjs
+ ┣ package.json
+ ┣ pnpm-lock.yaml
+ ┣ postcss.config.mjs
+ ┣ requirements.txt
+ ┣ tailwind.config.ts
+ ┗ tsconfig.json

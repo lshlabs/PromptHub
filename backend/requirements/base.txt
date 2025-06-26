@@ -1,0 +1,23 @@
+# Django 핵심 패키지
+Django>=4.2.0,<5.0.0
+djangorestframework>=3.14.0
+django-cors-headers>=4.3.0
+django-filter>=23.3
+
+# 인증 및 보안
+djangorestframework-simplejwt>=5.3.0
+
+# API 문서화
+drf-spectacular>=0.26.0
+
+# 이미지 처리
+Pillow>=10.0.0
+
+# 환경 변수 관리
+python-decouple>=3.8
+
+# 데이터베이스
+psycopg2-binary>=2.9.0  # PostgreSQL (프로덕션용)
+
+# 유틸리티
+python-slugify>=8.0.0

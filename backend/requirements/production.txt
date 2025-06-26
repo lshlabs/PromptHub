@@ -1,0 +1,15 @@
+-r base.txt
+
+# 프로덕션 서버
+gunicorn>=21.2.0
+whitenoise>=6.5.0
+
+# 모니터링
+sentry-sdk>=1.32.0
+
+# 캐싱
+redis>=5.0.0
+django-redis>=5.4.0
+
+# 보안
+django-ratelimit>=4.1.0
