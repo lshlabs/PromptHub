@@ -8,8 +8,6 @@ export interface User {
   id: number
   username: string
   email: string
-  first_name: string
-  last_name: string
   date_joined: string
   last_login: string | null
   profile: UserProfile
@@ -18,11 +16,8 @@ export interface User {
 export interface UserProfile {
   bio: string
   location: string
-  birth_date: string | null
   avatar: string | null
-  phone_number: string
   is_email_verified: boolean
-  full_name: string
   created_at: string
   updated_at: string
 }
@@ -43,8 +38,6 @@ export interface RegisterData {
   email: string
   password: string
   password_confirm: string
-  first_name?: string
-  last_name?: string
 }
 
 export interface ChangePasswordData {

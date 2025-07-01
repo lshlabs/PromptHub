@@ -14,14 +14,21 @@ export interface ApiResponse<T = any> {
   errors?: Record<string, string[]>
 }
 
+export interface UserProfile {
+  bio?: string
+  avatar?: string
+  location?: string
+  website?: string
+  // 필요시 phone, birth_date 등도 추가
+}
+
 export interface User {
   id: number
   username: string
   email: string
-  first_name: string
-  last_name: string
-  date_joined: string
-  last_login: string | null
+  created_at?: string
+  last_login?: string | null
+  profile?: UserProfile
 }
 
 export interface AuthResponse {
@@ -53,11 +60,8 @@ export const removeAuthToken = (): void => {
 const makeRequest = async <T>(
   endpoint: string,
   options: RequestInit = {}
-)
-: Promise<T> =>
-{
+): Promise<T> => {
   const token = getAuthToken()
-  \
   const config: RequestInit = {
     headers: {
       "Content-Type": "application/json",
@@ -99,12 +103,9 @@ const makeRequest = async <T>(
 export const authApi = {
   // 회원가입
   register: async (userData: {
-    username: string
     email: string
     password: string
     password_confirm: string
-    first_name?: string
-    last_name?: string
   }): Promise<AuthResponse> => {
     return makeRequest<AuthResponse>("/auth/register/", {
       method: "POST",
@@ -114,7 +115,7 @@ export const authApi = {
 
   // 로그인
   login: async (credentials: {
-    username: string
+    email: string
     password: string
   }): Promise<AuthResponse> => {
     return makeRequest<AuthResponse>("/auth/login/", {

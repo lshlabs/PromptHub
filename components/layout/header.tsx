@@ -2,25 +2,37 @@
 
 import { useState, useMemo, useEffect } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Menu, X, LogIn, Home, Users, BookOpen, TrendingUp, Star, Bookmark, Chrome, Puzzle } from "lucide-react"
+import { Menu, X, LogIn, Home, Users, BookOpen, TrendingUp, Star, Bookmark, Chrome, Puzzle, Sun, Moon, Monitor, Globe, ChevronDown } from "lucide-react"
 import AuthForm from "@/components/auth/auth-form"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { LogOut, User, Settings } from "lucide-react"
 
 export default function Header() {
   const [isAuthOpen, setIsAuthOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [userData, setUserData] = useState({
-    name: "김철수",
-    email: "kimcs@example.com",
+    email: "testuser@example.com",
+    username: "",
     avatar: null,
   })
+  const [theme, setTheme] = useState<"light" | "dark" | "system">("system")
+  const [language, setLanguage] = useState("한국어")
   const pathname = usePathname()
+  const router = useRouter()
 
   // 컴포넌트 마운트 시 인증 상태 확인
   useEffect(() => {
@@ -48,14 +60,26 @@ export default function Header() {
       "from-violet-500 to-purple-600",
     ]
 
-    // 사용자 이름을 기반으로 일관된 그라디언트 선택
-    const hash = userData.name.split("").reduce((a, b) => {
+    // 이메일이 없으면 기본값 사용
+    const base = userData.email || "default@email.com"
+    const hash = base.split("").reduce((a, b) => {
       a = (a << 5) - a + b.charCodeAt(0)
       return a & a
     }, 0)
 
     return gradients[Math.abs(hash) % gradients.length]
-  }, [userData.name])
+  }, [userData.email])
+
+  const getThemeIcon = () => {
+    switch (theme) {
+      case "light":
+        return <Sun className="w-4 h-4" />
+      case "dark":
+        return <Moon className="w-4 h-4" />
+      default:
+        return <Monitor className="w-4 h-4" />
+    }
+  }
 
   const allNavigationItems = [
     {
@@ -128,10 +152,13 @@ export default function Header() {
       localStorage.removeItem("userData")
       setIsLoggedIn(false)
       setUserData({
-        name: "김철수",
-        email: "kimcs@example.com",
+        email: "testuser@example.com",
+        username: "",
         avatar: null,
       })
+      if (pathname === "/profile") {
+        router.push("/")
+      }
     }
   }
 
@@ -240,40 +267,122 @@ export default function Header() {
             {/* 데스크톱 인증 버튼 */}
             <div className="hidden md:flex items-center space-x-2 lg:space-x-3">
               {isLoggedIn ? (
-                // 로그인된 상태: 북마크 + 사용자 아이콘
-                <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-gray-600 hover:text-gray-900 flex items-center justify-center w-10 h-10 xl:w-auto xl:h-auto xl:px-3 xl:justify-start p-0 xl:p-2"
-                  >
-                    <Bookmark className="w-4 h-4 xl:mr-2 flex-shrink-0" />
-                    <span className="hidden xl:inline">북마크</span>
-                  </Button>
-
-                  {/* 사용자 프로필 아이콘 */}
-                  <Link href="/profile">
+                // 로그인된 상태: 드롭다운 메뉴
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
                     <Button
                       variant="ghost"
                       size="sm"
                       className="p-1 w-10 h-10 rounded-full hover:bg-gray-100 transition-all duration-200 hover:shadow-md"
-                      title={`${userData.name}님의 프로필`}
                     >
                       <Avatar className="w-8 h-8">
                         <AvatarImage
                           src={userData.avatar || "/placeholder.svg?height=32&width=32"}
-                          alt={userData.name}
+                          alt={userData.email}
                           className="object-cover"
                         />
                         <AvatarFallback
                           className={`text-sm font-semibold text-white bg-gradient-to-br ${generateRandomGradient} border-2 border-white shadow-sm`}
                         >
-                          {userData.name.charAt(0)}
+                          {userData.email.charAt(0)}
                         </AvatarFallback>
                       </Avatar>
                     </Button>
-                  </Link>
-                </>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-72 p-0" align="end" sideOffset={8}>
+                    {/* 사용자 정보 헤더 */}
+                    <div className="px-4 py-3 border-b">
+                      <p className="text-sm font-medium text-gray-900">{userData.email}</p>
+                    </div>
+                    {/* 메뉴 항목들 */}
+                    <div className="py-2">
+                      <DropdownMenuItem asChild>
+                        <Link href="/profile" className="flex items-center gap-3 px-4 py-2 cursor-pointer">
+                          <User className="w-4 h-4" />
+                          <span>프로필</span>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="flex items-center gap-3 px-4 py-2 cursor-pointer">
+                        <Bookmark className="w-4 h-4" />
+                        <span>북마크</span>
+                      </DropdownMenuItem>
+                    </div>
+                    <DropdownMenuSeparator />
+                    {/* 환경설정 섹션 */}
+                    <div className="py-2">
+                      <DropdownMenuLabel className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                        환경설정
+                      </DropdownMenuLabel>
+                      {/* 테마 설정 */}
+                      <div className="px-4 py-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            {getThemeIcon()}
+                            <span className="text-sm">테마</span>
+                          </div>
+                          <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                            <Button
+                              variant={theme === "light" ? "default" : "ghost"}
+                              size="sm"
+                              className="h-6 px-2 text-xs"
+                              onClick={() => setTheme("light")}
+                            >
+                              <Sun className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              variant={theme === "dark" ? "default" : "ghost"}
+                              size="sm"
+                              className="h-6 px-2 text-xs"
+                              onClick={() => setTheme("dark")}
+                            >
+                              <Moon className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              variant={theme === "system" ? "default" : "ghost"}
+                              size="sm"
+                              className="h-6 px-2 text-xs"
+                              onClick={() => setTheme("system")}
+                            >
+                              <Monitor className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                      {/* 언어 설정 */}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <div className="flex items-center justify-between px-4 py-2 hover:bg-gray-50 cursor-pointer">
+                            <div className="flex items-center gap-3">
+                              <Globe className="w-4 h-4" />
+                              <span className="text-sm">언어</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-sm text-gray-600">
+                              <span>{language}</span>
+                              <ChevronDown className="w-3 h-3" />
+                            </div>
+                          </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent side="bottom" align="end">
+                          <DropdownMenuItem onClick={() => setLanguage("한국어")}>한국어</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setLanguage("English")}>English</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setLanguage("日本語")}>日本語</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setLanguage("中文")}>中文</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                    <DropdownMenuSeparator />
+                    {/* 로그아웃 */}
+                    <div className="py-2">
+                      <DropdownMenuItem
+                        className="flex items-center gap-3 px-4 py-2 cursor-pointer text-red-600 focus:text-red-600"
+                        onClick={handleLogout}
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>로그아웃</span>
+                      </DropdownMenuItem>
+                    </div>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               ) : (
                 // 로그인되지 않은 상태: 시작하기 + 다운로드
                 <>
@@ -344,17 +453,17 @@ export default function Header() {
                           <Avatar className="w-12 h-12">
                             <AvatarImage
                               src={userData.avatar || "/placeholder.svg?height=48&width=48"}
-                              alt={userData.name}
+                              alt={userData.email}
                               className="object-cover"
                             />
                             <AvatarFallback
                               className={`text-lg font-bold text-white bg-gradient-to-br ${generateRandomGradient} border-2 border-white shadow-sm`}
                             >
-                              {userData.name.charAt(0)}
+                              {userData.email.charAt(0)}
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <div className="font-semibold text-gray-900">{userData.name}</div>
+                            <div className="font-semibold text-gray-900">{userData.email}</div>
                             <div className="text-sm text-gray-600">프로필 보기</div>
                           </div>
                         </Link>

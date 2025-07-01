@@ -15,14 +15,11 @@ interface AuthContextType {
   token: string | null
   isLoading: boolean
   isAuthenticated: boolean
-  login: (credentials: { username: string; password: string }) => Promise<{ success: boolean; message: string }>
+  login: (credentials: { email: string; password: string }) => Promise<{ success: boolean; message: string }>
   register: (userData: {
-    username: string
     email: string
     password: string
     password_confirm: string
-    first_name?: string
-    last_name?: string
   }) => Promise<{ success: boolean; message: string }>
   logout: () => Promise<void>
   updateProfile: (profileData: Partial<User>) => Promise<{ success: boolean; message: string }>

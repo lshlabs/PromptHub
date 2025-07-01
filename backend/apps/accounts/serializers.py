@@ -4,6 +4,8 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from .models import User, UserProfile
 import logging
+import string
+import random
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +25,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = User
-        fields = ('email', 'username', 'first_name', 'last_name', 'password', 'password_confirm')
+        fields = ('email', 'username', 'password', 'password_confirm')
         extra_kwargs = {
             'email': {
                 'required': True,
@@ -32,14 +34,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             'username': {
                 'required': False,
                 'help_text': '사용자명을 입력하세요.'
-            },
-            'first_name': {
-                'required': False,
-                'help_text': '이름을 입력하세요.'
-            },
-            'last_name': {
-                'required': False,
-                'help_text': '성을 입력하세요.'
             }
         }
         
@@ -92,16 +86,26 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         try:
             # password_confirm 제거
             validated_data.pop('password_confirm', None)
-            
+            # username이 없으면 자동 생성
+            if not validated_data.get('username'):
+                validated_data['username'] = self.generate_random_username()
             # 사용자 생성
             user = User.objects.create_user(**validated_data)
-            
             logger.info(f"새 사용자 생성 성공: {user.email}")
             return user
-            
         except Exception as e:
             logger.error(f"사용자 생성 실패: {e}")
             raise serializers.ValidationError("사용자 생성 중 오류가 발생했습니다.")
+
+    @staticmethod
+    def generate_random_username(length=8):
+        prefix = "user_"
+        chars = string.ascii_lowercase + string.digits
+        while True:
+            random_part = ''.join(random.choices(chars, k=length))
+            username = prefix + random_part
+            if not User.objects.filter(username=username).exists():
+                return username
 
 class UserLoginSerializer(serializers.Serializer):
     """사용자 로그인 시리얼라이저 (개선된 버전)"""
@@ -145,13 +149,25 @@ class UserProfileSerializer(serializers.ModelSerializer):
     """사용자 프로필 시리얼라이저"""
     class Meta:
         model = UserProfile
-        fields = '__all__'
+        fields = ('bio', 'avatar', 'location', 'website')
 
 class UserSerializer(serializers.ModelSerializer):
     """사용자 정보 시리얼라이저"""
-    profile = UserProfileSerializer(read_only=True)
+    profile = UserProfileSerializer()
     
     class Meta:
         model = User
-        fields = ('id', 'email', 'username', 'first_name', 'last_name', 'bio', 'avatar', 'profile', 'created_at')
+        fields = ('id', 'email', 'username', 'profile', 'created_at')
         read_only_fields = ('id', 'created_at')
+
+    def update(self, instance, validated_data):
+        instance.username = validated_data.get('username', instance.username)
+        instance.save()
+
+        profile_data = validated_data.get('profile')
+        profile = getattr(instance, 'profile', None)
+        if profile and profile_data:
+            for attr, value in profile_data.items():
+                setattr(profile, attr, value)
+            profile.save()
+        return instance

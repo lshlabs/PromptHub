@@ -29,7 +29,7 @@ export default function LoginForm() {
 
     const formData = new FormData(e.currentTarget)
     const credentials = {
-      username: formData.get("username") as string,
+      email: formData.get("email") as string,
       password: formData.get("password") as string,
     }
 
@@ -70,14 +70,14 @@ export default function LoginForm() {
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="username">사용자명 또는 이메일</Label>
+            <Label htmlFor="email">이메일</Label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                id="username"
-                name="username"
-                type="text"
-                placeholder="사용자명 또는 이메일을 입력하세요"
+                id="email"
+                name="email"
+                type="email"
+                placeholder="이메일을 입력하세요"
                 className="pl-10"
                 required
               />

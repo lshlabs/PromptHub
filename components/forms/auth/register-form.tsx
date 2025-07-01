@@ -43,12 +43,9 @@ export default function RegisterForm() {
     }
 
     const userData = {
-      username: formData.get("username") as string,
       email: formData.get("email") as string,
       password,
       password_confirm: passwordConfirm,
-      first_name: formData.get("first_name") as string,
-      last_name: formData.get("last_name") as string,
     }
 
     try {
@@ -87,32 +84,6 @@ export default function RegisterForm() {
 
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="first_name">이름</Label>
-              <Input id="first_name" name="first_name" type="text" placeholder="이름" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="last_name">성</Label>
-              <Input id="last_name" name="last_name" type="text" placeholder="성" />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="username">사용자명</Label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                id="username"
-                name="username"
-                type="text"
-                placeholder="사용자명을 입력하세요"
-                className="pl-10"
-                required
-              />
-            </div>
-          </div>
-
           <div className="space-y-2">
             <Label htmlFor="email">이메일</Label>
             <div className="relative">

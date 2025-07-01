@@ -26,7 +26,7 @@ export default function AuthForm({ defaultTab = "login", onSuccess }: AuthFormPr
 
     const formData = new FormData(e.currentTarget)
     const loginData = {
-      username: formData.get("email") as string, // 이메일을 username으로 사용
+      email: formData.get("email") as string,
       password: formData.get("password") as string,
     }
 
@@ -75,7 +75,6 @@ export default function AuthForm({ defaultTab = "login", onSuccess }: AuthFormPr
     }
 
     const signupData = {
-      username: (formData.get("email") as string).split("@")[0], // 이메일에서 사용자명 생성
       email: formData.get("email") as string,
       password: password,
       password_confirm: confirmPassword,

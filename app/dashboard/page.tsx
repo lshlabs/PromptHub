@@ -47,7 +47,7 @@ export default function DashboardPage() {
     <div className="container mx-auto px-4 py-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          안녕하세요, {user?.first_name || user?.username}님! 👋
+          안녕하세요, {user?.username}님! 👋
         </h1>
         <p className="text-gray-600">오늘도 멋진 프롬프트를 만들어보세요.</p>
       </div>

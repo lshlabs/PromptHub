@@ -10,6 +10,7 @@ from .serializers import (
     UserSerializer
 )
 import logging
+from rest_framework.permissions import IsAuthenticated
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +118,7 @@ def profile_view(request):
         'user': serializer.data
     })
 
-@api_view(['PUT'])
+@api_view(['PUT', 'PATCH'])
 @permission_classes([permissions.IsAuthenticated])
 def update_profile_view(request):
     """사용자 프로필 수정"""
@@ -147,3 +148,23 @@ def update_profile_view(request):
             'message': '프로필 수정 중 오류가 발생했습니다.',
             'errors': {'non_field_errors': [str(e)]}
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def me_view(request):
+    return Response(UserSerializer(request.user).data)
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def check_username_view(request):
+    """
+    GET 파라미터로 전달된 username이 DB에 이미 존재하는지 중복 여부를 반환하는 API
+    - 사용 예: /api/accounts/check-username/?username=testuser
+    - 반환: { "available": true } (사용 가능), { "available": false } (중복)
+    """
+    username = request.GET.get('username', None)
+    if not username:
+        return Response({'available': False, 'error': 'username 파라미터가 필요합니다.'}, status=400)
+    # User 모델에서 username 중복 여부 확인
+    exists = User.objects.filter(username=username).exists()
+    return Response({'available': not exists})

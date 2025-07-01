@@ -14,13 +14,12 @@ logger = logging.getLogger(__name__)
 
 class UserProfileSerializer(serializers.ModelSerializer):
     """사용자 프로필 시리얼라이저"""
-    full_name = serializers.ReadOnlyField()
     
     class Meta:
         model = UserProfile
         fields = [
-            'bio', 'location', 'birth_date', 'avatar', 
-            'phone_number', 'is_email_verified', 'full_name',
+            'bio', 'location', 'avatar',
+            'is_email_verified',
             'created_at', 'updated_at'
         ]
         read_only_fields = ['is_email_verified', 'created_at', 'updated_at']

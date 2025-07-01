@@ -59,13 +59,16 @@ export const useAuth = () => {
   // 로그인
   const login = useCallback(
     async (credentials: {
-      username: string
+      email: string
       password: string
     }) => {
       try {
         setAuthState((prev) => ({ ...prev, isLoading: true }))
 
-        const response = await authApi.login(credentials)
+        const response = await authApi.login({
+          email: credentials.email,
+          password: credentials.password,
+        })
 
         setAuthToken(response.token)
 
@@ -91,17 +94,18 @@ export const useAuth = () => {
   // 회원가입
   const register = useCallback(
     async (userData: {
-      username: string
       email: string
       password: string
       password_confirm: string
-      first_name?: string
-      last_name?: string
     }) => {
       try {
         setAuthState((prev) => ({ ...prev, isLoading: true }))
 
-        const response = await authApi.register(userData)
+        const response = await authApi.register({
+          email: userData.email,
+          password: userData.password,
+          password_confirm: userData.password_confirm,
+        })
 
         setAuthToken(response.token)
 
