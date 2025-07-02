@@ -37,7 +37,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { toast } from "@/hooks/use-toast"
+import { toast } from "@/components/ui/use-toast"
 import {
   Calendar,
   Star,
@@ -68,13 +68,19 @@ import Footer from "@/components/layout/footer"
 /**
  * 사용자 프로필 페이지 컴포넌트
  * 
+ * 사용자의 개인 정보와 설정을 관리하는 종합적인 프로필 페이지입니다.
+ * 
  * 주요 기능:
  * - 사용자 기본 정보 조회 및 수정
- * - 아바타 이미지 업로드/삭제
+ * - 아바타 이미지 업로드/삭제 (준비중)
  * - 사용자명 중복 체크 및 실시간 검증
  * - 위치 정보 자동 감지
  * - 활동 통계 및 업적 표시
  * - 알림 설정 관리
+ * - 비밀번호 변경 및 계정 삭제
+ * - 반응형 디자인 및 접근성 최적화
+ * 
+ * @returns JSX.Element 프로필 페이지 컴포넌트
  */
 export default function ProfilePage() {
   // ========== 기본 상태 관리 ==========

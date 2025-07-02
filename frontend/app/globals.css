@@ -36,6 +36,35 @@ body {
   .text-balance {
     text-wrap: balance;
   }
+  
+  /* 텍스트 줄바꿈 최적화 유틸리티 클래스 */
+  .text-wrap-balance {
+    text-wrap: balance;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+  
+  .text-wrap-pretty {
+    text-wrap: pretty;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+  
+  .text-wrap-optimal {
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+  
+  /* 한국어 텍스트 최적화 */
+  .text-korean-optimal {
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    line-break: strict;
+    word-spacing: -0.05em;
+  }
 }
 
 @layer base {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -18,9 +18,39 @@ import {
   Copy,
 } from "lucide-react"
 
-const samplePrompts = ["블로그 글 써줘", "파이썬 코드 만들어줘", "마케팅 전략 알려줘", "영어 번역해줘"]
+/**
+ * 최적화 분석 결과 타입 정의
+ */
+interface OptimizationAnalysis {
+  issues: string[]
+  improved: string
+  response: string
+  accuracy: number
+}
 
-const optimizationSuggestions = {
+/**
+ * 최적화 팁 타입 정의
+ */
+interface OptimizationTip {
+  icon: React.ComponentType<{ className?: string }>
+  title: string
+  description: string
+}
+
+/**
+ * 샘플 프롬프트 배열
+ */
+const SAMPLE_PROMPTS = [
+  "블로그 글 써줘",
+  "파이썬 코드 만들어줘", 
+  "마케팅 전략 알려줘", 
+  "영어 번역해줘"
+] as const
+
+/**
+ * 프롬프트별 최적화 제안 데이터
+ */
+const OPTIMIZATION_SUGGESTIONS: Record<string, OptimizationAnalysis> = {
   "블로그 글 써줘": {
     issues: ["주제 불명확", "타겟 독자 미지정", "글 형식 불분명", "분량 미지정"],
     improved:
@@ -55,13 +85,75 @@ const optimizationSuggestions = {
   },
 }
 
-export function PromptOptimizer() {
-  const [userPrompt, setUserPrompt] = useState("")
-  const [isAnalyzing, setIsAnalyzing] = useState(false)
-  const [showResults, setShowResults] = useState(false)
-  const [currentAnalysis, setCurrentAnalysis] = useState<any>(null)
+/**
+ * 프롬프트 최적화 핵심 원칙 데이터
+ */
+const OPTIMIZATION_TIPS: OptimizationTip[] = [
+  {
+    icon: Target,
+    title: "명확한 목적",
+    description: "무엇을 원하는지 구체적으로 명시"
+  },
+  {
+    icon: CheckCircle,
+    title: "상세한 조건",
+    description: "형식, 길이, 톤앤매너 등 세부 요구사항"
+  },
+  {
+    icon: Sparkles,
+    title: "맥락 제공",
+    description: "배경 정보와 사용 목적 설명"
+  },
+  {
+    icon: Zap,
+    title: "예시 활용",
+    description: "원하는 결과의 샘플 제공"
+  }
+]
 
-  const handleAnalyze = async () => {
+/**
+ * 프롬프트 최적화 체험 섹션 컴포넌트
+ * 
+ * 기능:
+ * - 사용자 프롬프트 입력 및 분석
+ * - 실시간 최적화 제안
+ * - 개선된 프롬프트 미리보기
+ * - 복사 기능
+ * - 샘플 프롬프트 제공
+ * - 반응형 디자인 지원
+ * - 접근성 고려
+ */
+export function PromptOptimizer() {
+  // 상태 관리
+  const [userPrompt, setUserPrompt] = useState<string>("")
+  const [isAnalyzing, setIsAnalyzing] = useState<boolean>(false)
+  const [showResults, setShowResults] = useState<boolean>(false)
+  const [currentAnalysis, setCurrentAnalysis] = useState<OptimizationAnalysis | null>(null)
+
+  /**
+   * 현재 분석 결과의 메모화된 계산
+   */
+  const analysisMetrics = useMemo(() => {
+    if (!currentAnalysis) return null
+    
+    return {
+      scoreColor: currentAnalysis.accuracy >= 80 
+        ? "bg-green-500" 
+        : currentAnalysis.accuracy >= 60 
+          ? "bg-yellow-500" 
+          : "bg-red-500",
+      scoreLabel: currentAnalysis.accuracy >= 80 
+        ? "우수" 
+        : currentAnalysis.accuracy >= 60 
+          ? "보통" 
+          : "개선 필요"
+    }
+  }, [currentAnalysis])
+
+  /**
+   * 프롬프트 분석 처리 함수
+   */
+  const handleAnalyze = async (): Promise<void> => {
     if (!userPrompt.trim()) return
 
     setIsAnalyzing(true)
@@ -71,7 +163,7 @@ export function PromptOptimizer() {
     await new Promise((resolve) => setTimeout(resolve, 2000))
 
     // 가장 유사한 샘플 찾기 또는 기본 분석 제공
-    const analysis = optimizationSuggestions[userPrompt as keyof typeof optimizationSuggestions] || {
+    const analysis = OPTIMIZATION_SUGGESTIONS[userPrompt as keyof typeof OPTIMIZATION_SUGGESTIONS] || {
       issues: ["구체성 부족", "맥락 정보 부족", "원하는 결과 형식 불분명"],
       improved: `${userPrompt}에 대해 더 구체적으로 작성해보세요. 목적, 대상, 형식, 제약조건을 명확히 지정하면 더 나은 결과를 얻을 수 있습니다.`,
       response: "개선된 프롬프트를 사용하면 더 정확하고 유용한 답변을 받을 수 있습니다.",
@@ -83,55 +175,71 @@ export function PromptOptimizer() {
     setShowResults(true)
   }
 
-  const handleSamplePrompt = (prompt: string) => {
+  /**
+   * 샘플 프롬프트 선택 핸들러
+   * @param prompt - 선택된 샘플 프롬프트
+   */
+  const handleSamplePrompt = (prompt: string): void => {
     setUserPrompt(prompt)
     setShowResults(false)
   }
 
-  const handleReset = () => {
+  /**
+   * 초기화 핸들러
+   */
+  const handleReset = (): void => {
     setUserPrompt("")
     setShowResults(false)
     setCurrentAnalysis(null)
   }
 
-  const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text)
+  /**
+   * 클립보드 복사 핸들러
+   * @param text - 복사할 텍스트
+   */
+  const handleCopy = async (text: string): Promise<void> => {
+    try {
+      await navigator.clipboard.writeText(text)
+      // 실제 구현에서는 토스트 알림 표시
+      console.log("클립보드에 복사되었습니다:", text)
+    } catch (error) {
+      console.error("복사 실패:", error)
+    }
+  }
+
+  /**
+   * 키보드 네비게이션 핸들러
+   */
+  const handleKeyDown = (e: React.KeyboardEvent): void => {
+    if (e.key === "Enter" && e.ctrlKey && userPrompt.trim()) {
+      handleAnalyze()
+    }
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-4 sm:p-6">
-      {/* Header */}
-      <div className="text-center mb-8">
+    <section
+      className="w-full max-w-7xl mx-auto p-4 sm:p-6"
+      aria-labelledby="optimizer-section-title"
+    >
+      {/* 섹션 헤더 */}
+      <header className="text-center mb-8 sm:mb-12">
         <div className="flex items-center justify-center gap-2 mb-4">
-          <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" />
-          <h2 className="font-bold text-gray-900">
-            {/* 모바일 */}
-            <span className="block sm:hidden text-2xl">프롬프트 최적화 체험</span>
-
-            {/* 태블릿 */}
-            <span className="hidden sm:block md:hidden text-3xl">프롬프트 최적화 체험</span>
-
-            {/* 데스크톱 */}
-            <span className="hidden md:block text-4xl">프롬프트 최적화 체험</span>
+          <Zap className="w-6 h-6 sm:w-8 sm:h-8 text-purple-600" aria-hidden="true" />
+          <h2 
+            id="optimizer-section-title"
+            className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 text-wrap-balance"
+          >
+            프롬프트 최적화&nbsp;체험
           </h2>
         </div>
-        <p className="text-gray-600 max-w-3xl mx-auto leading-relaxed">
-          {/* 모바일 */}
-          <span className="block sm:hidden text-sm">
-            직접 프롬프트를 입력하고
-            <br />
-            AI가 제안하는 개선안을 확인해보세요
-          </span>
-
-          {/* 태블릿 이상 */}
-          <span className="hidden sm:block text-base sm:text-lg">
-            직접 프롬프트를 입력하고 AI가 제안하는 개선안을 확인해보세요
-          </span>
+        <p className="text-sm sm:text-base md:text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed text-wrap-pretty">
+          직접 프롬프트를 입력하고{" "}
+          <span className="block sm:inline">AI가 제안하는 개선안을 확인해보세요</span>
         </p>
-      </div>
+      </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-        {/* Input Section */}
+        {/* 입력 섹션 */}
         <Card className="h-fit">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
@@ -140,17 +248,24 @@ export function PromptOptimizer() {
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Sample Prompts */}
+            {/* 샘플 프롬프트 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">샘플 프롬프트</label>
-              <div className="flex flex-wrap gap-2">
-                {samplePrompts.map((prompt) => (
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                샘플 프롬프트
+              </label>
+              <div 
+                className="flex flex-wrap gap-2"
+                role="group"
+                aria-label="샘플 프롬프트 선택"
+              >
+                {SAMPLE_PROMPTS.map((prompt) => (
                   <Button
                     key={prompt}
                     variant="outline"
                     size="sm"
                     onClick={() => handleSamplePrompt(prompt)}
                     className="text-xs"
+                    type="button"
                   >
                     {prompt}
                   </Button>
@@ -158,23 +273,35 @@ export function PromptOptimizer() {
               </div>
             </div>
 
-            {/* Text Input */}
+            {/* 텍스트 입력 */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">당신의 프롬프트를 입력하세요</label>
+              <label 
+                htmlFor="prompt-input"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                당신의 프롬프트를 입력하세요
+              </label>
               <Textarea
+                id="prompt-input"
                 value={userPrompt}
                 onChange={(e) => setUserPrompt(e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder="예: 블로그 글 써줘"
                 className="min-h-[120px] resize-none text-sm sm:text-base"
+                aria-describedby="prompt-help"
               />
+              <p id="prompt-help" className="text-xs text-gray-500 mt-1">
+                Ctrl + Enter로 빠른 분석 가능
+              </p>
             </div>
 
-            {/* Action Buttons */}
+            {/* 액션 버튼 */}
             <div className="flex flex-col sm:flex-row gap-3">
               <Button
                 onClick={handleAnalyze}
                 disabled={!userPrompt.trim() || isAnalyzing}
                 className="flex-1 bg-purple-600 hover:bg-purple-700 text-sm sm:text-base"
+                type="button"
               >
                 {isAnalyzing ? (
                   <>
@@ -188,14 +315,19 @@ export function PromptOptimizer() {
                   </>
                 )}
               </Button>
-              <Button variant="outline" onClick={handleReset} className="text-sm sm:text-base">
+              <Button 
+                variant="outline" 
+                onClick={handleReset} 
+                className="text-sm sm:text-base"
+                type="button"
+              >
                 초기화
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Results Section */}
+        {/* 결과 섹션 */}
         <Card className="h-fit">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
@@ -211,9 +343,9 @@ export function PromptOptimizer() {
               </div>
             ) : (
               <div className="space-y-6">
-                {/* Issues */}
+                {/* 발견된 문제점 */}
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-3 flex items-center gap-2 text-sm sm:text-base">
+                  <h4 className="text-sm sm:text-base font-medium text-gray-900 mb-3 flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 text-yellow-500" />
                     발견된 문제점
                   </h4>
@@ -226,38 +358,44 @@ export function PromptOptimizer() {
                   </div>
                 </div>
 
-                {/* Accuracy Score */}
+                {/* 정확도 점수 */}
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-3 text-sm sm:text-base">현재 프롬프트 점수</h4>
+                  <h4 className="text-sm sm:text-base font-medium text-gray-900 mb-3">
+                    현재 프롬프트 점수
+                  </h4>
                   <div className="flex items-center gap-3">
                     <div className="flex-1 bg-gray-200 rounded-full h-3">
                       <div
-                        className={`h-3 rounded-full transition-all duration-1000 ${
-                          currentAnalysis?.accuracy >= 80
-                            ? "bg-green-500"
-                            : currentAnalysis?.accuracy >= 60
-                              ? "bg-yellow-500"
-                              : "bg-red-500"
-                        }`}
+                        className={`h-3 rounded-full transition-all duration-1000 ${analysisMetrics?.scoreColor}`}
                         style={{ width: `${currentAnalysis?.accuracy}%` }}
+                        role="progressbar"
+                        aria-valuenow={currentAnalysis?.accuracy}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-label={`프롬프트 점수 ${currentAnalysis?.accuracy}점`}
                       />
                     </div>
-                    <span className="font-semibold text-lg">{currentAnalysis?.accuracy}점</span>
+                    <div className="text-right">
+                      <span className="font-semibold text-lg">{currentAnalysis?.accuracy}점</span>
+                      <div className="text-xs text-gray-500">{analysisMetrics?.scoreLabel}</div>
+                    </div>
                   </div>
                 </div>
 
-                {/* Improved Prompt */}
+                {/* 개선된 프롬프트 */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-medium text-gray-900 flex items-center gap-2 text-sm sm:text-base">
+                    <h4 className="text-sm sm:text-base font-medium text-gray-900 flex items-center gap-2">
                       <CheckCircle className="w-4 h-4 text-green-500" />
                       개선된 프롬프트
                     </h4>
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => handleCopy(currentAnalysis?.improved)}
+                      onClick={() => currentAnalysis && handleCopy(currentAnalysis.improved)}
                       className="text-xs"
+                      type="button"
+                      aria-label="개선된 프롬프트 복사"
                     >
                       <Copy className="w-3 h-3 mr-1" />
                       복사
@@ -270,9 +408,11 @@ export function PromptOptimizer() {
                   </div>
                 </div>
 
-                {/* Expected Response */}
+                {/* 예상 응답 결과 */}
                 <div>
-                  <h4 className="font-medium text-gray-900 mb-3 text-sm sm:text-base">예상 응답 결과</h4>
+                  <h4 className="text-sm sm:text-base font-medium text-gray-900 mb-3">
+                    예상 응답 결과
+                  </h4>
                   <div className="bg-blue-50 p-3 sm:p-4 rounded-lg border border-blue-200">
                     <p className="text-xs sm:text-sm text-gray-700 leading-relaxed whitespace-pre-line break-words">
                       {currentAnalysis?.response}
@@ -283,8 +423,9 @@ export function PromptOptimizer() {
                 {/* CTA */}
                 <div className="text-center pt-4 border-t border-gray-200">
                   <Button
-                    onClick={() => handleCopy(currentAnalysis?.improved)}
+                    onClick={() => currentAnalysis && handleCopy(currentAnalysis.improved)}
                     className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white text-sm sm:text-base"
+                    type="button"
                   >
                     개선된 프롬프트 사용하기
                     <ArrowRight className="w-4 h-4 ml-2" />
@@ -296,43 +437,37 @@ export function PromptOptimizer() {
         </Card>
       </div>
 
-      {/* Tips Section */}
-      <div className="mt-12 p-4 sm:p-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
-        <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2 text-base sm:text-lg">
+      {/* 최적화 팁 섹션 */}
+      <div 
+        className="mt-12 p-4 sm:p-6 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200"
+        role="region"
+        aria-labelledby="tips-section-title"
+      >
+        <h3 
+          id="tips-section-title"
+          className="text-base sm:text-lg md:text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2"
+        >
           <Lightbulb className="w-5 h-5 text-yellow-500" />
           프롬프트 최적화 핵심 원칙
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-          <div className="p-4 bg-white rounded-lg border border-purple-100">
-            <div className="font-medium mb-2 text-purple-800 flex items-center gap-2">
-              <Target className="w-4 h-4" />
-              명확한 목적
-            </div>
-            <p className="text-gray-600 text-xs sm:text-sm">무엇을 원하는지 구체적으로 명시</p>
-          </div>
-          <div className="p-4 bg-white rounded-lg border border-purple-100">
-            <div className="font-medium mb-2 text-purple-800 flex items-center gap-2">
-              <CheckCircle className="w-4 h-4" />
-              상세한 조건
-            </div>
-            <p className="text-gray-600 text-xs sm:text-sm">형식, 길이, 톤앤매너 등 세부 요구사항</p>
-          </div>
-          <div className="p-4 bg-white rounded-lg border border-purple-100">
-            <div className="font-medium mb-2 text-purple-800 flex items-center gap-2">
-              <Sparkles className="w-4 h-4" />
-              맥락 제공
-            </div>
-            <p className="text-gray-600 text-xs sm:text-sm">배경 정보와 사용 목적 설명</p>
-          </div>
-          <div className="p-4 bg-white rounded-lg border border-purple-100">
-            <div className="font-medium mb-2 text-purple-800 flex items-center gap-2">
-              <Zap className="w-4 h-4" />
-              예시 활용
-            </div>
-            <p className="text-gray-600 text-xs sm:text-sm">원하는 결과의 샘플 제공</p>
-          </div>
+          {OPTIMIZATION_TIPS.map((tip, index) => {
+            const IconComponent = tip.icon
+            return (
+              <div 
+                key={index}
+                className="p-4 bg-white rounded-lg border border-purple-100"
+              >
+                <div className="font-medium mb-2 text-purple-800 flex items-center gap-2">
+                  <IconComponent className="w-4 h-4" />
+                  {tip.title}
+                </div>
+                <p className="text-gray-600 text-xs sm:text-sm">{tip.description}</p>
+              </div>
+            )
+          })}
         </div>
       </div>
-    </div>
+    </section>
   )
 }
