@@ -21,3 +21,4 @@ psycopg2-binary>=2.9.0  # PostgreSQL (프로덕션용)
 
 # 유틸리티
 python-slugify>=8.0.0
+requests>=2.31.0  # HTTP 요청 라이브러리 (IP 위치 조회용)

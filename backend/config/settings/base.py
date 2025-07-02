@@ -151,12 +151,28 @@ REST_FRAMEWORK = {
 }
 
 # CORS 설정
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # Next.js 개발 서버
-    "http://127.0.0.1:3000",
+    FRONTEND_URL,  # Next.js 개발 서버 (frontend 폴더)
+    "http://127.0.0.1:3000",  # 대체 로컬 URL
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+
+# 개발 환경에서 추가 CORS 설정
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = False  # 프로덕션에서는 반드시 False
+    CORS_ALLOWED_HEADERS = [
+        'accept',
+        'accept-encoding',
+        'authorization',
+        'content-type',
+        'dnt',
+        'origin',
+        'user-agent',
+        'x-csrftoken',
+        'x-requested-with',
+    ]
 
 # 로깅 설정
 LOGGING = {

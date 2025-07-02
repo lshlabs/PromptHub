@@ -2,320 +2,235 @@
 
 Django REST Framework와 Next.js를 사용한 현대적인 풀스택 웹 애플리케이션입니다.
 
-## 📁 권장 프로젝트 구조
+## 📁 현재 프로젝트 구조
 
-\`\`\`
+```
 prompthub/
-├── backend/                           # Django 백엔드
-│   ├── config/                       # Django 프로젝트 설정
-│   │   ├── __init__.py
-│   │   ├── settings/                 # 환경별 설정 분리
-│   │   │   ├── __init__.py
-│   │   │   ├── base.py              # 공통 설정
-│   │   │   ├── development.py       # 개발 환경
-│   │   │   ├── production.py        # 프로덕션 환경
-│   │   │   └── testing.py           # 테스트 환경
-│   │   ├── urls.py                  # 메인 URL 라우팅
-│   │   ├── wsgi.py                  # WSGI 설정
-│   │   └── asgi.py                  # ASGI 설정 (WebSocket 지원)
-│   ├── apps/                        # Django 앱들
-│   │   ├── __init__.py
-│   │   ├── accounts/                # 사용자 인증 및 관리
-│   │   │   ├── __init__.py
-│   │   │   ├── admin.py
-│   │   │   ├── apps.py
-│   │   │   ├── models.py            # User, UserProfile 모델
-│   │   │   ├── serializers.py       # DRF 시리얼라이저
-│   │   │   ├── views.py             # API 뷰
-│   │   │   ├── urls.py              # URL 패턴
-│   │   │   ├── permissions.py       # 커스텀 권한
-│   │   │   ├── signals.py           # Django 시그널
-│   │   │   ├── managers.py          # 커스텀 매니저
-│   │   │   ├── migrations/
-│   │   │   └── tests/
-│   │   │       ├── __init__.py
-│   │   │       ├── test_models.py
-│   │   │       ├── test_views.py
-│   │   │       └── test_serializers.py
-│   │   ├── posts/                   # 게시물 관리
-│   │   │   ├── __init__.py
-│   │   │   ├── admin.py
-│   │   │   ├── apps.py
-│   │   │   ├── models.py            # Post, Category 모델
-│   │   │   ├── serializers.py
-│   │   │   ├── views.py
-│   │   │   ├── urls.py
-│   │   │   ├── filters.py           # django-filter 설정
-│   │   │   ├── migrations/
-│   │   │   └── tests/
-│   │   ├── comments/                # 댓글 시스템
-│   │   │   ├── __init__.py
-│   │   │   ├── admin.py
-│   │   │   ├── apps.py
-│   │   │   ├── models.py            # Comment 모델
-│   │   │   ├── serializers.py
-│   │   │   ├── views.py
-│   │   │   ├── urls.py
-│   │   │   ├── migrations/
-│   │   │   └── tests/
-│   │   └── core/                    # 공통 유틸리티
-│   │       ├── __init__.py
-│   │       ├── models.py            # 추상 베이스 모델
-│   │       ├── permissions.py       # 공통 권한 클래스
-│   │       ├── pagination.py        # 커스텀 페이지네이션
-│   │       ├── exceptions.py        # 커스텀 예외
-│   │       ├── validators.py        # 커스텀 검증자
-│   │       ├── utils.py             # 헬퍼 함수
-│   │       └── middleware.py        # 커스텀 미들웨어
-│   ├── requirements/                # 의존성 관리
-│   │   ├── base.txt                # 기본 패키지
-│   │   ├── development.txt         # 개발용 패키지
-│   │   ├── production.txt          # 프로덕션용 패키지
-│   │   └── testing.txt             # 테스트용 패키지
-│   ├── static/                     # 정적 파일 (CSS, JS, 이미지)
-│   │   ├── admin/
-│   │   ├── css/
-│   │   ├── js/
-│   │   └── images/
-│   ├── media/                      # 사용자 업로드 파일
-│   │   ├── uploads/
-│   │   └── avatars/
-│   ├── templates/                  # Django 템플릿 (필요시)
-│   │   ├── base.html
-│   │   └── emails/
-│   ├── locale/                     # 국제화 파일
-│   │   ├── ko/
-│   │   └── en/
-│   ├── logs/                       # 로그 파일
-│   ├── scripts/                    # 유틸리티 스크립트
-│   │   ├── setup_database.py
-│   │   ├── create_superuser.py
-│   │   └── backup_database.py
-│   ├── manage.py                   # Django 관리 명령어
-│   ├── .env.example               # 환경 변수 템플릿
-│   ├── .gitignore
-│   └── pytest.ini                 # pytest 설정
-├── frontend/                       # Next.js 프론트엔드
-│   ├── app/                       # Next.js 13+ App Router
-│   │   ├── (auth)/               # 라우트 그룹 - 인증 페이지
+├── frontend/                         # Next.js 프론트엔드
+│   ├── app/                         # Next.js 13+ App Router
+│   │   ├── (auth)/                 # 라우트 그룹 - 인증 페이지
 │   │   │   ├── login/
 │   │   │   │   └── page.tsx
 │   │   │   ├── register/
 │   │   │   │   └── page.tsx
-│   │   │   ├── forgot-password/
-│   │   │   │   └── page.tsx
-│   │   │   └── layout.tsx        # 인증 페이지 공통 레이아웃
-│   │   ├── (dashboard)/          # 라우트 그룹 - 대시보드
-│   │   │   ├── dashboard/
-│   │   │   │   └── page.tsx
-│   │   │   ├── profile/
-│   │   │   │   └── page.tsx
-│   │   │   ├── settings/
-│   │   │   │   └── page.tsx
-│   │   │   └── layout.tsx        # 대시보드 공통 레이아웃
-│   │   ├── posts/                # 게시물 관련 페이지
-│   │   │   ├── page.tsx          # 게시물 목록
-│   │   │   ├── [id]/
-│   │   │   │   └── page.tsx      # 게시물 상세
-│   │   │   └── create/
-│   │   │       └── page.tsx      # 게시물 작성
-│   │   ├── api/                  # API 라우트 (필요시)
-│   │   │   └── auth/
-│   │   │       └── route.ts
-│   │   ├── globals.css           # 전역 스타일
-│   │   ├── layout.tsx            # 루트 레이아웃
-│   │   ├── page.tsx              # 홈페이지
-│   │   ├── loading.tsx           # 로딩 UI
-│   │   ├── error.tsx             # 에러 UI
-│   │   └── not-found.tsx         # 404 페이지
-│   ├── components/               # React 컴포넌트
-│   │   ├── ui/                  # 기본 UI 컴포넌트 (shadcn/ui)
+│   │   │   └── layout.tsx          # 인증 페이지 공통 레이아웃
+│   │   ├── dashboard/
+│   │   │   └── page.tsx
+│   │   ├── community/
+│   │   │   └── page.tsx
+│   │   ├── profile/
+│   │   │   └── page.tsx
+│   │   ├── trending/
+│   │   │   └── page.tsx
+│   │   ├── my-reviews/
+│   │   │   └── page.tsx
+│   │   ├── extension/
+│   │   │   └── page.tsx
+│   │   ├── globals.css             # 전역 스타일
+│   │   ├── layout.tsx              # 루트 레이아웃
+│   │   ├── page.tsx                # 홈페이지
+│   │   ├── loading.tsx             # 로딩 UI
+│   │   ├── error.tsx               # 에러 UI
+│   │   └── not-found.tsx           # 404 페이지
+│   ├── components/                 # React 컴포넌트
+│   │   ├── ui/                    # 기본 UI 컴포넌트 (shadcn/ui)
 │   │   │   ├── button.tsx
 │   │   │   ├── input.tsx
 │   │   │   ├── card.tsx
 │   │   │   └── ...
-│   │   ├── forms/               # 폼 컴포넌트
+│   │   ├── forms/                 # 폼 컴포넌트
 │   │   │   ├── auth/
 │   │   │   │   ├── login-form.tsx
-│   │   │   │   ├── register-form.tsx
-│   │   │   │   └── forgot-password-form.tsx
-│   │   │   ├── posts/
-│   │   │   │   ├── post-form.tsx
-│   │   │   │   └── comment-form.tsx
+│   │   │   │   └── register-form.tsx
 │   │   │   └── common/
-│   │   │       ├── search-form.tsx
-│   │   │       └── contact-form.tsx
-│   │   ├── layout/              # 레이아웃 컴포넌트
+│   │   ├── layout/                # 레이아웃 컴포넌트
 │   │   │   ├── header.tsx
 │   │   │   ├── footer.tsx
-│   │   │   ├── sidebar.tsx
 │   │   │   └── navigation.tsx
-│   │   ├── features/            # 기능별 컴포넌트
-│   │   │   ├── auth/
-│   │   │   │   ├── auth-guard.tsx
-│   │   │   │   └── user-menu.tsx
-│   │   │   ├── posts/
-│   │   │   │   ├── post-list.tsx
-│   │   │   │   ├── post-card.tsx
-│   │   │   │   └── post-detail.tsx
-│   │   │   └── comments/
-│   │   │       ├── comment-list.tsx
-│   │   │       └── comment-item.tsx
-│   │   ├── providers/           # Context Provider들
-│   │   │   ├── auth-provider.tsx
-│   │   │   ├── theme-provider.tsx
-│   │   │   └── query-provider.tsx
-│   │   └── common/              # 공통 컴포넌트
-│   │       ├── loading-spinner.tsx
-│   │       ├── error-boundary.tsx
-│   │       ├── pagination.tsx
-│   │       └── modal.tsx
-│   ├── lib/                     # 유틸리티 라이브러리
-│   │   ├── api/                # API 관련
-│   │   │   ├── client.ts       # Axios 클라이언트 설정
-│   │   │   ├── auth.ts         # 인증 API
-│   │   │   ├── posts.ts        # 게시물 API
-│   │   │   ├── comments.ts     # 댓글 API
-│   │   │   └── types.ts        # API 응답 타입
-│   │   ├── utils/              # 헬퍼 함수
-│   │   │   ├── auth.ts         # 인증 관련 유틸
-│   │   │   ├── format.ts       # 포맷팅 함수
-│   │   │   ├── validation.ts   # 검증 함수
-│   │   │   └── constants.ts    # 상수 정의
-│   │   ├── hooks/              # 커스텀 훅 (여기서는 별도 디렉토리)
-│   │   └── stores/             # 상태 관리 (Zustand 등)
-│   │       ├── auth-store.ts
-│   │       └── ui-store.ts
-│   ├── hooks/                  # 커스텀 React 훅
-│   │   ├── use-auth.ts
-│   │   ├── use-api.ts
-│   │   ├── use-local-storage.ts
-│   │   └── use-debounce.ts
-│   ├── types/                  # TypeScript 타입 정의
-│   │   ├── auth.ts
-│   │   ├── posts.ts
-│   │   ├── comments.ts
+│   │   ├── sections/              # 섹션별 컴포넌트
+│   │   │   ├── hero-section.tsx
+│   │   │   ├── charts-section.tsx
+│   │   │   ├── prompt-comparison.tsx
+│   │   │   ├── prompt-optimizer.tsx
+│   │   │   └── prompt-community.tsx
+│   │   ├── charts/                # 차트 컴포넌트
+│   │   │   ├── accuracy-hallucination-chart.tsx
+│   │   │   ├── price-satisfaction-chart.tsx
+│   │   │   └── user-growth-chart.tsx
+│   │   ├── community/             # 커뮤니티 컴포넌트
+│   │   │   ├── community-filters.tsx
+│   │   │   ├── community-header.tsx
+│   │   │   ├── create-post-dialog.tsx
+│   │   │   └── post-list.tsx
+│   │   └── providers/             # Context Provider들
+│   │       ├── auth-provider.tsx
+│   │       └── theme-provider.tsx
+│   ├── lib/                       # 유틸리티 라이브러리
+│   │   ├── api/                  # API 관련
+│   │   │   ├── client.ts         # Axios 클라이언트 설정
+│   │   │   └── auth.ts           # 인증 API
+│   │   ├── utils/                # 헬퍼 함수
+│   │   │   └── auth.ts           # 인증 관련 유틸
 │   │   ├── api.ts
-│   │   └── global.ts
-│   ├── styles/                 # 스타일 파일
-│   │   ├── globals.css
-│   │   ├── components.css
-│   │   └── utilities.css
-│   ├── public/                 # 정적 자산
-│   │   ├── images/
-│   │   ├── icons/
-│   │   ├── favicon.ico
-│   │   └── manifest.json
-│   ├── __tests__/              # 테스트 파일
-│   │   ├── components/
-│   │   ├── pages/
-│   │   └── utils/
-│   ├── .env.example           # 환경 변수 템플릿
-│   ├── .env.local             # 로컬 환경 변수
-│   ├── next.config.js         # Next.js 설정
-│   ├── tailwind.config.js     # Tailwind CSS 설정
-│   ├── tsconfig.json          # TypeScript 설정
-│   ├── package.json           # 의존성 및 스크립트
-│   ├── .gitignore
-│   └── jest.config.js         # Jest 테스트 설정
-├── docs/                       # 프로젝트 문서
-│   ├── api/                   # API 문서
-│   │   ├── authentication.md
-│   │   ├── posts.md
-│   │   └── comments.md
-│   ├── deployment/            # 배포 가이드
-│   │   ├── docker.md
-│   │   ├── vercel.md
-│   │   └── aws.md
-│   ├── development/           # 개발 가이드
-│   │   ├── setup.md
-│   │   ├── contributing.md
-│   │   └── coding-standards.md
-│   └── architecture.md       # 시스템 아키텍처
-├── scripts/                   # 프로젝트 전체 스크립트
-│   ├── setup.sh              # 초기 설정 스크립트
-│   ├── deploy.sh             # 배포 스크립트
-│   └── backup.sh             # 백업 스크립트
-├── docker/                    # Docker 설정
-│   ├── Dockerfile.backend
-│   ├── Dockerfile.frontend
-│   └── docker-compose.yml
-├── .github/                   # GitHub Actions
-│   └── workflows/
-│       ├── ci.yml
-│       └── deploy.yml
-├── .gitignore                 # Git 무시 파일
-├── package.json               # 루트 패키지 설정 (Monorepo 관리)
-└── README.md                  # 프로젝트 설명
-\`\`\`
+│   │   └── utils.ts
+│   ├── hooks/                    # 커스텀 React 훅
+│   │   ├── use-auth.ts
+│   │   ├── use-mobile.tsx
+│   │   └── use-toast.ts
+│   ├── types/                    # TypeScript 타입 정의
+│   │   └── auth.ts
+│   ├── styles/                   # 스타일 파일
+│   │   └── globals.css
+│   ├── public/                   # 정적 자산
+│   │   ├── placeholder-logo.png
+│   │   ├── placeholder-logo.svg
+│   │   └── ...
+│   ├── package.json             # 프론트엔드 의존성
+│   ├── next.config.mjs          # Next.js 설정
+│   ├── tailwind.config.ts       # Tailwind CSS 설정
+│   ├── tsconfig.json            # TypeScript 설정
+│   ├── postcss.config.mjs       # PostCSS 설정
+│   ├── components.json          # shadcn/ui 설정
+│   └── next-env.d.ts            # Next.js 타입 정의
+├── backend/                      # Django 백엔드
+│   ├── config/                  # Django 프로젝트 설정
+│   │   ├── __init__.py
+│   │   ├── settings/            # 환경별 설정 분리
+│   │   │   ├── __init__.py
+│   │   │   ├── base.py         # 공통 설정
+│   │   │   ├── development.py  # 개발 환경
+│   │   │   └── production.py   # 프로덕션 환경
+│   │   ├── urls.py             # 메인 URL 라우팅
+│   │   ├── wsgi.py             # WSGI 설정
+│   │   └── asgi.py             # ASGI 설정
+│   ├── apps/                   # Django 앱들
+│   │   ├── __init__.py
+│   │   ├── accounts/           # 사용자 인증 및 관리
+│   │   │   ├── __init__.py
+│   │   │   ├── admin.py
+│   │   │   ├── apps.py
+│   │   │   ├── models.py       # User, UserProfile 모델
+│   │   │   ├── serializers.py  # DRF 시리얼라이저
+│   │   │   ├── views.py        # API 뷰
+│   │   │   ├── urls.py         # URL 패턴
+│   │   │   ├── signals.py      # Django 시그널
+│   │   │   └── migrations/
+│   │   └── core/               # 공통 유틸리티
+│   │       ├── __init__.py
+│   │       └── pagination.py   # 커스텀 페이지네이션
+│   ├── requirements/           # 의존성 관리
+│   │   ├── base.txt           # 기본 패키지
+│   │   ├── development.txt    # 개발용 패키지
+│   │   └── production.txt     # 프로덕션용 패키지
+│   ├── static/                # 정적 파일
+│   ├── media/                 # 사용자 업로드 파일
+│   ├── logs/                  # 로그 파일
+│   ├── venv/                  # Python 가상환경
+│   └── manage.py              # Django 관리 명령어
+├── scripts/                    # 개발용 스크립트 모음
+│   ├── setup.sh              # 프로젝트 초기 설정
+│   ├── start-dev.sh          # 개발 서버 시작
+│   ├── migrate.sh            # 데이터베이스 마이그레이션
+│   ├── reset-db.sh           # 데이터베이스 초기화
+│   ├── docker-setup.sh       # Docker 환경 설정 (선택)
+│   └── help.sh               # 스크립트 도움말
+
+├── package.json              # 루트 워크스페이스 관리
+├── .gitignore               # Git 무시 파일
+└── README.md               # 📖 프로젝트 전체 가이드 (이 파일)
+```
 
 ## 🚀 빠른 시작
 
-### 1. 프로젝트 클론 및 초기 설정
+### 📋 사전 준비사항 (처음 설치하는 경우)
+```bash
+# macOS에서 Homebrew로 필수 도구 설치
+brew install python@3.11 node git
 
-\`\`\`bash
-git clone <repository-url>
+# Python 및 Node.js 버전 확인
+python3 --version  # Python 3.11+
+node --version      # Node.js 18+
+```
+
+### 1. 프로젝트 초기 설정
+```bash
+# 프로젝트 클론 후
+git clone <your-repo-url>
 cd prompthub
 
-# 초기 설정 스크립트 실행
-chmod +x scripts/setup.sh
+# 🔧 초기 설정 스크립트 실행 (추천)
 ./scripts/setup.sh
-\`\`\`
 
-### 2. 백엔드 설정
+# 📖 도움말 보기
+./scripts/help.sh
+```
 
-\`\`\`bash
-cd backend
+> 💡 **초보자 팁**: 위 스크립트가 모든 설정을 자동으로 해주므로, 복잡한 수동 설정은 필요 없습니다!
 
-# 가상환경 생성 및 활성화
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+### 2. 개발 서버 시작
+```bash
+# 🌐 개발 서버 시작 (백엔드 + 프론트엔드)
+./scripts/start-dev.sh
 
-# 의존성 설치
-pip install -r requirements/development.txt
-
-# 환경 변수 설정
-cp .env.example .env
-# .env 파일을 편집하여 필요한 값들을 설정
-
-# 데이터베이스 마이그레이션
-python manage.py makemigrations
-python manage.py migrate
-
-# 슈퍼유저 생성
-python manage.py createsuperuser
-
-# 개발 서버 실행
-python manage.py runserver
-\`\`\`
-
-### 3. 프론트엔드 설정
-
-\`\`\`bash
-cd frontend
-
-# 의존성 설치
-npm install
-# 또는
-yarn install
-
-# 환경 변수 설정
-cp .env.example .env.local
-# .env.local 파일을 편집하여 필요한 값들을 설정
-
-# 개발 서버 실행
+# 또는 npm 명령어로
 npm run dev
-# 또는
-yarn dev
-\`\`\`
+```
 
-### 4. 동시 실행 (Monorepo 스크립트)
+### 3. 개발 도구 (원클릭 스크립트)
+```bash
+# 🔄 데이터베이스 마이그레이션 (모델 변경 후)
+./scripts/migrate.sh
 
-\`\`\`bash
-# 루트 디렉토리에서
-npm install
-npm run dev  # 백엔드와 프론트엔드 동시 실행
-\`\`\`
+# 🗑️ 데이터베이스 완전 초기화 (주의: 모든 데이터 삭제!)
+./scripts/reset-db.sh
+
+# 📖 사용 가능한 모든 스크립트 보기
+./scripts/help.sh
+```
+
+### 4. 접속 정보
+```bash
+# 🌐 웹사이트
+프론트엔드: http://localhost:3000
+백엔드 API: http://localhost:8000/api/
+
+# 👨‍💼 Django 관리자 페이지
+URL: http://localhost:8000/admin/
+이메일: admin@prompthub.com
+비밀번호: admin123!
+
+# 📚 API 문서
+Swagger: http://localhost:8000/api/docs/
+```
+
+## ❓ 자주 묻는 질문 (FAQ)
+
+### Q: 처음 개발을 시작하는데 뭘 설치해야 하나요?
+```bash
+# macOS 기준 - 다음 명령어만 실행하세요
+brew install python@3.11 node git
+```
+
+### Q: 에러가 났는데 어떻게 해결하나요?
+```bash
+# 1. 데이터베이스 초기화
+./scripts/reset-db.sh
+
+# 2. 서버 재시작
+./scripts/start-dev.sh
+
+# 3. 도움말 확인
+./scripts/help.sh
+```
+
+### Q: 새로운 기능을 추가하려면?
+1. 백엔드 모델 변경 후: `./scripts/migrate.sh`
+2. 프론트엔드 컴포넌트는 `frontend/components/` 에 추가
+3. 페이지는 `frontend/app/` 에 추가
+
+### Q: 배포는 어떻게 하나요?
+나중에 개발이 완료된 후 Docker를 도입하여 배포할 예정입니다.
+현재는 개발에 집중하세요!
 
 ## 🔧 주요 기술 스택
 
@@ -340,9 +255,66 @@ npm run dev  # 백엔드와 프론트엔드 동시 실행
 - **React Hook Form**: 폼 관리
 - **Zod**: 스키마 검증
 - **Axios**: HTTP 클라이언트
-- **React Query**: 서버 상태 관리
-- **Zustand**: 클라이언트 상태 관리
+- **shadcn/ui**: 모던 UI 컴포넌트
+- **Tailwind CSS**: 유틸리티 CSS 프레임워크
+- **React Hook Form + Zod**: 폼 관리 및 검증
 - **next-themes**: 다크 모드 지원
+
+## 🎯 개발 워크플로우
+
+### 일반적인 개발 과정
+```bash
+# 1. 개발 시작
+./scripts/start-dev.sh
+
+# 2. 코드 수정 작업
+# - 백엔드: backend/apps/ 폴더에서 작업
+# - 프론트엔드: frontend/app/, frontend/components/ 에서 작업
+
+# 3. 데이터베이스 변경 시
+./scripts/migrate.sh
+
+# 4. 문제 발생 시
+./scripts/reset-db.sh  # 데이터베이스 초기화
+```
+
+### 폴더별 역할
+- `backend/apps/accounts/`: 사용자 관리
+- `backend/apps/core/`: 공통 유틸리티
+- `frontend/app/`: 페이지들
+- `frontend/components/`: 재사용 컴포넌트
+- `scripts/`: 개발 도구 스크립트
+
+## 🚨 문제 해결
+
+### 서버가 시작되지 않는 경우
+```bash
+# 1. 가상환경 확인
+ls backend/venv  # 존재하는지 확인
+
+# 2. Node 모듈 확인  
+ls frontend/node_modules  # 존재하는지 확인
+
+# 3. 초기 설정 다시 실행
+./scripts/setup.sh
+```
+
+### 데이터베이스 오류 발생 시
+```bash
+# 완전 초기화 (모든 데이터 삭제됨!)
+./scripts/reset-db.sh
+```
+
+### 포트 충돌 오류
+```bash
+# 실행 중인 서버 확인
+lsof -ti:3000  # 프론트엔드 포트
+lsof -ti:8000  # 백엔드 포트
+
+# 강제 종료
+kill -9 $(lsof -ti:3000)
+kill -9 $(lsof -ti:8000)
+```
 
 ## 📚 API 문서
 
@@ -352,11 +324,11 @@ npm run dev  # 백엔드와 프론트엔드 동시 실행
 - **ReDoc**: http://localhost:8000/api/redoc/
 - **OpenAPI Schema**: http://localhost:8000/api/schema/
 
-## 🧪 테스트
+## �� 테스트
 
 ### 백엔드 테스트
 
-\`\`\`bash
+```bash
 cd backend
 
 # 전체 테스트 실행
@@ -369,11 +341,11 @@ python manage.py test apps.accounts
 coverage run --source='.' manage.py test
 coverage report
 coverage html
-\`\`\`
+```
 
 ### 프론트엔드 테스트
 
-\`\`\`bash
+```bash
 cd frontend
 
 # 단위 테스트
@@ -384,17 +356,20 @@ npm run test:e2e
 
 # 테스트 커버리지
 npm run test:coverage
-\`\`\`
+```
 
 ## 🔐 환경 변수
 
 ### 백엔드 (.env)
 
-\`\`\`env
+```env
 # Django 설정
 SECRET_KEY=your-secret-key-here
 DEBUG=True
 ALLOWED_HOSTS=localhost,127.0.0.1
+
+# 프론트엔드 URL (CORS 설정용)
+FRONTEND_URL=http://localhost:3000
 
 # 데이터베이스
 DATABASE_URL=sqlite:///db.sqlite3
@@ -421,12 +396,12 @@ AWS_S3_REGION_NAME=ap-northeast-2
 # 소셜 로그인
 GOOGLE_OAUTH2_CLIENT_ID=your-google-client-id
 GOOGLE_OAUTH2_CLIENT_SECRET=your-google-client-secret
-\`\`\`
+```
 
 ### 프론트엔드 (.env.local)
 
-\`\`\`env
-# API 설정
+```env
+# API 설정 (하드코딩 방지를 위해 반드시 설정)
 NEXT_PUBLIC_API_URL=http://localhost:8000/api
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
@@ -440,25 +415,25 @@ GOOGLE_CLIENT_SECRET=your-google-client-secret
 
 # 분석
 NEXT_PUBLIC_GA_ID=your-google-analytics-id
-\`\`\`
+```
 
 ## 📦 배포
 
 ### Docker를 사용한 배포
 
-\`\`\`bash
+```bash
 # 전체 스택 빌드 및 실행
 docker-compose up --build
 
 # 프로덕션 모드
 docker-compose -f docker-compose.prod.yml up --build
-\`\`\`
+```
 
 ### 개별 배포
 
 #### 백엔드 (Django)
 
-\`\`\`bash
+```bash
 cd backend
 
 # 의존성 설치
@@ -472,11 +447,11 @@ python manage.py migrate
 
 # Gunicorn으로 서버 실행
 gunicorn config.wsgi:application --bind 0.0.0.0:8000
-\`\`\`
+```
 
 #### 프론트엔드 (Next.js)
 
-\`\`\`bash
+```bash
 cd frontend
 
 # 프로덕션 빌드
@@ -484,13 +459,13 @@ npm run build
 
 # 프로덕션 서버 실행
 npm start
-\`\`\`
+```
 
 ## 🔄 개발 워크플로우
 
 ### 1. 새로운 기능 개발
 
-\`\`\`bash
+```bash
 # 새 브랜치 생성
 git checkout -b feature/new-feature
 
@@ -507,11 +482,11 @@ npm run test
 git add .
 git commit -m "feat: add new feature"
 git push origin feature/new-feature
-\`\`\`
+```
 
 ### 2. 코드 품질 관리
 
-\`\`\`bash
+```bash
 # 백엔드 코드 포맷팅
 cd backend
 black .
@@ -522,7 +497,7 @@ flake8 .
 cd frontend
 npm run lint
 npm run format
-\`\`\`
+```
 
 ## 🤝 기여하기
 
@@ -542,18 +517,30 @@ npm run format
 - `test`: 테스트 코드 추가
 - `chore`: 빌드 업무 수정, 패키지 매니저 수정
 
-## 📄 라이선스
+## 📖 더 자세한 학습 자료
 
-이 프로젝트는 MIT 라이선스 하에 배포됩니다. 자세한 내용은 `LICENSE` 파일을 참조하세요.
+### Django 관련
+- [Django 공식 문서](https://docs.djangoproject.com/)
+- [Django REST Framework](https://www.django-rest-framework.org/)
 
-## 📞 지원
+### Next.js 관련  
+- [Next.js 공식 문서](https://nextjs.org/docs)
+- [React 공식 문서](https://react.dev/)
 
-문제가 발생하거나 질문이 있으시면 다음을 통해 연락해 주세요:
+### UI/UX 관련
+- [shadcn/ui 컴포넌트](https://ui.shadcn.com/)
+- [Tailwind CSS](https://tailwindcss.com/docs)
 
-- GitHub Issues: [프로젝트 이슈 페이지]
-- 이메일: your-email@example.com
-- 문서: [프로젝트 위키]
+## 🎉 마지막으로...
+
+이 프로젝트는 **초보개발자도 쉽게 시작할 수 있도록** 설계되었습니다!
+
+- 🔧 **복잡한 설정 NO**: 스크립트로 원클릭 해결
+- 📖 **자세한 가이드**: README 하나로 모든 설명
+- 🚀 **빠른 시작**: 몇 분 안에 개발 환경 구축
+- 💡 **초보자 친화적**: 에러 해결 방법까지 모두 포함
+
+**개발을 즐기세요!** 🚀
 
 ---
-
-**Happy Coding! 🚀**
+**PromptHub Team** | 📧 Contact: hu2chaso

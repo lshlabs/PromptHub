@@ -6,27 +6,25 @@ backend/env/
 # Environment variables
 .env
 .env.local
-.env.production
+.env.development.local
+.env.test.local
+.env.production.local
+frontend/.env.local
 backend/.env
-backend/.env.local
 
 # Database
 backend/db.sqlite3
-backend/*.db
+backend/*.sqlite3
 
 # Django
 backend/staticfiles/
 backend/media/
-backend/logs/*.log
+backend/logs/
 backend/__pycache__/
-backend/*/__pycache__/
-backend/*/*/__pycache__/
-backend/*/*/*/__pycache__/
-*.pyc
-*.pyo
-*.pyd
-__pycache__/
-.Python
+backend/**/__pycache__/
+backend/**/*.pyc
+backend/**/*.pyo
+backend/**/*.pyd
 
 # Next.js
 .next/
@@ -51,11 +49,11 @@ ehthumbs.db
 Thumbs.db
 
 # Logs
-logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
 # Coverage
 coverage/
@@ -64,3 +62,27 @@ coverage/
 # Temporary files
 *.tmp
 *.temp
+*.backup
+temp_serializer_backup.txt
+project_tree.txt
+
+# Frontend build artifacts in root (should be in frontend/)
+/.next/
+/node_modules/
+/components.json
+
+# Package manager lock files (keep only one)
+# pnpm-lock.yaml (using npm instead)
+
+# Django cache
+backend/redis_dump.rdb
+
+# Pytest
+.pytest_cache/
+.coverage
+
+# VS Code settings
+.vscode/settings.json
+
+# Local development files
+*.local
