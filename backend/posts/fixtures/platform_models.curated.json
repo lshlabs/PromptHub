@@ -1,0 +1,83 @@
+{
+  "platforms": [
+    {
+      "name": "OpenAI",
+      "models": [
+        { "name": "기타",     "slug": "other",    "variant_free_text_allowed": false },
+        { "name": "o1",       "slug": "o1",       "variant_free_text_allowed": true },
+        { "name": "o3",       "slug": "o3",       "variant_free_text_allowed": true },
+        { "name": "o4",       "slug": "o4",       "variant_free_text_allowed": true },
+        { "name": "GPT-4.1",  "slug": "gpt-4-1",  "variant_free_text_allowed": true },
+        { "name": "GPT-4.5",  "slug": "gpt-4-5",  "variant_free_text_allowed": true },
+        { "name": "GPT-4o",   "slug": "gpt-4o",   "variant_free_text_allowed": true },
+        { "name": "GPT-5",    "slug": "gpt-5",    "variant_free_text_allowed": true }
+      ]
+    },
+    {
+      "name": "Anthropic",
+      "models": [
+        { "name": "기타",                "slug": "other",              "variant_free_text_allowed": false },
+        { "name": "Claude 3.5 Sonnet",  "slug": "claude-3-5-sonnet",   "variant_free_text_allowed": true },
+        { "name": "Claude 3.7 Sonnet",  "slug": "claude-3-7-sonnet",   "variant_free_text_allowed": true },
+        { "name": "Claude 4 Sonnet",    "slug": "claude-4-sonnet",     "variant_free_text_allowed": true },
+        { "name": "Claude 4 Opus",      "slug": "claude-4-opus",       "variant_free_text_allowed": true },
+        { "name": "Claude 4.1 Opus",    "slug": "claude-4-1-opus",     "variant_free_text_allowed": true }
+      ]
+    },
+    {
+      "name": "Google",
+      "models": [
+        { "name": "기타",               "slug": "other",             "variant_free_text_allowed": false },
+        { "name": "Gemini 1.5 Flash",  "slug": "gemini-1-5-flash",  "variant_free_text_allowed": true },
+        { "name": "Gemini 1.5 Pro",    "slug": "gemini-1-5-pro",    "variant_free_text_allowed": true },
+        { "name": "Gemini 2.0 Flash",  "slug": "gemini-2-0-flash",  "variant_free_text_allowed": true },
+        { "name": "Gemini 2.5 Flash",  "slug": "gemini-2-5-flash",  "variant_free_text_allowed": true },
+        { "name": "Gemini 2.5 Pro",    "slug": "gemini-2-5-pro",    "variant_free_text_allowed": true }
+      ]
+    },
+    {
+      "name": "xAI",
+      "models": [
+        { "name": "기타",      "slug": "other",     "variant_free_text_allowed": false },
+        { "name": "Grok-1.5", "slug": "grok-1-5",  "variant_free_text_allowed": true },
+        { "name": "Grok-2",   "slug": "grok-2",    "variant_free_text_allowed": true },
+        { "name": "Grok-3",   "slug": "grok-3",    "variant_free_text_allowed": true },
+        { "name": "Grok-4",   "slug": "grok-4",    "variant_free_text_allowed": true }
+      ]
+    },
+    {
+      "name": "Meta",
+      "models": [
+        { "name": "기타",            "slug": "other",           "variant_free_text_allowed": false },
+        { "name": "Llama 3.1",     "slug": "llama-3-1",      "variant_free_text_allowed": true },
+        { "name": "Llama 3.2",     "slug": "llama-3-2",      "variant_free_text_allowed": true },
+        { "name": "Llama 3.3",     "slug": "llama-3-3",      "variant_free_text_allowed": true },
+        { "name": "Llama 4 Scout", "slug": "llama-4-scout",  "variant_free_text_allowed": true },
+        { "name": "Llama 4 Maverick", "slug": "llama-4-maverick", "variant_free_text_allowed": true }
+      ]
+    },
+    {
+      "name": "Mistral",
+      "models": [
+        { "name": "기타",              "slug": "other",            "variant_free_text_allowed": false },
+        { "name": "Mistral Small",    "slug": "mistral-small",    "variant_free_text_allowed": true },
+        { "name": "Mistral Small 3",  "slug": "mistral-small-3",  "variant_free_text_allowed": true },
+        { "name": "Mistral Small 3.1","slug": "mistral-small-3-1","variant_free_text_allowed": true },
+        { "name": "Mistral Small 3.2","slug": "mistral-small-3-2","variant_free_text_allowed": true },
+        { "name": "Mistral Large 2",  "slug": "mistral-large-2",  "variant_free_text_allowed": true }
+      ]
+    },
+    {
+      "name": "DeepSeek",
+      "models": [
+        { "name": "기타",           "slug": "other",          "variant_free_text_allowed": false },
+        { "name": "DeepSeek V2.5", "slug": "deepseek-v2-5", "variant_free_text_allowed": true },
+        { "name": "DeepSeek VL2",  "slug": "deepseek-vl2",  "variant_free_text_allowed": true },
+        { "name": "DeepSeek V3",   "slug": "deepseek-v3",   "variant_free_text_allowed": true },
+        { "name": "DeepSeek R1",   "slug": "deepseek-r1",   "variant_free_text_allowed": true }
+      ]
+    }
+  ]
+}
+
+

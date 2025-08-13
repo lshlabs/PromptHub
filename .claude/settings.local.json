@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(source:*)",
+      "Bash(pip install:*)",
+      "Bash(npm run build:*)",
+      "Bash(pkill:*)",
+      "Bash(true)",
+      "Bash(rm:*)",
+      "Bash(npx tsc:*)",
+      "Bash(./scripts/start-dev.sh)",
+      "Bash(python manage.py startapp:*)",
+      "mcp__filesystem__create_directory",
+      "Bash(./scripts/migrate.sh:*)",
+      "Bash(python manage.py:*)",
+      "Bash(./scripts/setup.sh:*)",
+      "Bash(./venv/bin/python manage.py makemigrations:*)",
+      "Bash(./venv/bin/python manage.py migrate:*)",
+      "Bash(./venv/bin/python manage.py loaddata:*)",
+      "Bash(./venv/bin/python manage.py load_initial_posts_data:*)",
+      "Bash(./venv/bin/python manage.py runserver:*)",
+      "Bash(curl:*)",
+      "Bash(./venv/bin/python manage.py update_platform_model_data:*)",
+      "mcp__filesystem__read_multiple_files",
+      "mcp__filesystem__list_directory",
+      "mcp__filesystem__edit_file",
+      "Bash(./scripts/check-servers.sh:*)",
+      "Bash(./scripts/clean-ports.sh:*)",
+      "mcp__filesystem__read_file",
+      "mcp__filesystem__write_file",
+      "Bash(osascript:*)",
+      "Bash(screencapture:*)",
+      "Bash(./venv/bin/python manage.py load_trending_data:*)",
+      "Bash(timeout:*)",
+      "Bash(./venv/bin/python manage.py check:*)",
+      "Bash(./scripts/help.sh:*)",
+      "Bash(./venv/bin/python manage.py shell:*)"
+    ],
+    "deny": []
+  }
+}

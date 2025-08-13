@@ -1,0 +1,12 @@
+{
+  "platforms": [
+    {
+      "name": "기타",
+      "models": [
+        { "name": "기타", "slug": "other", "variant_free_text_allowed": false }
+      ]
+    }
+  ]
+}
+
+
