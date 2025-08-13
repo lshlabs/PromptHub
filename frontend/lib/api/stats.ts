@@ -3,6 +3,7 @@ import { API_ENDPOINTS } from '@/types/api'
 import { get } from '@/lib/api/client'
 
 export const statsApi = {
+  /** 대시보드 통계 */
   getDashboardStats: async () => {
     return get<
       ApiResponse<{
@@ -21,6 +22,7 @@ export const statsApi = {
     >(API_ENDPOINTS.stats.dashboard)
   },
 
+  /** 사용자 통계 */
   getUserStats: async () => {
     return get<
       ApiResponse<{

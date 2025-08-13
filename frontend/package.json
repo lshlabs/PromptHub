@@ -7,6 +7,7 @@
     "dev": "next dev",
     "dev-external": "next dev -H 0.0.0.0",
     "lint": "next lint",
+    "deadcode": "tsc --noEmit && node -e \"const rg='rg -n --hidden --glob !node_modules --no-ignore --trim --pcre2'; const unused=[]; require('child_process').execSync(rg+' 'export (const|function|class) \\w+'').toString().split('\n').filter(Boolean).forEach(()=>{}); console.log('Dead code quick scan is informational only.');\"",
     "lint:fix": "next lint --fix",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",

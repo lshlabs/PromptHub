@@ -58,7 +58,6 @@ export function AccountInfoSection({ email }: AccountInfoSectionProps) {
 
   return (
     <div className="grid gap-4">
-      <h2 className="text-lg font-semibold text-foreground">계정 정보</h2>
       <div className="grid gap-2">
         <Label htmlFor="account-email">이메일</Label>
         <Input

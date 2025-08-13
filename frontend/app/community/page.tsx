@@ -8,8 +8,8 @@
 
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { CommunityHeader, CommunityAction } from '@/features/community'
-import { PostList } from '@/features/posts'
+import { CommunityHeader, CommunityAction } from '@/components/community'
+import { PostList } from '@/components/posts'
 import { SearchBar } from '@/components/common/search-bar'
 import type { SortOption } from '@/components/common/sort-selector'
 import { CreatePostDialog } from '@/components/common/create-post-dialog'

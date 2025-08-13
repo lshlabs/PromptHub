@@ -122,9 +122,7 @@ export function PostContentSections({
             <TooltipProvider>
               <div className="flex flex-wrap gap-2">
                 {finalTags.map((tag, index) => {
-                  // 모바일에서 4번째 태그부터는 +N 형태로 표시
                   const isMobileHidden = index >= 3
-
                   return (
                     <CustomBadge
                       key={index}
@@ -137,7 +135,6 @@ export function PostContentSections({
                   )
                 })}
 
-                {/* 모바일에서 4번째 태그부터 +N 표시 (툴팁 포함) */}
                 {finalTags.length > 3 && (
                   <Tooltip>
                     <TooltipTrigger asChild>

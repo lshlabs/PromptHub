@@ -185,7 +185,6 @@ export default function CategoryRankings({
                         {(() => {
                           const score =
                             typeof model.score === 'number' ? model.score.toString() : model.score
-                          // Input/Output 가격 형식인지 확인 (예: "Input $0.04 / Output $0.14")
                           if (
                             score.includes('Input') &&
                             score.includes('Output') &&

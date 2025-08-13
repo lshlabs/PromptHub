@@ -3,11 +3,11 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { BookmarkHeader } from '@/components/bookmark/bookmark-header'
-import { PostList } from '@/features/posts'
+import { PostList } from '@/components/posts'
 import { SearchBar } from '@/components/common/search-bar'
 import { postsApi } from '@/lib/api/posts'
 import { userDataApi } from '@/lib/api/userData'
-import { isAuthenticated } from '@/lib/api'
+import { isAuthenticated } from '@/lib/api/client'
 import type { PostCard, Platform, Model, Category } from '@/types/api'
 
 export default function MyBookmarksPage() {
@@ -102,7 +102,6 @@ export default function MyBookmarksPage() {
   const handleBrowsePrompts = () => {
     router.push('/community')
   }
-
 
   return (
     <div className="min-h-screen bg-gray-50">

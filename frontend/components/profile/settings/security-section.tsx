@@ -91,7 +91,6 @@ export function SecuritySection({
 
   return (
     <div className="grid gap-4">
-      <h2 className="text-lg font-semibold text-foreground">보안</h2>
       <div className="flex items-center justify-between">
         <div>
           <Label htmlFor="two-factor-auth">2단계 인증</Label>

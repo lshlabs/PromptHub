@@ -32,7 +32,6 @@ interface PostListProps {
     models?: string
   }
   sortBy?: SortOption
-  // 메타데이터 props 추가
   platformsData?: any[]
   modelsData?: any[]
   categoriesData?: any[]
@@ -55,7 +54,6 @@ export function PostList({
   useApi = false,
   searchParams,
   sortBy = 'latest',
-  // 메타데이터 props 추가
   platformsData: externalPlatformsData,
   modelsData: externalModelsData,
   categoriesData: externalCategoriesData,
@@ -78,7 +76,6 @@ export function PostList({
   const [internalCurrentPage, setInternalCurrentPage] = useState(1)
 
   useEffect(() => {
-    // 외부에서 메타데이터가 전달되지 않았을 때만 API 호출
     if (!externalPlatformsData || !externalModelsData || !externalCategoriesData) {
       const loadMetadata = async () => {
         try {

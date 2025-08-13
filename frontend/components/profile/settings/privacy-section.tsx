@@ -25,7 +25,6 @@ export function PrivacySection({
 }: PrivacySectionProps) {
   return (
     <div className="grid gap-4">
-      <h2 className="text-lg font-semibold text-gray-800">개인정보 설정</h2>
       <div className="flex items-center justify-between">
         <div>
           <Label htmlFor="public-profile">프로필 공개</Label>

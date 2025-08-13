@@ -1,7 +1,7 @@
 'use client'
 
 import { useRef, useState } from 'react'
-import { TrendingHero, PostsList, CategoryRankings } from '@/features/trending'
+import { TrendingHero, PostsList, CategoryRankings } from '@/components/trending'
 
 export default function TrendingPage() {
   const [selectedModel, setSelectedModel] = useState<string | null>(null)

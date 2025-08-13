@@ -1,15 +1,16 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card, CardHeader, CardContent } from '@/components/ui/card'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/hooks/use-toast'
-import { ProfileInfoCard, ProfileStatsSection, ProfilePostsSection } from '@/features/profile'
+import { ProfileInfoCard, ProfileStatsSection, ProfilePostsSection } from '@/components/profile'
 import { authApi } from '@/lib/api/auth'
 import { userDataApi } from '@/lib/api/userData'
 import { statsApi } from '@/lib/api/stats'
-import { handleApiError, getAccessToken } from '@/lib/api/client'
-import type { UserData as BackendUserData } from '@/types/api'
-import { useAuthContext } from '@/features/auth'
+import { handleApiError } from '@/lib/api/client'
+import { useAuthContext } from '@/components/layout/auth-provider'
 import { useAuth } from '@/hooks/use-auth'
 
 // 프론트엔드 사용자 데이터 타입
@@ -47,7 +48,7 @@ interface BackendPostData {
 }
 
 // PostCard 타입 import
-import type { PostCard } from '@/lib/api'
+import type { PostCard } from '@/types/api'
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -57,7 +58,6 @@ export default function ProfilePage() {
 
   // 중복 실행 방지 플래그 (useRef 사용)
   const isLoadingDataRef = useRef(false)
-  const [isLoadingData, setIsLoadingData] = useState(false)
 
   // 사용자 데이터 상태
   const [userData, setUserData] = useState<ProfileUserData>({
@@ -72,9 +72,14 @@ export default function ProfilePage() {
 
   // 게시글 데이터 상태
   const [userPosts, setUserPosts] = useState<PostCard[]>([])
+  const [likedPosts, setLikedPosts] = useState<PostCard[]>([])
+  const [bookmarkedPosts, setBookmarkedPosts] = useState<PostCard[]>([])
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [likedLoading, setLikedLoading] = useState(false)
+  const [bookmarkedLoading, setBookmarkedLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [activeTab, setActiveTab] = useState<'my' | 'liked' | 'bookmarked'>('my')
   const [backendStats, setBackendStats] = useState({
     postsCount: 0,
     totalLikes: 0,
@@ -82,30 +87,7 @@ export default function ProfilePage() {
     totalBookmarks: 0,
   })
 
-  // 백엔드 게시글 데이터를 PostCard 형식으로 변환
-  const transformBackendPostData = (backendPost: BackendPostData): PostCard => {
-    return {
-      id: backendPost.id,
-      title: backendPost.title,
-      author: backendPost.author,
-      authorInitial: backendPost.authorInitial,
-      avatarSrc: backendPost.avatarSrc || undefined,
-      createdAt: backendPost.createdAt,
-      relativeTime: backendPost.relativeTime,
-      views: backendPost.views,
-      platformId: backendPost.platformId,
-      modelId: backendPost.modelId,
-      categoryId: backendPost.categoryId,
-      modelEtc: backendPost.modelEtc,
-      categoryEtc: backendPost.categoryEtc,
-      satisfaction: backendPost.satisfaction || undefined,
-      tags: backendPost.tags,
-      likes: backendPost.likes,
-      isLiked: backendPost.isLiked,
-      bookmarks: backendPost.bookmarks,
-      isBookmarked: backendPost.isBookmarked,
-    }
-  }
+  // (간소화) 백엔드→프론트 데이터 변환은 각 API에서 이미 일관화되어 있어 별도 변환 함수 생략
 
   // 통계 데이터 계산 (백엔드 데이터 우선 사용)
   const stats = {
@@ -117,13 +99,7 @@ export default function ProfilePage() {
 
   // 백엔드 데이터를 프론트엔드 형식으로 변환
   const transformBackendData = (backendData: any): ProfileUserData => {
-    console.log('🔍 transformBackendData 입력:', backendData)
-
-    // 백엔드 응답이 {user: {...}} 형태인 경우 user 객체 추출
     const userData = backendData.user || backendData
-
-    console.log('🔍 추출된 userData:', userData)
-
     return {
       username: userData.username || '사용자',
       bio: userData.bio || '',
@@ -144,19 +120,13 @@ export default function ProfilePage() {
     }
 
     try {
-      console.log('🔍 loadProfileData 시작')
       isLoadingDataRef.current = true
       setIsLoading(true)
-
-      console.log('✅ 프로필/통계/목록 데이터 로드 시작')
       const [profileRes, statsRes, myPostsRes] = await Promise.all([
         authApi.getProfile(),
         statsApi.getUserStats(),
         userDataApi.getUserPosts({ page: 1, page_size: 50 }),
       ])
-      console.log('🔍 프로필 API 응답:', profileRes)
-      console.log('🔍 사용자 통계 응답:', statsRes)
-      console.log('🔍 사용자 게시글 응답:', myPostsRes)
 
       if (!profileRes) {
         throw new Error('사용자 데이터를 찾을 수 없습니다.')
@@ -165,12 +135,10 @@ export default function ProfilePage() {
       // 사용자 프로필 데이터 변환
       const transformedData = transformBackendData(profileRes)
       setUserData(transformedData)
-      console.log('✅ 사용자 데이터 변환 완료:', transformedData)
 
       // 사용자 게시글 (API 결과 사용)
       if (myPostsRes?.data?.results && Array.isArray(myPostsRes.data.results)) {
         setUserPosts(myPostsRes.data.results)
-        console.log('✅ 사용자 게시글 데이터 설정 완료:', myPostsRes.data.results.length, '개')
       }
 
       // 사용자 통계 (API 결과 사용)
@@ -182,10 +150,9 @@ export default function ProfilePage() {
           totalViews: s.total_views || 0,
           totalBookmarks: s.total_bookmarks || 0,
         })
-        console.log('✅ 사용자 통계 데이터 설정 완료')
       }
     } catch (error) {
-      console.error('❌ 프로필 로드 실패:', error)
+      console.error('프로필 로드 실패:', error)
       router.push('/')
     } finally {
       setIsLoading(false)
@@ -196,10 +163,44 @@ export default function ProfilePage() {
   // 사용자 정보가 있을 때 프로필 데이터 로드
   useEffect(() => {
     if (user && !authLoading) {
-      console.log('✅ 사용자 정보가 있음 - 프로필 데이터 로드')
       loadProfileData()
     }
   }, [user, authLoading])
+
+  // 탭 전환 시 좋아요/북마크 Lazy-load
+  useEffect(() => {
+    const loadLiked = async () => {
+      try {
+        setLikedLoading(true)
+        const res = await userDataApi.getLikedPosts({ page: 1, page_size: 50 })
+        if (res?.data?.results) setLikedPosts(res.data.results)
+      } catch (e) {
+        console.warn('좋아요한 게시글 로드 실패', e)
+        setLikedPosts([])
+      } finally {
+        setLikedLoading(false)
+      }
+    }
+    const loadBookmarked = async () => {
+      try {
+        setBookmarkedLoading(true)
+        const res = await userDataApi.getBookmarkedPosts({ page: 1, page_size: 50 })
+        if (res?.data?.results) setBookmarkedPosts(res.data.results)
+      } catch (e) {
+        console.warn('북마크한 게시글 로드 실패', e)
+        setBookmarkedPosts([])
+      } finally {
+        setBookmarkedLoading(false)
+      }
+    }
+
+    if (activeTab === 'liked' && likedPosts.length === 0 && !likedLoading) {
+      loadLiked()
+    }
+    if (activeTab === 'bookmarked' && bookmarkedPosts.length === 0 && !bookmarkedLoading) {
+      loadBookmarked()
+    }
+  }, [activeTab, likedPosts.length, bookmarkedPosts.length, likedLoading, bookmarkedLoading])
 
   // 이벤트 핸들러들
   const handleSave = async (newUserData: ProfileUserData) => {
@@ -260,7 +261,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6 text-gray-900 md:p-10">
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 lg:grid-cols-3">
-        {/* Left Column: Profile Info & Edit Form */}
+        {/* Left Column */}
         <div className="space-y-8 lg:col-span-1">
           <ProfileInfoCard
             userData={userData}
@@ -273,10 +274,54 @@ export default function ProfilePage() {
           />
         </div>
 
-        {/* Right Column: Statistics & Written Posts */}
+        {/* Right Column */}
         <div className="space-y-8 lg:col-span-2">
-          <ProfileStatsSection stats={stats} />
-          <ProfilePostsSection posts={userPosts} onPostClick={handlePostClick} />
+          <ProfileStatsSection stats={stats} isLoading={isLoading} title={''} contained />
+          <Card className="overflow-hidden border border-gray-100 bg-white">
+            <CardHeader className="pb-2">
+              <Tabs
+                value={activeTab}
+                onValueChange={v => setActiveTab(v as 'my' | 'liked' | 'bookmarked')}>
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="my">내 리뷰</TabsTrigger>
+                  <TabsTrigger value="liked">좋아요</TabsTrigger>
+                  <TabsTrigger value="bookmarked">북마크</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </CardHeader>
+            <CardContent className="pt-2">
+              {(() => {
+                const postsForTab =
+                  activeTab === 'my'
+                    ? userPosts
+                    : activeTab === 'liked'
+                      ? likedPosts
+                      : bookmarkedPosts
+                const loadingForTab =
+                  activeTab === 'my'
+                    ? isLoading
+                    : activeTab === 'liked'
+                      ? likedLoading
+                      : bookmarkedLoading
+                const variantForTab: 'default' | 'bookmark' | 'trending' | 'user-posts' =
+                  activeTab === 'bookmarked'
+                    ? 'bookmark'
+                    : activeTab === 'my'
+                      ? 'user-posts'
+                      : 'default'
+                return (
+                  <ProfilePostsSection
+                    posts={postsForTab}
+                    onPostClick={handlePostClick}
+                    isLoading={loadingForTab}
+                    variant={variantForTab}
+                    title={''}
+                    contained
+                  />
+                )
+              })()}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

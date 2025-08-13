@@ -35,7 +35,6 @@ export function AccountManagement({ onDeleteAccount }: AccountManagementProps) {
 
   return (
     <div className="grid gap-4">
-      <h2 className="text-lg font-semibold text-red-700">계정 관리</h2>
       <div className="rounded-lg border border-red-200 bg-red-50 p-4">
         <h3 className="mb-2 font-medium text-red-800">계정 삭제</h3>
         <p className="mb-4 text-sm text-red-600">
@@ -43,7 +42,10 @@ export function AccountManagement({ onDeleteAccount }: AccountManagementProps) {
         </p>
         <AlertDialog>
           <AlertDialogTrigger asChild>
-            <Button variant="destructive" size="sm">
+            <Button
+              variant="destructive"
+              size="sm"
+              className="bg-red-600 text-white hover:bg-red-700">
               계정 삭제
             </Button>
           </AlertDialogTrigger>

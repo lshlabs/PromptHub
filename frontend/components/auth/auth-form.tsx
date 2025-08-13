@@ -15,7 +15,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
-import { useAuthContext } from '@/features/auth'
+import { useAuthContext } from '@/components/layout/auth-provider'
 
 interface AuthFormProps {
   defaultTab?: 'login' | 'signup'

@@ -25,7 +25,6 @@ export function NotificationSection({
 }: NotificationSectionProps) {
   return (
     <div className="grid gap-4">
-      <h2 className="text-lg font-semibold text-gray-800">알림 설정</h2>
       <div className="flex items-center justify-between">
         <div>
           <Label htmlFor="email-notifications">이메일 알림</Label>

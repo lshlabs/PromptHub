@@ -11,7 +11,7 @@ import { useEffect, useState } from 'react'
 import { Filter, Plus } from 'lucide-react'
 import CustomButton from '@/components/common/custom-button'
 import { SortSelector, type SortOption } from '@/components/common/sort-selector'
-import { FilterPanel } from './community-filter'
+import { FilterPanel } from '@/components/community/community-filter'
 import type { Platform, Category } from '@/types/api'
 
 interface CommunityActionProps {

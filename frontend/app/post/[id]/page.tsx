@@ -9,7 +9,7 @@
 import { use, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { GoBackButton } from '@/components/common/go-back-button'
-import { PostHeader, PostContentSections, PostActions, PostList } from '@/features/posts'
+import { PostHeader, PostContentSections, PostActions, PostList } from '@/components/posts'
 import type { PostDetail, PostCard } from '@/types/api'
 import { useAuth } from '@/hooks/use-auth'
 import { postsApi } from '@/lib/api/posts'

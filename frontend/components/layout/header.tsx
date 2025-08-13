@@ -27,7 +27,7 @@ import {
   LogOut,
   User,
 } from 'lucide-react'
-import { AuthForm } from '@/features/auth'
+import { default as AuthForm } from '@/components/auth/auth-form'
 import { useAuthContext } from '@/components/layout/auth-provider'
 import {
   DropdownMenu,

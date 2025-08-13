@@ -9,14 +9,6 @@
 
 import { Users, FileText, Star, MessageSquare, Clock } from 'lucide-react'
 
-// TODO(데이터 연동): 상위 컴포넌트에서 `statsApi.getDashboardStats()` 응답을 받아
-// 이 컴포넌트의 `stats` 프로퍼티로 매핑하여 전달하세요. 권장 매핑은 아래와 같습니다.
-// - activeUsers      ← data.total_users (백엔드에서 "active_users" 제공 시 해당 값 사용)
-// - sharedPrompts    ← data.total_posts
-// - averageSatisfaction ← data.avg_satisfaction (백엔드 확장 필요: 전체 평균 만족도 추가)
-// - weeklyAdded      ← data.weekly_added_posts (백엔드 확장 필요: 최근 7일 신규 게시글 수)
-// 참고: API 클라이언트는 `@/lib/api/stats` 의 `statsApi.getDashboardStats()` 사용
-
 interface CommunityStats {
   activeUsers: number
   sharedPrompts: number

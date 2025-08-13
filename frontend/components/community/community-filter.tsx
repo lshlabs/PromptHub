@@ -112,7 +112,6 @@ export function FilterPanel({
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   {platforms
                     .slice()
-                    // 정렬 규칙: id 오름차순, id=0(기타)는 맨 뒤
                     .sort((a, b) => {
                       const isOtherA = a?.id === 0 || a?.name === '기타'
                       const isOtherB = b?.id === 0 || b?.name === '기타'
@@ -162,7 +161,6 @@ export function FilterPanel({
                   <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                     {models
                       .filter(model => model.platform?.toString() === currentPlatformModel)
-                      // 정렬 규칙: DB 정의 sort_order 오름차순, sort_order=0은 마지막, id=0(기타)도 마지막
                       .sort((a, b) => {
                         const isOtherA = a?.id === 0 || a?.name === '기타' || a?.slug === 'other'
                         const isOtherB = b?.id === 0 || b?.name === '기타' || b?.slug === 'other'
@@ -223,7 +221,6 @@ export function FilterPanel({
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                   {categories
                     .slice()
-                    // 정렬 규칙: id 오름차순, id=0(기타)는 맨 뒤
                     .sort((a, b) => {
                       const isOtherA = a?.id === 0 || a?.name === '기타'
                       const isOtherB = b?.id === 0 || b?.name === '기타'

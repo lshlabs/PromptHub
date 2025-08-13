@@ -35,22 +35,17 @@ interface PostHeaderProps {
   categoriesData?: any[]
 }
 
-// 날짜를 yyyy-mm-dd hh:mm 형식으로 변환하는 함수
 const formatDateTime = (dateString: string): string => {
   try {
     const date = new Date(dateString)
-
-    // 유효하지 않은 날짜인지 확인
     if (isNaN(date.getTime())) {
       return '날짜 형식 오류'
     }
-
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')
     const hours = String(date.getHours()).padStart(2, '0')
     const minutes = String(date.getMinutes()).padStart(2, '0')
-
     return `${year}-${month}-${day} ${hours}:${minutes}`
   } catch (error) {
     console.error('날짜 변환 오류:', error)
@@ -79,12 +74,10 @@ export function PostHeader({
   modelsData,
   categoriesData,
 }: PostHeaderProps) {
-  // 절대시간으로 변환
   const formattedDateTime = formatDateTime(createdAt)
 
   return (
     <div className={className}>
-      {/* 제목 */}
       <div className="mb-4 flex items-center justify-between gap-2">
         <h1 className="text-gray-900">{title}</h1>
         <div className="flex shrink-0 items-center gap-1 rounded-full bg-orange-500 px-2 py-1 sm:px-3 sm:py-1.5">
@@ -94,7 +87,6 @@ export function PostHeader({
           </span>
         </div>
       </div>
-      {/* 작성자 & 평점 */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8 ring-1 ring-gray-100 lg:h-10 lg:w-10">
@@ -118,7 +110,6 @@ export function PostHeader({
         </div>
       </div>
 
-      {/* 메타 정보 */}
       <div className="mb-4 flex items-center gap-4">
         <div className="flex items-center gap-1.5 text-gray-500">
           <div className="h-2 w-2 rounded-full bg-green-400"></div>
@@ -131,11 +122,9 @@ export function PostHeader({
         </div>
       </div>
 
-      {/* 모델/카테고리 태그 */}
       <div className="mb-5 flex gap-2">
         <CustomBadge variant="blue" size="responsive">
           {(() => {
-            // model_detail이 있으면 우선 표시, 없으면 기존 로직
             if (model_detail && model_detail.trim()) {
               return model_detail
             }
@@ -147,7 +136,6 @@ export function PostHeader({
         </CustomBadge>
       </div>
 
-      {/* 구분선 */}
       <div className="mb-5 h-px w-full bg-gradient-to-r from-transparent via-gray-200 to-transparent"></div>
     </div>
   )

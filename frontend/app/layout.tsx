@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { AuthProvider } from '@/features/auth'
+import { AuthProvider } from '@/components/layout/auth-provider'
 import Header from '@/components/layout/header'
 import Footer from '@/components/layout/footer'
 import { Toaster } from '@/components/ui/toaster'

@@ -3,15 +3,15 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { ChevronLeft } from 'lucide-react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import AvatarWithColors from '@/components/common/avatar-with-colors'
 import { AccountInfoSection } from '@/components/profile/settings/account-info-section'
 import { NotificationSection } from '@/components/profile/settings/notification-section'
 import { PrivacySection } from '@/components/profile/settings/privacy-section'
 import { SecuritySection } from '@/components/profile/settings/security-section'
 import { AccountManagement } from '@/components/profile/settings/account-management'
-import { useAuthContext } from '@/features/auth'
+import { useAuthContext } from '@/components/layout/auth-provider'
 import { authApi } from '@/lib/api/auth'
 
 export default function SettingsPage() {
@@ -25,6 +25,9 @@ export default function SettingsPage() {
   const [accountPublicProfile, setAccountPublicProfile] = useState(true)
   const [accountDataSharing, setAccountDataSharing] = useState(false)
   const [securityTwoFactorAuth, setSecurityTwoFactorAuth] = useState(false)
+  const [activeTab, setActiveTab] = useState<
+    'account' | 'notification' | 'privacy' | 'security' | 'manage'
+  >('account')
 
   // 초기 설정 로드
   useEffect(() => {
@@ -43,9 +46,7 @@ export default function SettingsPage() {
     initSettings()
   }, [])
 
-  const handleBack = () => {
-    router.back()
-  }
+  const handleBack = () => router.back()
 
   // 실시간 저장 함수들
   const handleNotificationsChange = async (value: boolean) => {
@@ -127,51 +128,78 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
-        <div className="mx-auto max-w-2xl space-y-6">
-          <Button variant="ghost" onClick={handleBack} className="mb-4 flex items-center gap-2">
-            <ChevronLeft className="h-4 w-4" />
-            뒤로 가기
-          </Button>
-          <Card className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
-            <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
-            <CardHeader className="p-6 pb-0">
-              <CardTitle className="text-2xl font-bold text-gray-900">설정</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="grid gap-8 p-6">
-                <AccountInfoSection email={accountEmail} />
-
-                <Separator />
-
-                <NotificationSection
-                  emailNotificationsEnabled={accountNotificationsEnabled}
-                  inAppNotificationsEnabled={accountInAppNotificationsEnabled}
-                  onEmailNotificationsChange={handleNotificationsChange}
-                  onInAppNotificationsChange={handleInAppNotificationsChange}
-                />
-
-                <Separator />
-
-                <PrivacySection
-                  publicProfile={accountPublicProfile}
-                  dataSharing={accountDataSharing}
-                  onPublicProfileChange={handlePublicProfileChange}
-                  onDataSharingChange={handleDataSharingChange}
-                />
-
-                <Separator />
-
-                <SecuritySection
-                  twoFactorAuth={securityTwoFactorAuth}
-                  onTwoFactorAuthChange={handleTwoFactorAuthChange}
-                  onTerminateSession={handleTerminateSession}
-                />
-
-                <Separator />
-
-                <AccountManagement onDeleteAccount={handleDeleteAccount} />
+        <div className="mx-auto max-w-3xl space-y-6">
+          {/* Hero */}
+          <div className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white">
+            <div className="pointer-events-none absolute inset-0 opacity-50 [background:radial-gradient(1200px_600px_at_100%_-10%,rgba(59,130,246,0.15),transparent_60%),radial-gradient(1200px_600px_at_0%_-10%,rgba(168,85,247,0.15),transparent_60%)]" />
+            <div className="relative flex items-center gap-4 p-6">
+              <AvatarWithColors
+                username={user?.username || undefined}
+                email={user?.email || undefined}
+                avatarUrl={(user as any)?.profile_image || null}
+                avatarColor1={(user as any)?.avatar_color1}
+                avatarColor2={(user as any)?.avatar_color2}
+                size="lg"
+              />
+              <div className="min-w-0">
+                <h1 className="truncate text-2xl font-bold text-gray-900">설정</h1>
+                <p className="truncate text-sm text-muted-foreground">{accountEmail}</p>
               </div>
-            </CardContent>
+              <div className="ml-auto">
+                <Button variant="ghost" onClick={handleBack} className="text-muted-foreground">
+                  뒤로
+                </Button>
+              </div>
+            </div>
+            <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
+          </div>
+
+          {/* Settings Tabs */}
+          <Card className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+            <Tabs value={activeTab} onValueChange={v => setActiveTab(v as any)}>
+              <CardHeader className="p-0">
+                <div className="border-b border-gray-100 bg-white/60 p-2">
+                  <TabsList className="grid w-full grid-cols-5">
+                    <TabsTrigger value="account">계정</TabsTrigger>
+                    <TabsTrigger value="notification">알림</TabsTrigger>
+                    <TabsTrigger value="privacy">개인정보</TabsTrigger>
+                    <TabsTrigger value="security">보안</TabsTrigger>
+                    <TabsTrigger value="manage">관리</TabsTrigger>
+                  </TabsList>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6">
+                <TabsContent value="account" className="m-0">
+                  <AccountInfoSection email={accountEmail} />
+                </TabsContent>
+                <TabsContent value="notification" className="m-0">
+                  <NotificationSection
+                    emailNotificationsEnabled={accountNotificationsEnabled}
+                    inAppNotificationsEnabled={accountInAppNotificationsEnabled}
+                    onEmailNotificationsChange={handleNotificationsChange}
+                    onInAppNotificationsChange={handleInAppNotificationsChange}
+                  />
+                </TabsContent>
+                <TabsContent value="privacy" className="m-0">
+                  <PrivacySection
+                    publicProfile={accountPublicProfile}
+                    dataSharing={accountDataSharing}
+                    onPublicProfileChange={handlePublicProfileChange}
+                    onDataSharingChange={handleDataSharingChange}
+                  />
+                </TabsContent>
+                <TabsContent value="security" className="m-0">
+                  <SecuritySection
+                    twoFactorAuth={securityTwoFactorAuth}
+                    onTwoFactorAuthChange={handleTwoFactorAuthChange}
+                    onTerminateSession={handleTerminateSession}
+                  />
+                </TabsContent>
+                <TabsContent value="manage" className="m-0">
+                  <AccountManagement onDeleteAccount={handleDeleteAccount} />
+                </TabsContent>
+              </CardContent>
+            </Tabs>
           </Card>
         </div>
       </div>
