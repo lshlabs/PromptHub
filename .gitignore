@@ -47,3 +47,11 @@ coverage/
 
 # Editor backups
 *~
+
+# Repo docs and local servers
+CLAUDE.md
+.claude/
+CURSOR_RULES.md
+PROJECT_PROGRESS.md
+rules/
+servers/

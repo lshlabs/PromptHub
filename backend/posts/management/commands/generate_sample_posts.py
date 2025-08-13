@@ -1,5 +1,9 @@
 """
-실제와 유사한 게시글 10개를 생성하는 명령어.
+실제와 유사한 게시글 샘플을 생성하는 명령어.
+
+구성:
+- 기본 샘플 10개 + 추가 샘플 10개 (총 20개 세트)
+- 이미 같은 제목의 게시글이 있으면 건너뛰어 중복 생성을 방지
 
 요구사항:
 - 기존 사용자만 사용 (새 사용자 생성하지 않음)
@@ -19,7 +23,7 @@ from posts.models import Platform, AiModel, Category, Post
 
 
 class Command(BaseCommand):
-    help = "실제와 유사한 게시글 10개를 생성합니다."
+    help = "실제와 유사한 게시글 샘플(최대 20개 세트)을 생성합니다."
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -173,17 +177,105 @@ class Command(BaseCommand):
             },
         ]
 
-        # 플랫폼=기타인 샘플(5번)에 모델=기타 강제 설정
+        # 추가 샘플 10개 구성
+        more_samples = [
+            # 11) OpenAI GPT-5
+            {
+                'user': users[0], 'platform': openai_gpt5.platform, 'model': openai_gpt5,
+                'category': random_category(True), 'title': '데이터 파이프라인 최적화 자동화',
+                'model_detail': 'GPT-5-high-precise', 'model_etc': '',
+                'satisfaction': Decimal('4.5'), 'views': 1320, 'likes': 31, 'bookmarks': 16,
+                'created_at': now - timezone.timedelta(days=6, hours=1)
+            },
+            # 12) OpenAI GPT-4o
+            {
+                'user': users[1 if len(users) > 1 else 0], 'platform': openai_gpt4o.platform, 'model': openai_gpt4o,
+                'category': random_category(), 'title': '이미지 표 추출 및 CSV 자동 변환',
+                'model_detail': 'GPT-4o-mini-vision', 'model_etc': '',
+                'satisfaction': Decimal('4.0'), 'views': 740, 'likes': 19, 'bookmarks': 9,
+                'created_at': now - timezone.timedelta(days=4, hours=20)
+            },
+            # 13) Anthropic Claude 4 Sonnet
+            {
+                'user': users[0], 'platform': anthropic_sonnet.platform, 'model': anthropic_sonnet,
+                'category': random_category(), 'title': '법률 문서 요약과 핵심 쟁점 추출',
+                'model_detail': 'Claude-4-Sonnet-latest', 'model_etc': '',
+                'satisfaction': Decimal('4.5'), 'views': 990, 'likes': 27, 'bookmarks': 12,
+                'created_at': now - timezone.timedelta(days=4, hours=2)
+            },
+            # 14) Google 기타 모델 사용
+            {
+                'user': users[1 if len(users) > 1 else 0], 'platform': google_other.platform, 'model': google_other,
+                'category': random_category(), 'title': '사내 문서 검색 챗봇 구축 실험',
+                'model_detail': '', 'model_etc': 'Gemini 1.5 Pro experimental',
+                'satisfaction': Decimal('3.5'), 'views': 430, 'likes': 10, 'bookmarks': 5,
+                'created_at': now - timezone.timedelta(days=3, hours=10)
+            },
+            # 15) 플랫폼=기타 + 모델=기타 (model_etc 필수)
+            {
+                'user': users[0], 'platform': platform_other, 'model': None,
+                'category': category_other or random_category(), 'title': '오픈소스 LLM 벤치마크 리포트 생성',
+                'model_detail': '', 'model_etc': 'Mistral 8x7B Instruct',
+                'satisfaction': Decimal('4.0'), 'views': 880, 'likes': 24, 'bookmarks': 11,
+                'created_at': now - timezone.timedelta(days=3, hours=5)
+            },
+            # 16) Meta Llama 3.3
+            {
+                'user': users[0], 'platform': meta_llama33.platform if meta_llama33 else openai_gpt4o.platform,
+                'model': meta_llama33 or openai_gpt4o, 'category': random_category(),
+                'title': '레거시 코드 리팩토링 제안 자동화', 'model_detail': '', 'model_etc': '',
+                'satisfaction': Decimal('3.5'), 'views': 360, 'likes': 9, 'bookmarks': 6,
+                'created_at': now - timezone.timedelta(days=2, hours=12)
+            },
+            # 17) xAI Grok-3
+            {
+                'user': users[1 if len(users) > 1 else 0], 'platform': xai_grok3.platform, 'model': xai_grok3,
+                'category': random_category(), 'title': '실시간 주가 뉴스 요약 알림 생성',
+                'model_detail': '', 'model_etc': '',
+                'satisfaction': Decimal('4.0'), 'views': 560, 'likes': 15, 'bookmarks': 8,
+                'created_at': now - timezone.timedelta(days=2, hours=3)
+            },
+            # 18) DeepSeek V3
+            {
+                'user': users[0], 'platform': deepseek_v3.platform, 'model': deepseek_v3,
+                'category': random_category(), 'title': '수학 올림피아드 문제 유형별 해설',
+                'model_detail': '', 'model_etc': '',
+                'satisfaction': Decimal('4.5'), 'views': 1420, 'likes': 42, 'bookmarks': 20,
+                'created_at': now - timezone.timedelta(days=1, hours=18)
+            },
+            # 19) OpenAI o3 (detail 없음)
+            {
+                'user': users[0], 'platform': openai_gpt4o.platform, 'model': get_model('OpenAI', 'o3') or openai_gpt4o,
+                'category': random_category(), 'title': '대규모 데이터셋 전처리 스크립트 생성',
+                'model_detail': '', 'model_etc': '',
+                'satisfaction': Decimal('3.0'), 'views': 295, 'likes': 7, 'bookmarks': 3,
+                'created_at': now - timezone.timedelta(hours=16)
+            },
+            # 20) 카테고리=기타 + 모델=기타 사용
+            {
+                'user': users[1 if len(users) > 1 else 0], 'platform': openai_gpt5.platform, 'model': get_model('OpenAI', '기타'),
+                'category': category_other or random_category(), 'title': '도메인 특화 규정 문서 QA 파인튜닝',
+                'model_detail': '', 'model_etc': 'Community R1-70B',
+                'satisfaction': Decimal('4.0'), 'views': 510, 'likes': 13, 'bookmarks': 8,
+                'created_at': now - timezone.timedelta(hours=8)
+            },
+        ]
+
+        all_samples = samples + more_samples
+
+        # 플랫폼=기타인 샘플에 모델=기타 강제 설정
         if platform_other is not None:
             try:
                 other_model = AiModel.objects.get(platform=platform_other, name='기타')
-                samples[4]['model'] = other_model
+                for s in all_samples:
+                    if s.get('platform') == platform_other and not s.get('model'):
+                        s['model'] = other_model
             except AiModel.DoesNotExist:
                 pass
 
         created = 0
         with transaction.atomic():
-            for idx, s in enumerate(samples, start=1):
+            for idx, s in enumerate(all_samples, start=1):
                 # Post 생성 전 검증 데이터 만들기
                 post_kwargs = dict(
                     title=s['title'], platform=s['platform'], model=s['model'], category=s['category'],
@@ -192,7 +284,12 @@ class Command(BaseCommand):
                     additional_opinion=long_opinion,
                 )
                 if dry_run:
-                    self.stdout.write(self.style.WARNING(f"[{idx}] {post_kwargs['title']} → platform={post_kwargs['platform']}, model={getattr(post_kwargs['model'],'name',None)}"))
+                    self.stdout.write(self.style.WARNING(f"[DRY-RUN] [{idx}] {post_kwargs['title']} → platform={post_kwargs['platform']}, model={getattr(post_kwargs['model'],'name',None)}"))
+                    continue
+
+                # 동일 제목 게시글이 이미 존재하면 건너뜀 (중복 방지)
+                if Post.objects.filter(title=post_kwargs['title']).exists():
+                    self.stdout.write(self.style.WARNING(f"[SKIP] 이미 존재: {post_kwargs['title']}"))
                     continue
 
                 post = Post.objects.create(author=s['user'], **post_kwargs)
