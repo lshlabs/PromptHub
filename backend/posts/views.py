@@ -16,43 +16,17 @@ from .serializers import (
     TagSerializer, PostInteractionSerializer
 )
 from core.filters import PostFilter
+from posts.services.post_service import (
+    attach_user_from_token,
+    build_posts_page,
+    get_post_and_increment_views,
+    build_user_posts_page,
+)
 
 User = get_user_model()
 
 
-def token_required(view_func):
-    """
-    토큰 기반 인증 데코레이터
-    
-    Authorization 헤더에서 Token을 추출하여 인증을 수행합니다.
-    인증에 실패하면 401 오류를 반환합니다.
-    
-    Args:
-        view_func: 데코레이션될 뷰 함수
-        
-    Returns:
-        function: 래핑된 뷰 함수
-    """
-    """토큰 기반 인증 데코레이터"""
-    def wrapper(request, *args, **kwargs):
-        auth_header = request.headers.get('Authorization', '')
-        if not auth_header.startswith('Token '):
-            return JsonResponse({
-                'status': 'error', 
-                'message': '유효한 토큰이 필요합니다.'
-            }, status=401)
-        
-        token_key = auth_header.split(' ')[1]
-        try:
-            token = Token.objects.get(key=token_key)
-            request.user = token.user
-            return view_func(request, *args, **kwargs)
-        except Token.DoesNotExist:
-            return JsonResponse({
-                'status': 'error', 
-                'message': '유효하지 않은 토큰입니다.'
-            }, status=401)
-    return wrapper
+from core.utils.auth import token_required
 
 
 # ========================
@@ -285,86 +259,9 @@ def posts_list(request):
         JsonResponse: 게시글 목록과 페이지네이션 데이터
     """
     # 토큰 인증 처리 (선택적)
-    auth_header = request.headers.get('Authorization', '')
-    if auth_header.startswith('Token '):
-        token_key = auth_header.split(' ')[1]
-        try:
-            token = Token.objects.get(key=token_key)
-            request.user = token.user
-        except Token.DoesNotExist:
-            # 토큰이 유효하지 않으면 익명 사용자로 처리
-            pass
+    attach_user_from_token(request)
     
-    # 쿼리 파라미터 파싱
-    page = request.GET.get('page', 1)
-    page_size = request.GET.get('page_size', 10)
-    search = request.GET.get('search', '')
-    exclude_id = request.GET.get('exclude_id', '')
-    sort_by = request.GET.get('sort_by', 'latest')
-    
-    try:
-        page = int(page)
-        page_size = int(page_size)
-        page_size = min(page_size, 50)  # 최대 50개로 제한
-    except (ValueError, TypeError):
-        page = 1
-        page_size = 10
-    
-    # 기본 쿼리셋
-    queryset = Post.objects.select_related(
-        'author', 'platform', 'model', 'category'
-    )
-    
-    # PostFilter 적용
-    filterset = PostFilter(request.GET, queryset=queryset)
-    if filterset.is_valid():
-        queryset = filterset.qs
-    
-    # 정렬 적용
-    if sort_by == 'latest':
-        queryset = queryset.order_by('-created_at')
-    elif sort_by == 'oldest':
-        queryset = queryset.order_by('created_at')
-    elif sort_by == 'popular':
-        queryset = queryset.order_by('-like_count')
-    elif sort_by in ('rating', 'satisfaction'):
-        try:
-            # Django가 지원하는 DB에서는 NULLS LAST 적용
-            queryset = queryset.order_by(F('satisfaction').desc(nulls_last=True), '-created_at')
-        except Exception:
-            # 일부 DB에서는 nulls_last 미지원 → 기본 내림차순 + 보조키
-            queryset = queryset.order_by('-satisfaction', '-created_at')
-    elif sort_by == 'views':
-        queryset = queryset.order_by('-view_count')
-    else:
-        queryset = queryset.order_by('-created_at')  # 기본값
-    
-    # 검색 필터 (PostFilter에서 처리하지 않는 별도 기능)
-    if search:
-        queryset = queryset.filter(
-            Q(title__icontains=search) |
-            Q(prompt__icontains=search) |
-            Q(ai_response__icontains=search) |
-            Q(tags__icontains=search)
-        )
-    
-    # 특정 게시글 제외 (상세 페이지에서 현재 게시글 제외용)
-    if exclude_id:
-        try:
-            exclude_id_int = int(exclude_id)
-            queryset = queryset.exclude(id=exclude_id_int)
-        except (ValueError, TypeError):
-            pass
-    
-    # 페이지네이션
-    paginator = Paginator(queryset, page_size)
-    
-    try:
-        posts_page = paginator.page(page)
-    except PageNotAnInteger:
-        posts_page = paginator.page(1)
-    except EmptyPage:
-        posts_page = paginator.page(paginator.num_pages)
+    posts_page, paginator = build_posts_page(request)
     
     # 시리얼라이즈
     serializer = PostCardSerializer(
@@ -404,30 +301,14 @@ def post_detail(request, post_id):
     """
     """게시글 상세 조회"""
     # 토큰 인증 처리 (선택적)
-    auth_header = request.headers.get('Authorization', '')
-    if auth_header.startswith('Token '):
-        token_key = auth_header.split(' ')[1]
-        try:
-            token = Token.objects.get(key=token_key)
-            request.user = token.user
-        except Token.DoesNotExist:
-            # 토큰이 유효하지 않으면 익명 사용자로 처리
-            pass
-    
-    try:
-        post = Post.objects.select_related(
-            'author', 'platform', 'model', 'category'
-        ).get(id=post_id)
-    except Post.DoesNotExist:
+    attach_user_from_token(request)
+
+    post = get_post_and_increment_views(post_id)
+    if not post:
         return JsonResponse({
             'status': 'error',
             'message': '게시글을 찾을 수 없습니다.'
         }, status=404)
-    
-    # 조회수 증가 (트랜잭션으로 안전하게)
-    with transaction.atomic():
-        Post.objects.filter(id=post_id).update(view_count=F('view_count') + 1)
-        post.refresh_from_db()
     
     # 시리얼라이즈
     serializer = PostDetailSerializer(post, context={'request': request})
@@ -746,54 +627,17 @@ def user_liked_posts(request):
         page = 1
         page_size = 20
     
-    # 사용자가 좋아요한 게시글 쿼리셋
-    queryset = Post.objects.select_related(
-        'author', 'platform', 'model', 'category'
-    ).filter(
+    base_queryset = Post.objects.select_related('author', 'platform', 'model', 'category').filter(
         interactions__user=request.user,
-        interactions__is_liked=True
+        interactions__is_liked=True,
     )
-    
-    # 정렬 적용
-    if sort_by == 'latest':
-        queryset = queryset.order_by('-interactions__updated_at')
-    elif sort_by == 'oldest':
-        queryset = queryset.order_by('interactions__updated_at')
-    elif sort_by == 'popular':
-        queryset = queryset.order_by('-like_count')
-    elif sort_by == 'views':
-        queryset = queryset.order_by('-view_count')
-    else:
-        queryset = queryset.order_by('-interactions__updated_at')  # 기본값
-    
-    # 검색 필터
-    if search:
-        queryset = queryset.filter(
-            Q(title__icontains=search) |
-            Q(prompt__icontains=search) |
-            Q(ai_response__icontains=search) |
-            Q(tags__icontains=search)
-        )
-    
-    # 카테고리 필터
-    if category:
-        category_list = [cat.strip() for cat in category.split(',')]
-        queryset = queryset.filter(category__name__in=category_list)
-    
-    # 플랫폼 필터
-    if platform:
-        platform_list = [plat.strip() for plat in platform.split(',')]
-        queryset = queryset.filter(platform__name__in=platform_list)
-    
-    # 페이지네이션
-    paginator = Paginator(queryset, page_size)
-    
-    try:
-        posts_page = paginator.page(page)
-    except PageNotAnInteger:
-        posts_page = paginator.page(1)
-    except EmptyPage:
-        posts_page = paginator.page(paginator.num_pages)
+    posts_page, paginator = build_user_posts_page(
+        request,
+        base_queryset,
+        sort_param_name='sort',
+        default_sort='latest',
+        order_field_latest='-interactions__updated_at',
+    )
     
     # 시리얼라이즈
     serializer = PostCardSerializer(
@@ -855,54 +699,17 @@ def user_bookmarked_posts(request):
         page = 1
         page_size = 20
     
-    # 사용자가 북마크한 게시글 쿼리셋
-    queryset = Post.objects.select_related(
-        'author', 'platform', 'model', 'category'
-    ).filter(
+    base_queryset = Post.objects.select_related('author', 'platform', 'model', 'category').filter(
         interactions__user=request.user,
-        interactions__is_bookmarked=True
+        interactions__is_bookmarked=True,
     )
-    
-    # 정렬 적용
-    if sort_by == 'latest':
-        queryset = queryset.order_by('-interactions__updated_at')
-    elif sort_by == 'oldest':
-        queryset = queryset.order_by('interactions__updated_at')
-    elif sort_by == 'popular':
-        queryset = queryset.order_by('-like_count')
-    elif sort_by == 'views':
-        queryset = queryset.order_by('-view_count')
-    else:
-        queryset = queryset.order_by('-interactions__updated_at')  # 기본값
-    
-    # 검색 필터
-    if search:
-        queryset = queryset.filter(
-            Q(title__icontains=search) |
-            Q(prompt__icontains=search) |
-            Q(ai_response__icontains=search) |
-            Q(tags__icontains=search)
-        )
-    
-    # 카테고리 필터
-    if category:
-        category_list = [cat.strip() for cat in category.split(',')]
-        queryset = queryset.filter(category__name__in=category_list)
-    
-    # 플랫폼 필터
-    if platform:
-        platform_list = [plat.strip() for plat in platform.split(',')]
-        queryset = queryset.filter(platform__name__in=platform_list)
-    
-    # 페이지네이션
-    paginator = Paginator(queryset, page_size)
-    
-    try:
-        posts_page = paginator.page(page)
-    except PageNotAnInteger:
-        posts_page = paginator.page(1)
-    except EmptyPage:
-        posts_page = paginator.page(paginator.num_pages)
+    posts_page, paginator = build_user_posts_page(
+        request,
+        base_queryset,
+        sort_param_name='sort',
+        default_sort='latest',
+        order_field_latest='-interactions__updated_at',
+    )
     
     # 시리얼라이즈
     serializer = PostCardSerializer(
@@ -964,51 +771,16 @@ def user_my_posts(request):
         page = 1
         page_size = 20
     
-    # 사용자가 작성한 게시글 쿼리셋
-    queryset = Post.objects.select_related(
-        'author', 'platform', 'model', 'category'
-    ).filter(author=request.user)
-    
-    # 정렬 적용
-    if sort_by == 'latest':
-        queryset = queryset.order_by('-created_at')
-    elif sort_by == 'oldest':
-        queryset = queryset.order_by('created_at')
-    elif sort_by == 'popular':
-        queryset = queryset.order_by('-like_count')
-    elif sort_by == 'views':
-        queryset = queryset.order_by('-view_count')
-    else:
-        queryset = queryset.order_by('-created_at')  # 기본값
-    
-    # 검색 필터
-    if search:
-        queryset = queryset.filter(
-            Q(title__icontains=search) |
-            Q(prompt__icontains=search) |
-            Q(ai_response__icontains=search) |
-            Q(tags__icontains=search)
-        )
-    
-    # 카테고리 필터
-    if category:
-        category_list = [cat.strip() for cat in category.split(',')]
-        queryset = queryset.filter(category__name__in=category_list)
-    
-    # 플랫폼 필터
-    if platform:
-        platform_list = [plat.strip() for plat in platform.split(',')]
-        queryset = queryset.filter(platform__name__in=platform_list)
-    
-    # 페이지네이션
-    paginator = Paginator(queryset, page_size)
-    
-    try:
-        posts_page = paginator.page(page)
-    except PageNotAnInteger:
-        posts_page = paginator.page(1)
-    except EmptyPage:
-        posts_page = paginator.page(paginator.num_pages)
+    base_queryset = Post.objects.select_related('author', 'platform', 'model', 'category').filter(
+        author=request.user,
+    )
+    posts_page, paginator = build_user_posts_page(
+        request,
+        base_queryset,
+        sort_param_name='sort',
+        default_sort='latest',
+        order_field_latest='-created_at',
+    )
     
     # 시리얼라이즈
     serializer = PostCardSerializer(

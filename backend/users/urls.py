@@ -1,6 +1,8 @@
 from django.urls import path
 from . import views
 
+app_name = 'users'
+
 urlpatterns = [
     # 인증 관련 URL
     path('register/', views.UserRegistrationView.as_view(), name='user_register'),

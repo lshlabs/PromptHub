@@ -272,8 +272,39 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
     }
   }
 
-  const handleDelete = () => {
-    // 삭제 로직 구현
+  const handleDelete = async () => {
+    if (!postData) return
+    if (!isAuthenticated) {
+      toast({
+        title: '로그인이 필요합니다',
+        description: '삭제하려면 먼저 로그인해주세요.',
+        variant: 'destructive',
+      })
+      return
+    }
+    const isAuthor = postData.isAuthor || (user ? postData.author === user.username : false)
+    if (!isAuthor) {
+      toast({
+        title: '권한 없음',
+        description: '이 게시글을 삭제할 권한이 없습니다.',
+        variant: 'destructive',
+      })
+      return
+    }
+    const confirmed = window.confirm('정말로 이 게시글을 삭제하시겠습니까? 되돌릴 수 없습니다.')
+    if (!confirmed) return
+
+    try {
+      const res = await postsApi.deletePost(postData.id)
+      toast({ title: '삭제 완료', description: res.message || '게시글이 삭제되었습니다.' })
+      router.push('/community')
+    } catch (err: any) {
+      toast({
+        title: '삭제 실패',
+        description: err?.message || '게시글 삭제 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      })
+    }
   }
 
   const handleViewMore = () => {

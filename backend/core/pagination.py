@@ -13,9 +13,10 @@ class CustomPagination(PageNumberPagination):
     필터와 정렬과 유기적으로 연동:
     1. 검색 → 2. 필터 → 3. 정렬 → 4. 페이지네이션 순서로 적용
     """
-    page_size = 12
+    # 통일: 기본 20, 최대 100 (프론트 타입 기준과 일치)
+    page_size = 20
     page_size_query_param = 'page_size'
-    max_page_size = 50
+    max_page_size = 100
     page_query_param = 'page'
 
     def get_paginated_response(self, data):
@@ -25,6 +26,7 @@ class CustomPagination(PageNumberPagination):
         """
         return Response({
             'count': self.page.paginator.count,  # 필터링된 전체 개수
+            'total_count': self.page.paginator.count,  # 호환 키
             'next': self.get_next_link(),
             'previous': self.get_previous_link(),
             'results': data,
@@ -55,7 +57,7 @@ class PostPagination(CustomPagination):
     paginator = PostPagination()
     page = paginator.paginate_queryset(queryset, request)
     """
-    page_size = 12
+    page_size = 20
 
 
 class UserPagination(CustomPagination):

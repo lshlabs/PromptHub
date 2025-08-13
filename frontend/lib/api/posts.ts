@@ -16,7 +16,7 @@ import type {
   ModelSuggestResponse,
 } from '@/types/api'
 import { API_ENDPOINTS } from '@/types/api'
-import { get, post, put } from '@/lib/api/client'
+import { get, post, put, del } from '@/lib/api/client'
 
 export const postsApi = {
   /**
@@ -50,6 +50,11 @@ export const postsApi = {
   /** 게시글 업데이트 */
   updatePost: async (id: number, data: PostUpdateRequest): Promise<ApiResponse<PostDetail>> => {
     return put<ApiResponse<PostDetail>>(API_ENDPOINTS.posts.update(id), data)
+  },
+
+  /** 게시글 삭제 */
+  deletePost: async (id: number): Promise<{ status: 'success' | 'error'; message?: string }> => {
+    return del<{ status: 'success' | 'error'; message?: string }>(API_ENDPOINTS.posts.delete(id))
   },
 
   /** 좋아요 토글 */

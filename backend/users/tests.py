@@ -10,9 +10,9 @@ User = get_user_model()
 
 class UserAuthAndProfileTests(APITestCase):
     def setUp(self):
-        self.register_url = reverse('user_register')
-        self.login_url = reverse('user_login')
-        self.profile_url = reverse('user_profile')
+        self.register_url = reverse('users:user_register')
+        self.login_url = reverse('users:user_login')
+        self.profile_url = reverse('users:user_profile')
 
     def test_register_login_and_profile_flow(self):
         # 회원가입
@@ -56,7 +56,7 @@ class UserAuthAndProfileTests(APITestCase):
 
         # 비밀번호 변경
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {token}')
-        password_url = reverse('password_change')
+        password_url = reverse('users:password_change')
         res = self.client.post(password_url, {
             'current_password': 'Str0ng-Passw0rd!',
             'new_password': 'NewStr0ng-Passw0rd!',
@@ -67,7 +67,7 @@ class UserAuthAndProfileTests(APITestCase):
 
         # 새 비밀번호로 로그인 가능 확인
         self.client.credentials()  # 인증 해제
-        login_url = reverse('user_login')
+        login_url = reverse('users:user_login')
         res = self.client.post(login_url, {
             'email': 'pwtest@example.com',
             'password': 'NewStr0ng-Passw0rd!'
@@ -77,7 +77,7 @@ class UserAuthAndProfileTests(APITestCase):
 
         # 계정 삭제
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {new_token}')
-        delete_url = reverse('account_delete')
+        delete_url = reverse('users:account_delete')
         res = self.client.delete(delete_url, {'confirmation': '계정 삭제'}, format='json')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertIn('message', res.data)

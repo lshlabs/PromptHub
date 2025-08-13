@@ -73,6 +73,9 @@ class PostValidationMixin:
                 raise serializers.ValidationError("만족도는 0.5점 단위로 입력해야 합니다.")
         return value
 
+    def validate(self, data):
+        return self.validate_business_logic(data)
+
     def validate_platform(self, value):
         """플랫폼 유효성 검사"""
         if not value:
@@ -284,8 +287,7 @@ class PostCreateSerializer(PostValidationMixin, serializers.ModelSerializer):
     def validate_tags(self, value):
         return self.validate_tags_list(value)
 
-    def validate(self, data):
-        return self.validate_business_logic(data)
+    # 상위 Mixin의 validate 사용
 
     def create(self, validated_data):
         tags_data = validated_data.pop('tags', [])
@@ -351,8 +353,7 @@ class PostEditSerializer(PostValidationMixin, serializers.ModelSerializer):
     def validate_tags_input(self, value):
         return self.validate_tags_list(value)
 
-    def validate(self, data):
-        return self.validate_business_logic(data)
+    # 상위 Mixin의 validate 사용
 
     def update(self, instance, validated_data):
         tags_data = validated_data.pop('tags', None)

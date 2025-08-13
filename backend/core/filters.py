@@ -1,3 +1,10 @@
+"""
+core.filters
+ - django-filter 기반의 게시글 필터 정의
+ - 프론트엔드 FilterPanel과 1:1로 대응되는 최소 필터만 유지 (categories, models)
+ - 플랫폼은 모델 선택의 상위 개념이므로 별도 필터에서 제외
+"""
+
 from django_filters import rest_framework as filters
 from django.db.models import Q
 from posts.models import Post, Platform, AiModel, Category
@@ -103,10 +110,8 @@ class PostFilter(filters.FilterSet):
                     # 기타 모델: 해당 플랫폼의 "기타" 모델이면서 model_etc 필드가 있는 게시물
                     conditions |= Q(model=model, model_etc__isnull=False, model_etc__gt='')
                 else:
-                    # 일반 모델: 기본 모델 게시물 + 해당 기본 모델에 종속된 상세 모델명
-                    conditions |= Q(model_id=model_id_int) | (
-                        Q(model_id=model_id_int) & Q(model_detail__isnull=False)  # 안전성
-                    )
+                    # 일반 모델: 해당 기본 모델 게시물. 상세 모델 여부 조건은 중복이므로 제거
+                    conditions |= Q(model_id=model_id_int)
                     
             except (AiModel.DoesNotExist, ValueError, TypeError):
                 # 존재하지 않는 모델 ID는 무시

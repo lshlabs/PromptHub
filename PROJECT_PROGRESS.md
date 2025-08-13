@@ -65,3 +65,62 @@
 - [x] ESLint 규칙 재점검: Next.js 권장 규칙 및 React 권장 규칙 통합, 경고 최소화 설정 반영
 - [x] API 계층(`lib/api/*`) 타입 주석 보강: posts/auth/core/stats/metadata/trending API에 JSDoc 추가
 - [ ] dead code 제거 자동화 스크립트 추가(선택)
+
+## 2025-08-13 (추가)
+
+- [x] 빈 디렉토리 정리: `frontend/features/*/components` 빈 폴더 삭제
+- [x] 샘플데이터 정리: `frontend/sampledata/mock-api.ts`, `mock-posts-api.ts` 등 import로 참조되던 샘플 파일 제거 및 `types/datatype_sample.d.ts` 삭제
+- [x] 빌드 검증: ESLint 비활성화 상태에서 `next build` 정상 완료 (설정 이슈 분리 확인). 기능 리팩토링에 따른 런타임 이상 없음
+
+### 백엔드 라우팅/테스트
+- [x] posts URL REST alias 추가: `liked-posts/`, `bookmarked-posts/`, `my-posts/` (기존 `liked/`, `bookmarked/`, `my/` 병행 유지)
+- [x] 백엔드 테스트 전체 실행: 6 tests OK, 실패 없음
+
+### 백엔드 문서화/정리
+- [x] users 엔드포인트 요청/응답 스키마 주석 보강 (로그인/로그아웃/프로필/설정/세션/비밀번호/계정삭제)
+- [x] core/filters 문서화 및 경량화 (중복 조건 제거, 모듈 docstring 추가)
+
+## 백엔드 리팩토링 계획 (초안)
+
+- 목표: Django/DRF 앱 구조를 도메인 중심으로 정리하고, API 일관성, 필터/정렬/페이지네이션 공통화, 서비스 계층 명확화
+- 범위: `backend/core`, `backend/posts`, `backend/users`, `backend/stats`, 전역 `config`
+
+1) 공통 모듈 정리 (core)
+- [ ] 공통 `filters.py/sorting.py/pagination.py/search.py`를 유틸 모듈로 통합 (`core/filters`, `core/sorting`, `core/pagination`, `core/search` 유지)
+- [ ] 서비스 계층 표준화: `core/services/*`에 도메인 무관 서비스(검색/정렬 조합)를 위치
+- [x] 검색 유틸 점검: `core/search.py`의 SearchManager가 제목/내용/태그/가중치/다중단어/퍼지 검색 지원 확인
+- [ ] 트렌딩 관련 관리 커맨드 정리: 입력/출력 스키마 주석 보강, 에러 로깅 통일
+- [x] 인증 유틸 공통화: `core/utils/auth.py`에 `token_required` 데코레이터 도입, posts에서 사용
+- [x] 페이지네이션 기본 통일: `core/pagination.py`의 CustomPagination 기반으로 DRF 설정과 일치화
+- [x] 페이지네이션 기본 통일: 기본 20/최대 100, 응답에 `total_count` 키 추가(프론트 호환)
+- [x] DRF 전역 페이지네이션 클래스 교체: `core.pagination.CustomPagination` 적용
+- [x] 정렬 유틸 점검: `core/sorting.py`의 SortManager가 프런트 SortSelector와 일치 확인
+
+2) posts 앱
+- [x] `views.py` 일부 비즈니스 로직 서비스 분리: `posts/services/post_service.py` 도입 (토큰 유저 부착, 목록 페이징 빌더, 조회수 증가 포함)
+- [x] `serializers.py` 공통 Mixin 보강: 공통 validate 상향, 하위 중복 제거
+- [x] 상호작용/사용자별 목록 서비스화: 공통 페이지네이션/정렬 빌더 도입으로 뷰 슬림화
+- [x] `urls.py` 라우트 명세 정리(1차): REST alias(`liked-posts/`, `bookmarked-posts/`, `my-posts/`) 추가, 기존 경로 병행 유지
+- [x] 인덱스/쿼리 최적화(초안): 사용자 인증시 interactions prefetch 적용으로 N+1 감소
+
+3) users 앱
+- [x] User/Settings/Session 엔드포인트 스키마 문서화(초안, 주석 보강 시작). 응답 필드 명 일관화 점검 예정
+- [x] URL 네임스페이스 도입: `backend/users/urls.py`에 `app_name = 'users'` 추가
+- [ ] 인증/권한 데코레이터 공통화 (권한 검사 헬퍼)
+
+4) stats 앱
+- [ ] 대시보드/사용자 통계 쿼리 정리, 캐싱 전략 검토(selective cache)
+- [x] 공통 인증 데코레이터 적용: `core/utils/auth.token_required` 재사용
+ - [x] 선택적 캐싱: `core/utils/cache.cache_value_or_set`로 대시보드 60초 캐시
+
+5) config
+- [x] settings 분리: `config/settings_base.py`, `config/settings_dev.py`, `config/settings_prod.py` 도입 및 `config/settings.py`에서 dev 기본 로드
+- [x] CORS/보안 헤더/로깅 설정 점검 및 `.env` 키 주입: `DJANGO_SECRET_KEY`, `DJANGO_DEBUG`, `DJANGO_ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, `DJANGO_LOG_LEVEL`
+
+6) 테스트/문서화
+- [ ] pytest 기준 스모크 테스트 추가 (핵심 API 200 응답, 스키마 필드 확인)
+- [ ] README: 백엔드 로컬 실행/마이그레이션/샘플 데이터 로드 간단 가이드 (변경점만)
+- [x] DRF APITest 스모크: posts 엔드투엔드 흐름(생성/수정/상세/좋아요/북마크/목록 검색) 테스트 케이스 확인
+
+진행 순서 제안
+- [ ] posts → users → core → stats → config 순으로 점진 적용, 각 단계마다 API 스냅샷 테스트

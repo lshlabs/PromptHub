@@ -26,6 +26,10 @@ urlpatterns = [
     path('liked/', views.user_liked_posts, name='user_liked_posts'),
     path('bookmarked/', views.user_bookmarked_posts, name='user_bookmarked_posts'),
     path('my/', views.user_my_posts, name='user_my_posts'),
+    # RESTful alias (하이픈 컨벤션), 기존 경로와 병행 지원
+    path('liked-posts/', views.user_liked_posts, name='user_liked_posts_v2'),
+    path('bookmarked-posts/', views.user_bookmarked_posts, name='user_bookmarked_posts_v2'),
+    path('my-posts/', views.user_my_posts, name='user_my_posts_v2'),
     
     # 게시글 삭제 API
     path('<int:post_id>/delete/', views.post_delete, name='post_delete'),

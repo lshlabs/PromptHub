@@ -458,6 +458,7 @@ export interface ApiEndpoints {
     create: '/api/posts/create/'
     detail: (id: number) => string
     update: (id: number) => string
+    delete: (id: number) => string
     like: (id: number) => string
     bookmark: (id: number) => string
     liked: '/api/posts/liked/'
@@ -627,7 +628,12 @@ export const isValidationError = (error: any): error is ValidationError => {
 // 상수들
 // ===========================================
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000'
+// 클라이언트(브라우저)에서는 공개 변수(NEXT_PUBLIC_API_BASE_URL) 사용
+// 서버(SSR)에서는 컨테이너 내부 네트워크 접근을 위해 NEXT_INTERNAL_API_BASE_URL 우선 사용
+export const API_BASE_URL =
+  (typeof window === 'undefined'
+    ? process.env.NEXT_INTERNAL_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL
+    : process.env.NEXT_PUBLIC_API_BASE_URL) || 'http://localhost:8000'
 
 export const API_ENDPOINTS: ApiEndpoints = {
   auth: {
@@ -647,6 +653,7 @@ export const API_ENDPOINTS: ApiEndpoints = {
     create: '/api/posts/create/',
     detail: (id: number) => `/api/posts/${id}/`,
     update: (id: number) => `/api/posts/${id}/update/`,
+    delete: (id: number) => `/api/posts/${id}/delete/`,
     like: (id: number) => `/api/posts/${id}/like/`,
     bookmark: (id: number) => `/api/posts/${id}/bookmark/`,
     liked: '/api/posts/liked/',

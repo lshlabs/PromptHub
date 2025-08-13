@@ -4,44 +4,12 @@ from django.utils import timezone
 from datetime import timedelta
 from django.contrib.auth import get_user_model
 from rest_framework.authtoken.models import Token
+from core.utils.auth import token_required
 from posts.models import Post, PostInteraction, Platform, Category
+from core.utils.cache import cache_value_or_set
 from users.models import CustomUser
 
 User = get_user_model()
-
-
-def token_required(view_func):
-    """
-    토큰 기반 인증 데코레이터
-    
-    Authorization 헤더에서 Token을 추출하여 인증을 수행합니다.
-    인증에 실패하면 401 오류를 반환합니다.
-    
-    Args:
-        view_func: 데코레이션될 뷰 함수
-        
-    Returns:
-        function: 래핑된 뷰 함수
-    """
-    def wrapper(request, *args, **kwargs):
-        auth_header = request.headers.get('Authorization', '')
-        if not auth_header.startswith('Token '):
-            return JsonResponse({
-                'status': 'error', 
-                'message': '유효한 토큰이 필요합니다.'
-            }, status=401)
-        
-        token_key = auth_header.split(' ')[1]
-        try:
-            token = Token.objects.get(key=token_key)
-            request.user = token.user
-            return view_func(request, *args, **kwargs)
-        except Token.DoesNotExist:
-            return JsonResponse({
-                'status': 'error', 
-                'message': '유효하지 않은 토큰입니다.'
-            }, status=401)
-    return wrapper
 
 
 def dashboard_stats(request):
@@ -71,7 +39,90 @@ def dashboard_stats(request):
         JsonResponse: 대시보드 통계 데이터
     """
     try:
-        # 기본 통계 계산
+        def compute():
+            # 기본 통계 계산
+            total_posts = Post.objects.count()
+            total_users = User.objects.count()
+            total_views = Post.objects.aggregate(
+                total=Sum('view_count')
+            )['total'] or 0
+            total_likes = Post.objects.aggregate(
+                total=Sum('like_count')
+            )['total'] or 0
+            total_bookmarks = Post.objects.aggregate(
+                total=Sum('bookmark_count')
+            )['total'] or 0
+
+            # 평균 만족도 (전체 기준, 소수점 1자리 반올림)
+            avg_satisfaction = Post.objects.exclude(
+                satisfaction__isnull=True
+            ).aggregate(avg=Avg('satisfaction'))['avg']
+            if avg_satisfaction is not None:
+                avg_satisfaction_val = round(float(avg_satisfaction), 1)
+            else:
+                avg_satisfaction_val = 0
+
+            # 최근 7일 신규 게시글 수
+            seven_days_ago = timezone.now() - timedelta(days=7)
+            weekly_added_posts = Post.objects.filter(created_at__gte=seven_days_ago).count()
+
+            # 활성 사용자 수 (최근 30일 내 게시글 작성 사용자 수)
+            thirty_days_ago = timezone.now() - timedelta(days=30)
+            active_users = User.objects.filter(posts__created_at__gte=thirty_days_ago).distinct().count()
+
+            # 최근 게시글 (최대 5개)
+            recent_posts = Post.objects.select_related(
+                'author', 'platform', 'category'
+            ).order_by('-created_at')[:5]
+
+            recent_posts_data = [
+                {
+                    'id': post.id,
+                    'title': post.title,
+                    'author': post.author.username,
+                    'created_at': post.created_at.isoformat(),
+                    'views': post.view_count,
+                    'likes': post.like_count,
+                    'platform': post.platform.name,
+                    'category': post.category.name,
+                }
+                for post in recent_posts
+            ]
+
+            # 인기 태그 (상위 10개)
+            posts_with_tags = Post.objects.exclude(tags='').values_list('tags', flat=True)
+            tag_counts = {}
+            for tags_str in posts_with_tags:
+                if tags_str:
+                    tags = [tag.strip() for tag in tags_str.split(',') if tag.strip()]
+                    for tag in tags:
+                        tag_counts[tag] = tag_counts.get(tag, 0) + 1
+
+            popular_tags = sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)[:10]
+            popular_tags_data = [{'name': tag, 'count': count} for tag, count in popular_tags]
+
+            # 플랫폼별 게시글 분포
+            platform_distribution = Platform.objects.annotate(post_count=Count('posts')).filter(post_count__gt=0).order_by('-post_count')
+            platform_distribution_data = [
+                {'platform': platform.name, 'count': platform.post_count}
+                for platform in platform_distribution
+            ]
+
+            return {
+                'total_posts': total_posts,
+                'total_users': total_users,
+                'total_views': total_views,
+                'total_likes': total_likes,
+                'total_bookmarks': total_bookmarks,
+                'avg_satisfaction': avg_satisfaction_val,
+                'weekly_added_posts': weekly_added_posts,
+                'active_users': active_users,
+                'recent_posts': recent_posts_data,
+                'popular_tags': popular_tags_data,
+                'platform_distribution': platform_distribution_data,
+            }
+
+        data = cache_value_or_set('stats:dashboard', 60, compute)
         total_posts = Post.objects.count()
         total_users = User.objects.count()
         total_views = Post.objects.aggregate(
@@ -154,22 +205,7 @@ def dashboard_stats(request):
             for platform in platform_distribution
         ]
         
-        return JsonResponse({
-            'status': 'success',
-            'data': {
-                'total_posts': total_posts,
-                'total_users': total_users,
-                'total_views': total_views,
-                'total_likes': total_likes,
-                'total_bookmarks': total_bookmarks,
-                'avg_satisfaction': avg_satisfaction,
-                'weekly_added_posts': weekly_added_posts,
-                'active_users': active_users,
-                'recent_posts': recent_posts_data,
-                'popular_tags': popular_tags_data,
-                'platform_distribution': platform_distribution_data
-            }
-        })
+        return JsonResponse({'status': 'success', 'data': data})
         
     except Exception as e:
         return JsonResponse({

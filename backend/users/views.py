@@ -20,7 +20,17 @@ class UserRegistrationView(APIView):
     """
     사용자 회원가입 API 뷰
     
-    POST: 새 사용자 계정을 생성하고 JWT 토큰을 반환합니다.
+    POST: 새 사용자 계정을 생성하고 Token을 반환합니다.
+
+    Request Body (application/json):
+        - email (str, required)
+        - password (str, required)
+        - password_confirm (str, required)
+
+    Response Body (201):
+        - message (str)
+        - user (object): 생성된 사용자 프로필
+        - token (str): DRF TokenAuthentication 키
     """
     permission_classes = [permissions.AllowAny]
 
@@ -75,6 +85,23 @@ class UserLoginView(APIView):
     사용자 로그인 API 뷰
     
     POST: 이메일/비밀번호로 인증하고 Token을 반환합니다.
+
+    Request Body (application/json):
+        - email (str, required)
+        - password (str, required)
+
+    Response Body (200):
+        - message (str)
+        - user (object): 사용자 프로필 필드 일체(snake_case)
+        - token (str): DRF TokenAuthentication 키
+        - session (object): 서버 생성 세션 정보
+            - key (str): 세션 식별 키 (프론트는 'X-Session-Key' 헤더로 전달 가능)
+            - user_agent (str | null)
+            - ip_address (str | null)
+            - device (str | null)
+            - browser (str | null)
+            - os (str | null)
+            - created_at, last_active, revoked_at
     """
     permission_classes = [permissions.AllowAny]
 
@@ -143,6 +170,15 @@ class UserLogoutView(APIView):
     사용자 로그아웃 API 뷰
     
     POST: 사용자의 Token을 삭제하여 로그아웃합니다.
+
+    Headers (optional):
+        - X-Session-Key: 현재 세션을 나타내는 키. 전달 시 해당 세션만 비활성화 처리
+
+    Request Body (optional):
+        - session_key (str): 헤더 대신 바디로 세션 키를 전달할 수 있습니다.
+
+    Response Body (200):
+        - message (str)
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -183,6 +219,21 @@ class UserProfileView(APIView):
     
     GET: 현재 로그인한 사용자의 프로필 정보를 반환합니다.
     PUT: 현재 로그인한 사용자의 프로필 정보를 업데이트합니다.
+
+    GET Response (200):
+        - user (object): 사용자 기본 프로필
+        - settings (object): 사용자 설정
+
+    PUT/PATCH Request Body (application/json | multipart/form-data):
+        - username (str, optional)
+        - bio (str, optional)
+        - location (str, optional)
+        - github_handle (str, optional)
+        - profile_image (file, optional)
+
+    PUT/PATCH Response (200):
+        - message (str)
+        - user (object)
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -257,6 +308,17 @@ class UserSettingsView(APIView):
     사용자 설정 조회/수정 API
     GET: 현재 사용자의 설정 조회
     PATCH/PUT: 현재 사용자의 설정 수정
+
+    GET Response (200):
+        - email_notifications_enabled (bool)
+        - in_app_notifications_enabled (bool)
+        - public_profile (bool)
+        - data_sharing (bool)
+        - two_factor_auth_enabled (bool)
+        - updated_at (datetime ISO8601)
+
+    PATCH/PUT Request Body (application/json):
+        - 위와 동일한 필드 중 일부
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -281,6 +343,15 @@ class UserSessionsView(APIView):
     활성 세션 목록 조회 및 세션 종료 API
     GET: 현재 사용자 세션 목록 반환
     DELETE: 특정 세션을 종료하거나 (query/body로 key 전달), all=true 시 현재 세션 제외 전체 종료
+
+    GET Response (200): Array<UserSession>
+
+    DELETE Query Params / Body:
+        - key (str, optional): 종료할 세션 키
+        - all (bool, optional): true 전달 시 현재 세션을 제외하고 모든 세션 종료
+
+    Headers (optional):
+        - X-Session-Key: 현재 세션 키. all=true 시 보존을 위해 사용됨
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -318,6 +389,15 @@ class PasswordChangeView(APIView):
     비밀번호 변경 API 뷰
     
     POST: 현재 로그인한 사용자의 비밀번호를 변경합니다.
+
+    Request Body (application/json):
+        - current_password (str, required)
+        - new_password (str, required)
+        - new_password_confirm (str, required)
+
+    Response (200):
+        - message (str)
+        - token (str, optional): 성공 시 새 토큰이 발급될 수 있음
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -358,6 +438,12 @@ class AccountDeleteView(APIView):
     계정 삭제 API 뷰
 
     DELETE: 현재 로그인한 사용자의 계정을 삭제합니다.
+
+    Request Body (application/json):
+        - confirmation (str, optional): 안전 장치. 값이 '계정 삭제'여야 함
+
+    Response (200):
+        - message (str)
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -392,6 +478,15 @@ def user_info(request):
     간단한 사용자 정보 조회 API
     
     GET: 현재 로그인한 사용자의 기본 정보를 반환합니다.
+
+    Response Fields:
+        - id (int)
+        - email (str)
+        - username (str)
+        - avatar_url (str | null)
+        - avatar_color1 (str)
+        - avatar_color2 (str)
+        - created_at (datetime ISO8601)
     """
     user = request.user
     return Response({
