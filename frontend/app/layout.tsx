@@ -19,6 +19,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body suppressHydrationWarning>
+        {/* Google Identity Services (개발/배포에서 Client ID 설정 시 자동 토큰 발급에 사용) */}
+        <script src="https://accounts.google.com/gsi/client" async defer></script>
         <AuthProvider>
           <Header />
           <main className="min-h-screen">{children}</main>

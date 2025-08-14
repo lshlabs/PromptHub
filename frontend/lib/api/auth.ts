@@ -38,6 +38,18 @@ export const authApi = {
     return response as UserLoginResponse
   },
 
+  /** Google 로그인: id_token 제출 */
+  loginWithGoogle: async (idToken: string): Promise<UserLoginResponse> => {
+    const response = await post<any>(endpoints.auth.google, { id_token: idToken })
+    if (response.token && typeof window !== 'undefined') {
+      localStorage.setItem('prompthub_access_token', response.token)
+      if (response.session?.key) {
+        localStorage.setItem('prompthub_session_key', response.session.key)
+      }
+    }
+    return response as UserLoginResponse
+  },
+
   /** 로그아웃 (토큰 제거) */
   logout: async (): Promise<void> => {
     try {

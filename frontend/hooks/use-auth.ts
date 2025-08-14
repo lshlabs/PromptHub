@@ -11,6 +11,7 @@ export interface UseAuthReturn {
   isLoading: boolean
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<{ success: boolean; message: string }>
+  loginWithGoogle: (idToken: string) => Promise<{ success: boolean; message: string }>
   register: (
     email: string,
     password: string,
@@ -117,6 +118,26 @@ export function useAuth(): UseAuthReturn {
     }
   }
 
+  const loginWithGoogle = async (
+    idToken: string,
+  ): Promise<{ success: boolean; message: string }> => {
+    try {
+      const response = await authApi.loginWithGoogle(idToken)
+      if (response.token && response.user) {
+        setToken(response.token)
+        setUser(response.user)
+        await new Promise(resolve => setTimeout(resolve, 50))
+        return { success: true, message: response.message }
+      }
+      return { success: false, message: 'Google 로그인에 실패했습니다.' }
+    } catch (error: any) {
+      let message = 'Google 로그인 중 오류가 발생했습니다.'
+      if (error?.response?.data?.message) message = error.response.data.message
+      else if (error?.message) message = error.message
+      return { success: false, message }
+    }
+  }
+
   const register = async (
     email: string,
     password: string,
@@ -212,6 +233,7 @@ export function useAuth(): UseAuthReturn {
     isLoading,
     isAuthenticated,
     login,
+    loginWithGoogle,
     register,
     logout,
     refreshUser,

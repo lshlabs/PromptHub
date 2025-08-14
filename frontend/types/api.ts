@@ -450,6 +450,7 @@ export interface ApiEndpoints {
     profileDelete: '/api/auth/profile/delete/'
     settings: '/api/auth/profile/settings/'
     sessions: '/api/auth/profile/sessions/'
+    google: '/api/auth/google/'
   }
 
   // Posts 앱

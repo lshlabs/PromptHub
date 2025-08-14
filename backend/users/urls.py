@@ -8,6 +8,7 @@ urlpatterns = [
     path('register/', views.UserRegistrationView.as_view(), name='user_register'),
     path('login/', views.UserLoginView.as_view(), name='user_login'),
     path('logout/', views.UserLogoutView.as_view(), name='user_logout'),
+    path('google/', views.GoogleLoginView.as_view(), name='user_google_login'),
     
     # 프로필 관련 URL
     path('profile/', views.UserProfileView.as_view(), name='user_profile'),

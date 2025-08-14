@@ -14,6 +14,8 @@ from .serializers import (
     UserSessionSerializer,
 )
 from user_agents import parse as parse_ua
+import os
+import requests
 
 
 class UserRegistrationView(APIView):
@@ -211,6 +213,96 @@ class UserLogoutView(APIView):
             return Response({
                 'message': '로그아웃 처리 중 오류가 발생했습니다.'
             }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class GoogleLoginView(APIView):
+    """
+    Google ID 토큰으로 로그인/회원가입 처리
+
+    POST Body:
+        - id_token (str): Google Identity Services에서 발급된 ID 토큰
+
+    Response (200 | 201):
+        - message (str)
+        - user (object)
+        - token (str)
+        - session (object)
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        id_token = request.data.get('id_token') if hasattr(request, 'data') else None
+        if not id_token:
+            return Response({'message': 'id_token이 필요합니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            # Google의 tokeninfo 엔드포인트로 id_token 검증 (간단 구현)
+            resp = requests.get(
+                'https://oauth2.googleapis.com/tokeninfo', params={'id_token': id_token}, timeout=5
+            )
+            if resp.status_code != 200:
+                return Response({'message': '유효하지 않은 Google 토큰입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+            data = resp.json()
+
+            email = data.get('email')
+            email_verified = data.get('email_verified') in (True, 'true', 'True', '1', 1)
+            audience = data.get('aud')
+
+            # 선택적으로 클라이언트 ID 검사 (환경변수 GOOGLE_CLIENT_ID 설정 시)
+            expected_client_id = os.environ.get('GOOGLE_CLIENT_ID') or os.environ.get('NEXT_PUBLIC_GOOGLE_CLIENT_ID')
+            if expected_client_id and audience != expected_client_id:
+                return Response({'message': '허용되지 않은 클라이언트에서 발급된 토큰입니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            if not email or not email_verified:
+                return Response({'message': '이메일 확인에 실패했습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # 사용자 조회/생성 (매니저의 create_user 사용)
+            user = CustomUser.objects.filter(email=email).first()
+            created = False
+            if not user:
+                user = CustomUser.objects.create_user(email=email, password=None)
+                created = True
+
+            # 토큰 발급
+            token, _ = Token.objects.get_or_create(user=user)
+
+            # 세션 생성 (일반 로그인과 동일한 포맷)
+            from secrets import token_urlsafe
+            raw_ua = request.META.get('HTTP_USER_AGENT', '')
+            ua = parse_ua(raw_ua) if raw_ua else None
+            device = None
+            if ua:
+                if ua.is_mobile:
+                    device = ua.device.brand or ua.device.family or 'Mobile'
+                elif ua.is_tablet:
+                    device = ua.device.brand or ua.device.family or 'Tablet'
+                elif ua.is_pc:
+                    device = ua.device.family or 'PC'
+                elif ua.is_bot:
+                    device = 'Bot'
+            browser = f"{ua.browser.family} {ua.browser.version_string}" if ua else None
+            os_name = f"{ua.os.family} {ua.os.version_string}" if ua else None
+
+            session = UserSession.objects.create(
+                user=user,
+                key=token_urlsafe(32),
+                user_agent=raw_ua,
+                ip_address=(request.META.get('HTTP_X_FORWARDED_FOR') or '').split(',')[0] or request.META.get('REMOTE_ADDR'),
+                device=device,
+                browser=browser,
+                os=os_name,
+            )
+
+            profile_data = UserProfileSerializer(user).data
+            return Response({
+                'message': 'Google 로그인에 성공했습니다.' if not created else 'Google 계정으로 회원가입이 완료되었습니다.',
+                'user': profile_data,
+                'token': token.key,
+                'session': UserSessionSerializer(session).data,
+            }, status=status.HTTP_200_OK if not created else status.HTTP_201_CREATED)
+        except Exception as e:
+            print(f"Google 로그인 처리 중 오류: {e}")
+            return Response({'message': 'Google 로그인 처리 중 오류가 발생했습니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserProfileView(APIView):
