@@ -12,6 +12,19 @@ ALLOWED_HOSTS = [
     host for host in os.getenv('DJANGO_ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',') if host
 ]
 
+# render.com 자동 도메인 허용
+import re
+if 'RENDER' in os.environ:
+    # render.com에서 자동 생성되는 도메인 패턴 허용
+    ALLOWED_HOSTS.extend([
+        '.onrender.com',  # 모든 onrender.com 서브도메인 허용
+        'prompthub-n9y3.onrender.com',  # 현재 도메인 명시적 허용
+    ])
+    
+# 개발 환경 호스트도 추가
+if DEBUG:
+    ALLOWED_HOSTS.extend(['localhost', '127.0.0.1', '0.0.0.0'])
+
 # PostgreSQL 데이터베이스 설정 (render 자동 제공)
 if 'DATABASE_URL' in os.environ:
     DATABASES = {
