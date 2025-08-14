@@ -34,7 +34,7 @@ ENV DJANGO_SETTINGS_MODULE=config.settings_prod
 
 # 헬스체크 추가
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/api/health/ || exit 1
+    CMD curl -f http://localhost:8000/api/core/health/ || exit 1
 
 # Gunicorn을 사용하여 애플리케이션 실행
 CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]

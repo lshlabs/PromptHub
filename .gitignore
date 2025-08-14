@@ -26,10 +26,18 @@ backend/db.sqlite3
 media/
 staticfiles/
 
-# Env
+# Env files (개인 설정, 민감 정보 포함)
 .env
-.env.*
+.env.local
+.env.development
+.env.production
+.env.test
 frontend/.env.local
+backend/.env
+backend/.env.local
+
+# .env.example 파일은 템플릿이므로 버전 관리에 포함
+# !*.env.example
 
 # Logs
 *.log
