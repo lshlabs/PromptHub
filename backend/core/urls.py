@@ -1,9 +1,11 @@
 from django.urls import path
 from . import views
+from .health import health_check
 
 app_name = 'core'
 
 urlpatterns = [
+    path('health/', health_check, name='health_check'),
     path('search/', views.search_posts, name='search_posts'),
     path('sort-options/', views.get_sort_options, name='get_sort_options'),
     path('filter-options/', views.get_filter_options, name='get_filter_options'),
