@@ -18,10 +18,6 @@
     {
       "src": "/api/(.*)",
       "dest": "backend/vercel_app.py"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "frontend/$1"
     }
   ],
   "env": {
