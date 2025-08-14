@@ -27,10 +27,5 @@
   "env": {
     "DJANGO_SETTINGS_MODULE": "config.settings_vercel",
     "PYTHONPATH": "backend"
-  },
-  "functions": {
-    "backend/vercel_app.py": {
-      "includeFiles": "backend/**"
-    }
   }
 }
