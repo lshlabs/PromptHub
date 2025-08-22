@@ -7,7 +7,7 @@
 
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
@@ -64,11 +64,11 @@ export function SecuritySection({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const currentSessionKey = useMemo(() => {
+  const getCurrentSessionKey = () => {
     if (typeof window === 'undefined') return null
     // 기본 구현: 세션 키를 로컬스토리지에 저장해 두었다고 가정. 없으면 null
     return localStorage.getItem('prompthub_session_key')
-  }, [])
+  }
 
   const fetchSessions = async () => {
     try {
@@ -135,7 +135,7 @@ export function SecuritySection({
             ) : (
               <div className="space-y-3">
                 {sessions.map(s => {
-                  const isCurrent = currentSessionKey && s.key === currentSessionKey
+                  const isCurrent = getCurrentSessionKey() && s.key === getCurrentSessionKey()
                   const Icon =
                     s.device?.toLowerCase().includes('iphone') ||
                     s.device?.toLowerCase().includes('android')
@@ -198,7 +198,7 @@ export function SecuritySection({
                     onClick={async () => {
                       try {
                         await authApi.endOtherSessions()
-                        setSessions(prev => prev.filter(x => x.key === currentSessionKey))
+                        setSessions(prev => prev.filter(x => x.key === getCurrentSessionKey()))
                       } catch (e) {
                         alert('다른 세션 종료 실패')
                       }

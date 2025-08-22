@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { coreApi } from '@/lib/api/core'
-import type { SearchParams, FilterOptions } from '@/types/api'
+import type { FilterOptions } from '@/types/api'
 
 interface UseSearchOptions {
   initialPage?: number
@@ -96,19 +96,14 @@ export function useSearch(options: UseSearchOptions = {}): UseSearchReturn {
   const [filterOptions, setFilterOptions] = useState<FilterOptions | null>(null)
 
   // 디바운스된 검색 함수
-  const debouncedSearch = useCallback(
-    (() => {
-      let timeoutId: NodeJS.Timeout
-      return (query: string) => {
-        clearTimeout(timeoutId)
-        timeoutId = setTimeout(() => {
-          setSearchQuery(query)
-          setCurrentPage(1) // 검색 시 첫 페이지로 이동
-        }, debounceMs)
-      }
-    })(),
-    [debounceMs],
-  )
+  const debouncedSearch = useCallback((query: string) => {
+    const timeoutId = setTimeout(() => {
+      setSearchQuery(query)
+      setCurrentPage(1) // 검색 시 첫 페이지로 이동
+    }, debounceMs)
+    
+    return () => clearTimeout(timeoutId)
+  }, [debounceMs])
 
   // 검색 실행 함수
   const executeSearch = useCallback(async () => {

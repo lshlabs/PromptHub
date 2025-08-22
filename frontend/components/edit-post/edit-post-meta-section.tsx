@@ -104,7 +104,7 @@ export default function EditPostMetaSection({
   onActiveSectionChange,
   onUserInteraction,
 }: EditPostMetaSectionProps) {
-  const { getPlatformId, getModelId, getCategoryId, getModelDisplayName, getCategoryDisplayName } =
+  const { getPlatformId, getModelId, getCategoryId, getModelDisplayNameFromBackend, getCategoryDisplayNameFromBackend } =
     useMetadataUtils()
   // 디버깅용 콘솔 출력
   console.log('EditPostMetaSection Debug:', {
@@ -519,14 +519,20 @@ export default function EditPostMetaSection({
             }
             // Name → ID 변환 후 다시 표시명 결정
             const modelId = getModelId(model)
-            return getModelDisplayName(modelId, model_etc)
+            return getModelDisplayNameFromBackend({
+              modelId: modelId,
+              modelEtc: model_etc
+            })
           })()}
         </CustomBadge>
         <CustomBadge variant="gray" size="responsive">
           {(() => {
             // Name → ID 변환 후 다시 표시명 결정
             const categoryId = getCategoryId(category)
-            return categoryId ? getCategoryDisplayName(categoryId, category_etc) : category
+            return categoryId ? getCategoryDisplayNameFromBackend({
+              categoryId: categoryId,
+              categoryEtc: category_etc
+            }) : category
           })()}
         </CustomBadge>
         {tags.map((tag, index) => (

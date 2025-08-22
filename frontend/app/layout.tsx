@@ -6,9 +6,16 @@ import { Toaster } from '@/components/ui/toaster'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'PromptHub',
-  description: 'Created by hu2chaso',
-  generator: 'hu2chaso',
+  title: 'PromptHub - AI 프롬프트 리뷰 플랫폼',
+  description: 'AI 프롬프트를 공유하고 최적화할 수 있는 커뮤니티 플랫폼입니다.',
+  keywords: 'AI, 프롬프트, ChatGPT, 최적화, 커뮤니티',
+  authors: [{ name: 'hu2chaso' }],
+  creator: 'hu2chaso',
+  openGraph: {
+    title: 'PromptHub',
+    description: 'AI 프롬프트 리뷰 플랫폼',
+    type: 'website',
+  },
 }
 
 export default function RootLayout({
@@ -17,16 +24,21 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="ko" suppressHydrationWarning>
+      <head>
+        <script
+          src="https://accounts.google.com/gsi/client"
+          async
+          defer
+        />
+      </head>
       <body suppressHydrationWarning>
-        {/* Google Identity Services (개발/배포에서 Client ID 설정 시 자동 토큰 발급에 사용) */}
-        <script src="https://accounts.google.com/gsi/client" async defer></script>
         <AuthProvider>
           <Header />
           <main className="min-h-screen">{children}</main>
           <Footer />
+          <Toaster />
         </AuthProvider>
-        <Toaster />
       </body>
     </html>
   )

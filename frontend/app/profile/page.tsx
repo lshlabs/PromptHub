@@ -90,12 +90,12 @@ export default function ProfilePage() {
   // (간소화) 백엔드→프론트 데이터 변환은 각 API에서 이미 일관화되어 있어 별도 변환 함수 생략
 
   // 통계 데이터 계산 (백엔드 데이터 우선 사용)
-  const stats = {
+  const getStats = () => ({
     postCount: backendStats.postsCount,
     likeCount: backendStats.totalLikes,
     bookmarkCount: backendStats.totalBookmarks,
     viewCount: backendStats.totalViews,
-  }
+  })
 
   // 백엔드 데이터를 프론트엔드 형식으로 변환
   const transformBackendData = (backendData: any): ProfileUserData => {
@@ -276,7 +276,7 @@ export default function ProfilePage() {
 
         {/* Right Column */}
         <div className="space-y-8 lg:col-span-2">
-          <ProfileStatsSection stats={stats} isLoading={isLoading} title={''} contained />
+          <ProfileStatsSection stats={getStats()} isLoading={isLoading} title={''} contained />
           <Card className="overflow-hidden border border-gray-100 bg-white">
             <CardHeader className="pb-2">
               <Tabs

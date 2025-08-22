@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { PostCard } from '@/components/common/post-card'
 import { Pagination } from '@/components/common/pagination'
 import { EmptyState } from '@/components/common/empty-state'
@@ -131,7 +131,7 @@ export function PostList({
 
   const rawPosts = useApi ? apiPosts : externalPosts || []
 
-  const processedPosts = useMemo(() => {
+  const getProcessedPosts = () => {
     if (useApi) return rawPosts
 
     let filtered = [...rawPosts]
@@ -172,9 +172,9 @@ export function PostList({
     })
 
     return filtered
-  }, [rawPosts, searchParams, sortBy, useApi])
+  }
 
-  const posts = processedPosts
+  const posts = getProcessedPosts()
 
   const isExternalPagination =
     (externalCurrentPage !== undefined &&

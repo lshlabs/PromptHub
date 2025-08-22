@@ -26,65 +26,56 @@ export function EmptyState({
   onAction,
   className = '',
 }: EmptyStateProps) {
-  const getDefaultContent = () => {
-    switch (type) {
-      case 'posts':
-        return {
-          icon: FileText,
-          defaultTitle: '게시글이 없습니다',
-          defaultDescription: '아직 작성된 게시글이 없습니다. 첫 번째 게시글을 작성해보세요!',
-          defaultActionText: '게시글 작성하기',
-        };
-      case 'search':
-        return {
-          icon: Search,
-          defaultTitle: '검색 결과가 없습니다',
-          defaultDescription: '검색 조건에 맞는 결과를 찾을 수 없습니다. 다른 키워드로 검색해보세요.',
-          defaultActionText: '다시 검색하기',
-        };
-      case 'reviews':
-        return {
-          icon: FileText,
-          defaultTitle: '리뷰가 없습니다',
-          defaultDescription: '아직 작성된 리뷰가 없습니다. 첫 번째 리뷰를 작성해보세요!',
-          defaultActionText: '리뷰 작성하기',
-        };
-      case 'users':
-        return {
-          icon: Users,
-          defaultTitle: '사용자가 없습니다',
-          defaultDescription: '아직 등록된 사용자가 없습니다.',
-          defaultActionText: '사용자 초대하기',
-        };
-      case 'bookmark':
-        return {
-          icon: Bookmark,
-          defaultTitle: '아직 북마크한 프롬프트가 없습니다',
-          defaultDescription: '마음에 드는 프롬프트를 북마크해서 나중에 쉽게 찾아보세요',
-          defaultActionText: '프롬프트 둘러보기',
-        };
-      case 'trending':
-        return {
-          icon: TrendingUp,
-          defaultTitle: '트렌딩 게시글이 없습니다',
-          defaultDescription: '곧 새로운 트렌딩 게시글이 나타날 예정입니다!',
-          defaultActionText: '',
-        };
-      case 'user-posts':
-        return {
-          icon: FileText,
-          defaultTitle: '아직 작성한 리뷰가 없습니다',
-          defaultDescription: '첫 번째 리뷰를 작성해보세요!',
-          defaultActionText: '리뷰 작성하기',
-        };
-      default:
-        return {
-          icon: FolderOpen,
-          defaultTitle: '데이터가 없습니다',
-          defaultDescription: '표시할 데이터가 없습니다.',
-          defaultActionText: '새로 만들기',
-        };
-    }
+  const contentMap = {
+    posts: {
+      icon: FileText,
+      defaultTitle: '게시글이 없습니다',
+      defaultDescription: '아직 작성된 게시글이 없습니다. 첫 번째 게시글을 작성해보세요!',
+      defaultActionText: '게시글 작성하기',
+    },
+    search: {
+      icon: Search,
+      defaultTitle: '검색 결과가 없습니다',
+      defaultDescription: '검색 조건에 맞는 결과를 찾을 수 없습니다. 다른 키워드로 검색해보세요.',
+      defaultActionText: '다시 검색하기',
+    },
+    reviews: {
+      icon: FileText,
+      defaultTitle: '리뷰가 없습니다',
+      defaultDescription: '아직 작성된 리뷰가 없습니다. 첫 번째 리뷰를 작성해보세요!',
+      defaultActionText: '리뷰 작성하기',
+    },
+    users: {
+      icon: Users,
+      defaultTitle: '사용자가 없습니다',
+      defaultDescription: '아직 등록된 사용자가 없습니다.',
+      defaultActionText: '사용자 초대하기',
+    },
+    bookmark: {
+      icon: Bookmark,
+      defaultTitle: '아직 북마크한 프롬프트가 없습니다',
+      defaultDescription: '마음에 드는 프롬프트를 북마크해서 나중에 쉽게 찾아보세요',
+      defaultActionText: '프롬프트 둘러보기',
+    },
+    trending: {
+      icon: TrendingUp,
+      defaultTitle: '트렌딩 게시글이 없습니다',
+      defaultDescription: '곧 새로운 트렌딩 게시글이 나타날 예정입니다!',
+      defaultActionText: '',
+    },
+    'user-posts': {
+      icon: FileText,
+      defaultTitle: '아직 작성한 리뷰가 없습니다',
+      defaultDescription: '첫 번째 리뷰를 작성해보세요!',
+      defaultActionText: '리뷰 작성하기',
+    },
+  };
+
+  const getDefaultContent = () => contentMap[type] || {
+    icon: FolderOpen,
+    defaultTitle: '데이터가 없습니다',
+    defaultDescription: '표시할 데이터가 없습니다.',
+    defaultActionText: '새로 만들기',
   };
 
   const content = getDefaultContent();

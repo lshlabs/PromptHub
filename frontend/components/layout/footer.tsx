@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import { useMemo } from 'react'
 import { Star, Github, MessageCircle, Twitter, Youtube } from 'lucide-react'
 
 // ============================================================================
@@ -99,13 +98,13 @@ const BOTTOM_LINKS: FooterMenuItem[] = [
  */
 export default function Footer(): JSX.Element {
   // ========================================================================
-  // 메모화된 값들
+  // 유틸리티 함수들
   // ========================================================================
 
   /**
    * 현재 연도 (저작권 표시용)
    */
-  const currentYear = useMemo(() => new Date().getFullYear(), [])
+  const getCurrentYear = () => new Date().getFullYear()
 
   // ========================================================================
   // 렌더링 헬퍼 함수들
@@ -214,7 +213,7 @@ export default function Footer(): JSX.Element {
         <div className="mt-12 border-t border-gray-800 pt-8">
           <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
             <p className="text-sm text-gray-400">
-              Made by @hu2chaso | PromptHub - Private Project {currentYear}
+              Made by @hu2chaso | PromptHub - Private Project {getCurrentYear()}
             </p>
             <nav className="flex gap-6 text-sm text-gray-400" aria-label="법적 링크">
               {BOTTOM_LINKS.map(link => (

@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { CommunityHeader, CommunityAction } from '@/components/community'
 import { PostList } from '@/components/posts'
@@ -38,7 +38,7 @@ export default function CommunityPage() {
   const [currentPage, setCurrentPage] = useState(1)
   const [sortBy, setSortBy] = useState<SortOption>('latest')
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
-  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([])
+  const [selectedPlatforms] = useState<string[]>([])
   const [selectedModels, setSelectedModels] = useState<string[]>([])
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
@@ -82,16 +82,11 @@ export default function CommunityPage() {
   }, [])
 
   // 검색 매개변수 객체
-  const searchParams = useMemo(() => {
-    const params = {
-      search: searchQuery || undefined,
-      categories: selectedCategories.length > 0 ? selectedCategories.join(',') : undefined,
-      // platforms는 더 이상 필터로 사용하지 않음 (모델 선택의 관문 역할만)
-      models: selectedModels.length > 0 ? selectedModels.join(',') : undefined,
-    }
-    console.log('DEBUG: Search params:', params) // 디버깅 로그 추가
-    return params
-  }, [searchQuery, selectedCategories, selectedModels])
+  const getSearchParams = () => ({
+    search: searchQuery || undefined,
+    categories: selectedCategories.length > 0 ? selectedCategories.join(',') : undefined,
+    models: selectedModels.length > 0 ? selectedModels.join(',') : undefined,
+  })
 
   const handlePostClick = (postId: number) => {
     router.push(`/post/${postId}?from=community&from_page=${currentPage}`)
@@ -207,7 +202,7 @@ export default function CommunityPage() {
           {/* 게시글 목록 */}
           <PostList
             useApi={true}
-            searchParams={searchParams}
+            searchParams={getSearchParams()}
             sortBy={sortBy}
             onPostClick={handlePostClick}
             pagination={true}

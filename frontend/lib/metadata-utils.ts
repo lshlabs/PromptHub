@@ -88,7 +88,7 @@ export class MetadataManager {
     return this.categories
   }
 
-  // 모델 표시명 결정 (기타 모델 처리 포함)
+  // 모델 표시명 결정 (레거시 - 백엔드 호환성을 위해 유지, 향후 제거 예정)
   getModelDisplayName(modelId: number | null, modelEtc: string): string {
     if (!modelId) {
       return modelEtc || '기타'
@@ -104,7 +104,7 @@ export class MetadataManager {
     return modelName
   }
 
-  // 카테고리 표시명 결정 (기타 카테고리 처리 포함)
+  // 카테고리 표시명 결정 (레거시 - 백엔드 호환성을 위해 유지, 향후 제거 예정)
   getCategoryDisplayName(categoryId: number, categoryEtc: string): string {
     const categoryName = this.getCategoryName(categoryId)
 
@@ -114,6 +114,27 @@ export class MetadataManager {
     }
 
     return categoryName
+  }
+
+  // 백엔드 displayName 우선 사용 (새로운 방식)
+  getModelDisplayNameFromBackend(post: { modelDisplayName?: string; modelId?: number | null; modelEtc?: string }): string {
+    // 백엔드에서 제공하는 displayName이 있으면 우선 사용
+    if (post.modelDisplayName) {
+      return post.modelDisplayName
+    }
+    
+    // 백엔드 displayName이 없으면 기존 로직으로 폴백
+    return this.getModelDisplayName(post.modelId || null, post.modelEtc || '')
+  }
+
+  getCategoryDisplayNameFromBackend(post: { categoryDisplayName?: string; categoryId: number; categoryEtc?: string }): string {
+    // 백엔드에서 제공하는 displayName이 있으면 우선 사용
+    if (post.categoryDisplayName) {
+      return post.categoryDisplayName
+    }
+    
+    // 백엔드 displayName이 없으면 기존 로직으로 폴백
+    return this.getCategoryDisplayName(post.categoryId, post.categoryEtc || '')
   }
 }
 
@@ -133,11 +154,17 @@ export const useMetadataUtils = () => {
     getModelId: (name: string) => metadataManager.getModelId(name),
     getCategoryId: (name: string) => metadataManager.getCategoryId(name),
 
-    // 표시명 결정
+    // 표시명 결정 (레거시 - 하위 호환성을 위해 유지, 새 개발에서는 FromBackend 함수 사용 권장)
     getModelDisplayName: (modelId: number | null, modelEtc = '') =>
       metadataManager.getModelDisplayName(modelId, modelEtc),
     getCategoryDisplayName: (categoryId: number, categoryEtc = '') =>
       metadataManager.getCategoryDisplayName(categoryId, categoryEtc),
+
+    // 표시명 결정 (백엔드 displayName 우선 - 새로운 방식)
+    getModelDisplayNameFromBackend: (post: { modelDisplayName?: string; modelId?: number | null; modelEtc?: string }) =>
+      metadataManager.getModelDisplayNameFromBackend(post),
+    getCategoryDisplayNameFromBackend: (post: { categoryDisplayName?: string; categoryId: number; categoryEtc?: string }) =>
+      metadataManager.getCategoryDisplayNameFromBackend(post),
 
     // 데이터 설정
     setMetadata: (platforms: Platform[], models: Model[], categories: Category[]) =>
@@ -151,7 +178,7 @@ export const useMetadataUtils = () => {
   }
 }
 
-// 편의 함수들
+// 편의 함수들 (레거시 - 사용되지 않음, 향후 제거 예정)
 export const convertIdsToNames = (
   platformId: number,
   modelId: number | null,

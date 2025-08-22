@@ -5,7 +5,7 @@
 'use client'
 
 import type React from 'react'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
@@ -57,14 +57,12 @@ export function PostCard({
 }: PostCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [showRemoveDialog, setShowRemoveDialog] = useState(false)
-  const { getModelDisplayName, getCategoryDisplayName, setMetadata } = useMetadataUtils()
+  const { getModelDisplayNameFromBackend, getCategoryDisplayNameFromBackend, setMetadata } = useMetadataUtils()
 
-  // 메타데이터가 전달되면 설정
-  useEffect(() => {
-    if (platformsData && modelsData && categoriesData) {
-      setMetadata(platformsData, modelsData, categoriesData)
-    }
-  }, [platformsData, modelsData, categoriesData, setMetadata])
+  // 메타데이터가 전달되면 설정 (컴포넌트 렌더 시점에 동기적으로 처리)
+  if (platformsData && modelsData && categoriesData) {
+    setMetadata(platformsData, modelsData, categoriesData)
+  }
 
   // 상대적 시간 결정
   const relativeTime =
@@ -97,13 +95,12 @@ export function PostCard({
   // 모델명과 카테고리 표시 로직
   const getModelDisplay = () => {
     if (isBackendPostCard(data) || isBookmarkPostCard(data)) {
-      // 백엔드 데이터: model_detail 우선, 없으면 기본 로직
-      const modelDetail = (data as any).modelDetail || (data as any).model_detail
-      if (modelDetail && modelDetail.trim()) {
-        return modelDetail
-      }
-      // model_detail이 없으면 기존 로직 사용
-      return getModelDisplayName(data.modelId || null, data.modelEtc || '')
+      // 백엔드 데이터: 새로운 백엔드 displayName 우선 사용
+      return getModelDisplayNameFromBackend({
+        modelDisplayName: (data as any).modelDisplayName,
+        modelId: data.modelId || null,
+        modelEtc: data.modelEtc
+      })
     } else if (isFrontendPostCard(data)) {
       // 프론트엔드 샘플 데이터: model_detail 우선 확인
       const frontendData = data as PostCardFrontend
@@ -121,18 +118,12 @@ export function PostCard({
 
   const getCategoryDisplay = () => {
     if (isBackendPostCard(data) || isBookmarkPostCard(data)) {
-      // 백엔드 데이터: props로 전달된 메타데이터 우선 사용
-      if (categoriesData && categoriesData.length > 0) {
-        const category = categoriesData.find(c => c.id === data.categoryId)
-        const categoryName = category?.name || '알 수 없는 카테고리'
-        // 카테고리명이 '기타'이고 categoryEtc가 있으면 categoryEtc 사용
-        if (categoryName === '기타' && data.categoryEtc) {
-          return data.categoryEtc
-        }
-        return categoryName
-      }
-      // 폴백: 싱글톤 매니저 사용
-      return getCategoryDisplayName(data.categoryId, data.categoryEtc || '')
+      // 백엔드 데이터: 새로운 백엔드 displayName 우선 사용
+      return getCategoryDisplayNameFromBackend({
+        categoryDisplayName: (data as any).categoryDisplayName,
+        categoryId: data.categoryId,
+        categoryEtc: data.categoryEtc
+      })
     } else if (isFrontendPostCard(data)) {
       // 프론트엔드 샘플 데이터: 기존 로직 유지
       return data.category === '기타' && data.category_etc ? data.category_etc : data.category
@@ -143,74 +134,73 @@ export function PostCard({
   // 좋아요 상태 결정
   const isLiked = getIsLiked(data)
 
-  // 바리에이션별 스타일 설정
-  const getVariantStyles = () => {
-    // 현재 포스트 강조 여부에 따라 스타일 결정
-    if (isCurrent) {
-      return {
-        cardBorder: 'border-2 border-blue-200 hover:border-blue-300',
-        cardShadow: 'hover:shadow-xl',
-        topBar: 'bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500',
-        headerBg: 'bg-blue-50/30 border-blue-100',
-        avatarRing: 'ring-2 ring-blue-100',
-        avatarBg: 'bg-blue-100 text-blue-700',
-        authorColor: 'text-gray-800',
-        eyeColor: 'text-blue-500',
-        eyeTextColor: 'text-blue-600',
-        starBg: 'bg-orange-500 shadow-md',
-        modelBg: 'bg-blue-100 text-blue-800 ring-blue-700/20',
-        categoryBg: 'bg-gray-100 text-gray-700 ring-gray-500/20',
-      }
-    }
+  // 바리에이션별 스타일 맵
+  const variantStylesMap = {
+    current: {
+      cardBorder: 'border-2 border-blue-200 hover:border-blue-300',
+      cardShadow: 'hover:shadow-xl',
+      topBar: 'bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500',
+      headerBg: 'bg-blue-50/30 border-blue-100',
+      avatarRing: 'ring-2 ring-blue-100',
+      avatarBg: 'bg-blue-100 text-blue-700',
+      authorColor: 'text-gray-800',
+      eyeColor: 'text-blue-500',
+      eyeTextColor: 'text-blue-600',
+      starBg: 'bg-orange-500 shadow-md',
+      modelBg: 'bg-blue-100 text-blue-800 ring-blue-700/20',
+      categoryBg: 'bg-gray-100 text-gray-700 ring-gray-500/20',
+      leftBar: '',
+    },
+    bookmark: {
+      cardBorder: 'border border-gray-100 hover:border-gray-200',
+      cardShadow: 'hover:shadow-lg',
+      topBar: '',
+      headerBg: 'bg-gray-50/50 border-gray-100',
+      avatarRing: '',
+      avatarBg: 'bg-gray-100 text-gray-600',
+      authorColor: 'text-gray-700',
+      eyeColor: 'text-gray-400',
+      eyeTextColor: 'text-gray-500',
+      starBg: 'bg-orange-500',
+      modelBg: 'bg-blue-50 text-blue-700 ring-blue-700/10',
+      categoryBg: 'bg-gray-50 text-gray-600 ring-gray-500/10',
+      leftBar: 'bg-gradient-to-b from-green-400 to-green-600',
+    },
+    popular: {
+      cardBorder: 'border border-red-100 hover:border-red-200',
+      cardShadow: 'hover:shadow-xl',
+      topBar: 'bg-gradient-to-r from-red-500 via-pink-500 to-orange-500',
+      headerBg: 'bg-gradient-to-br from-red-50/50 to-pink-50/30 border-red-100',
+      avatarRing: 'ring-2 ring-red-100',
+      avatarBg: 'bg-red-100 text-red-700',
+      authorColor: 'text-gray-800',
+      eyeColor: 'text-gray-400',
+      eyeTextColor: 'text-gray-500',
+      starBg: 'bg-gradient-to-r from-orange-500 to-red-500 shadow-lg',
+      modelBg: 'bg-blue-50 text-blue-700 ring-blue-700/10',
+      categoryBg: 'bg-gray-50 text-gray-600 ring-gray-500/10',
+      leftBar: '',
+    },
+    normal: {
+      cardBorder: 'border border-gray-100 hover:border-gray-200',
+      cardShadow: 'hover:shadow-lg',
+      topBar: '',
+      headerBg: 'bg-gray-50/50 border-gray-100',
+      avatarRing: '',
+      avatarBg: 'bg-gray-100 text-gray-600',
+      authorColor: 'text-gray-700',
+      eyeColor: 'text-gray-400',
+      eyeTextColor: 'text-gray-500',
+      starBg: 'bg-orange-500',
+      modelBg: 'bg-blue-50 text-blue-700 ring-blue-700/10',
+      categoryBg: 'bg-gray-50 text-gray-600 ring-gray-500/10',
+      leftBar: '',
+    },
+  }
 
-    switch (finalVariant) {
-      case 'bookmark':
-        return {
-          cardBorder: 'border border-gray-100 hover:border-gray-200',
-          cardShadow: 'hover:shadow-lg',
-          topBar: '',
-          headerBg: 'bg-gray-50/50 border-gray-100',
-          avatarRing: '',
-          avatarBg: 'bg-gray-100 text-gray-600',
-          authorColor: 'text-gray-700',
-          eyeColor: 'text-gray-400',
-          eyeTextColor: 'text-gray-500',
-          starBg: 'bg-orange-500',
-          modelBg: 'bg-blue-50 text-blue-700 ring-blue-700/10',
-          categoryBg: 'bg-gray-50 text-gray-600 ring-gray-500/10',
-          leftBar: 'bg-gradient-to-b from-green-400 to-green-600',
-        }
-      case 'popular':
-        return {
-          cardBorder: 'border border-red-100 hover:border-red-200',
-          cardShadow: 'hover:shadow-xl',
-          topBar: 'bg-gradient-to-r from-red-500 via-pink-500 to-orange-500',
-          headerBg: 'bg-gradient-to-br from-red-50/50 to-pink-50/30 border-red-100',
-          avatarRing: 'ring-2 ring-red-100',
-          avatarBg: 'bg-red-100 text-red-700',
-          authorColor: 'text-gray-800',
-          eyeColor: 'text-gray-400',
-          eyeTextColor: 'text-gray-500',
-          starBg: 'bg-gradient-to-r from-orange-500 to-red-500 shadow-lg',
-          modelBg: 'bg-blue-50 text-blue-700 ring-blue-700/10',
-          categoryBg: 'bg-gray-50 text-gray-600 ring-gray-500/10',
-        }
-      default: // normal
-        return {
-          cardBorder: 'border border-gray-100 hover:border-gray-200',
-          cardShadow: 'hover:shadow-lg',
-          topBar: '',
-          headerBg: 'bg-gray-50/50 border-gray-100',
-          avatarRing: '',
-          avatarBg: 'bg-gray-100 text-gray-600',
-          authorColor: 'text-gray-700',
-          eyeColor: 'text-gray-400',
-          eyeTextColor: 'text-gray-500',
-          starBg: 'bg-orange-500',
-          modelBg: 'bg-blue-50 text-blue-700 ring-blue-700/10',
-          categoryBg: 'bg-gray-50 text-gray-600 ring-gray-500/10',
-        }
-    }
+  const getVariantStyles = () => {
+    if (isCurrent) return variantStylesMap.current
+    return variantStylesMap[finalVariant as keyof typeof variantStylesMap] || variantStylesMap.normal
   }
 
   const styles = getVariantStyles()

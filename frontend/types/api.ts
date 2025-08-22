@@ -181,6 +181,8 @@ export interface PostCard {
   modelEtc?: string
   modelDetail?: string
   categoryEtc?: string
+  modelDisplayName?: string  // 백엔드에서 제공하는 계산된 모델명
+  categoryDisplayName?: string  // 백엔드에서 제공하는 계산된 카테고리명
   likes: number
   isLiked: boolean
   bookmarks: number
@@ -648,6 +650,7 @@ export const API_ENDPOINTS: ApiEndpoints = {
     profileDelete: '/api/auth/profile/delete/',
     settings: '/api/auth/profile/settings/',
     sessions: '/api/auth/profile/sessions/',
+    google: '/api/auth/google/',
   },
   posts: {
     list: '/api/posts/',

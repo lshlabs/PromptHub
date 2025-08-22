@@ -134,6 +134,10 @@ class PostCardSerializer(serializers.ModelSerializer):
     modelDetail = serializers.CharField(source='model_detail', read_only=True)
     categoryEtc = serializers.CharField(source='category_etc', read_only=True)
     
+    # 표시명 (계산된 값)
+    modelDisplayName = serializers.SerializerMethodField()
+    categoryDisplayName = serializers.SerializerMethodField()
+    
     # 상호작용 필드들
     likes = serializers.IntegerField(source='like_count', read_only=True)
     isLiked = serializers.SerializerMethodField()
@@ -150,6 +154,7 @@ class PostCardSerializer(serializers.ModelSerializer):
             'createdAt', 'relativeTime', 'views',
             'platformId', 'modelId', 'categoryId',
             'modelEtc', 'modelDetail', 'categoryEtc',
+            'modelDisplayName', 'categoryDisplayName',
             'likes', 'isLiked', 'bookmarks', 'isBookmarked',
             'satisfaction', 'tags'
         ]
@@ -182,6 +187,14 @@ class PostCardSerializer(serializers.ModelSerializer):
 
     def get_tags(self, obj):
         return obj.get_tags_list()
+    
+    def get_modelDisplayName(self, obj):
+        """모델 표시명 반환"""
+        return obj.get_model_display_name()
+    
+    def get_categoryDisplayName(self, obj):
+        """카테고리 표시명 반환"""
+        return obj.get_category_display_name()
 
 
 class PostDetailSerializer(serializers.ModelSerializer):
@@ -204,6 +217,10 @@ class PostDetailSerializer(serializers.ModelSerializer):
     modelEtc = serializers.CharField(source='model_etc', read_only=True)
     modelDetail = serializers.CharField(source='model_detail', read_only=True)
     categoryEtc = serializers.CharField(source='category_etc', read_only=True)
+    
+    # 표시명 (계산된 값)
+    modelDisplayName = serializers.SerializerMethodField()
+    categoryDisplayName = serializers.SerializerMethodField()
     
     # 상호작용 필드들
     likes = serializers.IntegerField(source='like_count', read_only=True)
@@ -228,6 +245,7 @@ class PostDetailSerializer(serializers.ModelSerializer):
             'createdAt', 'relativeTime', 'views',
             'platformId', 'modelId', 'categoryId',
             'modelEtc', 'modelDetail', 'categoryEtc',
+            'modelDisplayName', 'categoryDisplayName',
             'likes', 'isLiked', 'bookmarks', 'isBookmarked',
             'satisfaction', 'tags',
             'prompt', 'aiResponse', 'additionalOpinion',
@@ -267,6 +285,14 @@ class PostDetailSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             return obj.author == request.user
         return False
+    
+    def get_modelDisplayName(self, obj):
+        """모델 표시명 반환"""
+        return obj.get_model_display_name()
+    
+    def get_categoryDisplayName(self, obj):
+        """카테고리 표시명 반환"""
+        return obj.get_category_display_name()
 
 
 class PostCreateSerializer(PostValidationMixin, serializers.ModelSerializer):

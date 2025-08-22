@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import * as React from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 // import { useTheme } from 'next-themes'
@@ -12,9 +12,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
   Menu,
   LogIn,
-  Home,
   Users,
-  BookOpen,
   TrendingUp,
   Star,
   Bookmark,
@@ -173,11 +171,11 @@ export default function Header(): JSX.Element {
   // 인증 상태 관리
   const { user, isAuthenticated, logout, isLoading } = useAuthContext()
 
-  const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false)
+  const [isAuthOpen, setIsAuthOpen] = React.useState<boolean>(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState<boolean>(false)
   // 로컬 테마 상태 (원복)
-  const [theme, setTheme] = useState<Theme>('system')
-  const [language, setLanguage] = useState<Language>('한국어')
+  const [theme, setTheme] = React.useState<Theme>('system')
+  const [language, setLanguage] = React.useState<Language>('한국어')
 
   // ========================================================================
   // Next.js 훅
@@ -190,18 +188,9 @@ export default function Header(): JSX.Element {
   // 메모화된 값들
   // ========================================================================
 
-  /**
-   * 인증 상태에 따라 필터링된 네비게이션 아이템들
-   */
-  const navigationItems = useMemo(
-    () => NAVIGATION_ITEMS.filter(item => !item.requiresAuth || isAuthenticated),
-    [isAuthenticated],
-  )
+  const navigationItems = NAVIGATION_ITEMS.filter(item => !item.requiresAuth || isAuthenticated)
 
-  /**
-   * 아바타 색상 (백엔드에서 제공되는 색상 값들)
-   */
-  const avatarColors = useMemo(() => {
+  const getAvatarColors = () => {
     if (user?.avatar_color1 && user?.avatar_color2) {
       return {
         color1: user.avatar_color1,
@@ -214,15 +203,13 @@ export default function Header(): JSX.Element {
       color2: '#9EE5FF',
       gradient: 'linear-gradient(135deg, #6B73FF 0%, #9EE5FF 100%)',
     }
-  }, [user?.avatar_color1, user?.avatar_color2])
+  }
 
-  /**
-   * 현재 테마에 맞는 아이콘 컴포넌트
-   */
-  const ThemeIcon = useMemo(() => {
+  const getThemeIcon = () => {
     const themeOption = THEME_OPTIONS.find(option => option.value === theme)
     return themeOption?.icon || Monitor
-  }, [theme])
+  }
+  const ThemeIcon = getThemeIcon()
 
   // ========================================================================
   // 유틸리티 함수들
@@ -234,7 +221,7 @@ export default function Header(): JSX.Element {
    * @param href - 확인할 경로
    * @returns 활성 상태 여부
    */
-  const isActive = useCallback(
+  const isActive = React.useCallback(
     (href: string): boolean => {
       if (href === '/') {
         return pathname === '/' || pathname === '/home'
@@ -255,7 +242,7 @@ export default function Header(): JSX.Element {
    * - 상태 초기화
    * - 필요시 홈으로 리다이렉트
    */
-  const handleLogout = useCallback(async (): Promise<void> => {
+  const handleLogout = React.useCallback(async (): Promise<void> => {
     try {
       console.log('🚪 Header: 로그아웃 시작')
       await logout()
@@ -276,7 +263,7 @@ export default function Header(): JSX.Element {
    * 로그인 성공 후 처리
    * - 로컬 스토리지에서 사용자 데이터 가져와서 상태 업데이트
    */
-  const handleLoginSuccess = useCallback((): void => {
+  const handleLoginSuccess = React.useCallback((): void => {
     console.log('🎉 Header: 로그인 성공 콜백 실행')
 
     // 모달 닫기
@@ -296,7 +283,7 @@ export default function Header(): JSX.Element {
    *
    * @param newTheme - 새로운 테마
    */
-  const handleThemeChange = useCallback((newTheme: Theme): void => {
+  const handleThemeChange = React.useCallback((newTheme: Theme): void => {
     setTheme(newTheme)
     localStorage.setItem('theme', newTheme)
   }, [])
@@ -306,7 +293,7 @@ export default function Header(): JSX.Element {
    *
    * @param newLanguage - 새로운 언어
    */
-  const handleLanguageChange = useCallback((newLanguage: Language): void => {
+  const handleLanguageChange = React.useCallback((newLanguage: Language): void => {
     setLanguage(newLanguage)
     // 실제 구현에서는 여기서 i18n 라이브러리를 통해 언어 변경
     localStorage.setItem('language', newLanguage)
@@ -316,10 +303,10 @@ export default function Header(): JSX.Element {
   // 생명주기 및 부수효과
   // ========================================================================
 
-  /**
-   * 테마 설정 복원
-   */
-  useEffect(() => {
+  // 테마 및 언어 설정 초기화 (클라이언트에서만 실행)
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return
+    
     const savedTheme = localStorage.getItem('theme') as Theme
     if (savedTheme && THEME_OPTIONS.some(option => option.value === savedTheme)) {
       setTheme(savedTheme)
@@ -328,53 +315,12 @@ export default function Header(): JSX.Element {
     if (savedLanguage && SUPPORTED_LANGUAGES.includes(savedLanguage)) {
       setLanguage(savedLanguage)
     }
-  }, [])
+  }, []) // 빈 의존성 배열로 마운트 시에만 실행
 
   // ========================================================================
   // 렌더링 헬퍼 함수들
   // ========================================================================
 
-  /**
-   * 네비게이션 링크 렌더링
-   *
-   * @param item - 네비게이션 아이템
-   * @param className - 추가 CSS 클래스
-   * @param onClick - 클릭 핸들러
-   * @returns 네비게이션 링크 JSX
-   */
-  const renderNavigationLink = useCallback(
-    (item: NavigationItem, className: string = '', onClick?: () => void): JSX.Element => {
-      const Icon = item.icon
-      const active = isActive(item.href)
-
-      return (
-        <Link
-          key={item.label}
-          href={item.href}
-          className={`${className} ${active ? 'active' : ''}`}
-          onClick={onClick}
-          aria-current={active ? 'page' : undefined}>
-          <Icon className="h-4 w-4 flex-shrink-0 sm:h-5 sm:w-5" aria-hidden="true" />
-          <span>{item.label}</span>
-          {item.badge && (
-            <Badge
-              variant={
-                item.badge === 'Hot'
-                  ? 'destructive'
-                  : item.badge === 'New'
-                    ? 'default'
-                    : 'secondary'
-              }
-              className="h-5 px-1.5 py-0.5 text-xs"
-              aria-label={`${item.label} ${item.badge}`}>
-              {item.badge}
-            </Badge>
-          )}
-        </Link>
-      )
-    },
-    [isActive],
-  )
 
   /**
    * 사용자 아바타 렌더링
@@ -382,7 +328,7 @@ export default function Header(): JSX.Element {
    * @param size - 아바타 크기 클래스
    * @returns 아바타 JSX
    */
-  const renderUserAvatar = useCallback(
+  const renderUserAvatar = React.useCallback(
     (size: string = 'w-8 h-8'): JSX.Element => {
       // 로딩 중일 때 스켈레톤 반환
       if (isLoading) {
@@ -393,14 +339,14 @@ export default function Header(): JSX.Element {
         <Avatar className={size}>
           <AvatarFallback
             className="border-2 border-white text-sm font-semibold text-white shadow-sm"
-            style={{ background: avatarColors.gradient }}
+            style={{ background: getAvatarColors().gradient }}
             aria-label={`${user?.username || '사용자'}의 아바타`}>
             {user?.username?.charAt(0).toUpperCase() || 'U'}
           </AvatarFallback>
         </Avatar>
       )
     },
-    [avatarColors.gradient, user?.username, isLoading],
+    [user?.username, isLoading],
   )
 
   // ========================================================================

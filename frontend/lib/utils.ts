@@ -275,21 +275,7 @@ export function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1)
 }
 
-// 태그 문자열을 배열로 변환
-export function parseTagsString(tagsString: string): string[] {
-  if (!tagsString || typeof tagsString !== 'string') {
-    return []
-  }
-  return tagsString
-    .split(',')
-    .map(tag => tag.trim())
-    .filter(tag => tag.length > 0)
-}
-
-// 태그 배열을 문자열로 변환
-export function stringifyTags(tags: string[]): string {
-  return tags.filter(tag => tag && tag.trim()).join(', ')
-}
+// 태그 관련 함수들은 백엔드에서 배열 형태로 제공되므로 제거됨
 
 // ===========================================
 // 숫자/통계 처리 유틸리티 함수들
@@ -316,16 +302,9 @@ export function formatNumber(num: number): string {
 export function formatSatisfactionStars(satisfaction: number): string {
   const fullStars = Math.floor(satisfaction)
   const hasHalfStar = satisfaction % 1 !== 0
-
-  let stars = '★'.repeat(fullStars)
-  if (hasHalfStar) {
-    stars += '☆'
-  }
-
   const emptyStars = 5 - Math.ceil(satisfaction)
-  stars += '☆'.repeat(emptyStars)
 
-  return stars
+  return '★'.repeat(fullStars) + (hasHalfStar ? '☆' : '') + '☆'.repeat(emptyStars)
 }
 
 // 만족도를 퍼센트로 변환
