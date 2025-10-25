@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { PostCard } from '@/components/common/post-card'
 import { Pagination } from '@/components/common/pagination'
 import { EmptyState } from '@/components/common/empty-state'
-import { postsApi } from '@/lib/api/posts'
+import { postsApi } from '@/lib/api'
 import type { PostCard as ApiPostCard } from '@/types/api'
 import type { SortOption } from '@/components/common/sort-selector'
 
@@ -27,6 +27,7 @@ interface PostListProps {
   useApi?: boolean
   searchParams?: {
     search?: string
+    search_type?: string
     categories?: string
     platforms?: string
     models?: string
@@ -75,26 +76,11 @@ export function PostList({
 
   const [internalCurrentPage, setInternalCurrentPage] = useState(1)
 
+  // 메타데이터는 상위 컴포넌트에서 전달받은 것만 사용 (중복 로드 방지)
   useEffect(() => {
-    if (!externalPlatformsData || !externalModelsData || !externalCategoriesData) {
-      const loadMetadata = async () => {
-        try {
-          const [platformsResponse, modelsResponse, categoriesResponse] = await Promise.all([
-            postsApi.getPlatforms(),
-            postsApi.getModels(),
-            postsApi.getCategories(),
-          ])
-
-          setPlatformsData(platformsResponse.data)
-          setModelsData(modelsResponse.data)
-          setCategoriesData(categoriesResponse.data)
-        } catch (err) {
-          console.error('메타데이터 로드 실패:', err)
-        }
-      }
-
-      loadMetadata()
-    }
+    if (externalPlatformsData) setPlatformsData(externalPlatformsData)
+    if (externalModelsData) setModelsData(externalModelsData)
+    if (externalCategoriesData) setCategoriesData(externalCategoriesData)
   }, [externalPlatformsData, externalModelsData, externalCategoriesData])
 
   useEffect(() => {
@@ -127,7 +113,16 @@ export function PostList({
     }
 
     loadPosts()
-  }, [useApi, externalCurrentPage, internalCurrentPage, itemsPerPage, searchParams, sortBy])
+  }, [
+    useApi,
+    externalCurrentPage,
+    internalCurrentPage,
+    itemsPerPage,
+    searchParams?.search,
+    searchParams?.categories,
+    searchParams?.models,
+    sortBy,
+  ])
 
   const rawPosts = useApi ? apiPosts : externalPosts || []
 
@@ -207,7 +202,15 @@ export function PostList({
   }
 
   if (posts.length === 0) {
-    const emptyStateType = variant === 'default' ? 'posts' : variant
+    // 검색 상황인지 판단 (검색어가 있거나 필터가 적용된 경우)
+    const isSearching =
+      searchParams?.search ||
+      searchParams?.search_type ||
+      searchParams?.categories ||
+      searchParams?.platforms ||
+      searchParams?.models
+
+    const emptyStateType = isSearching ? 'search' : variant === 'default' ? 'posts' : variant
 
     return (
       <EmptyState

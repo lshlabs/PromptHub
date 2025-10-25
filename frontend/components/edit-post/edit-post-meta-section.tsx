@@ -21,7 +21,7 @@ import { ChevronDown, Plus } from 'lucide-react'
 import CustomButton from '@/components/common/custom-button'
 import CustomBadge from '@/components/common/custom-badge'
 import StarRating from '@/components/common/star-rating'
-import { useMetadataUtils } from '@/lib/metadata-utils'
+import { useMetadataUtils } from '@/lib/utils'
 
 // API 데이터 타입 정의
 interface Platform {
@@ -104,8 +104,13 @@ export default function EditPostMetaSection({
   onActiveSectionChange,
   onUserInteraction,
 }: EditPostMetaSectionProps) {
-  const { getPlatformId, getModelId, getCategoryId, getModelDisplayNameFromBackend, getCategoryDisplayNameFromBackend } =
-    useMetadataUtils()
+  const {
+    getPlatformId,
+    getModelId,
+    getCategoryId,
+    getModelDisplayNameFromBackend,
+    getCategoryDisplayNameFromBackend,
+  } = useMetadataUtils()
   // 디버깅용 콘솔 출력
   console.log('EditPostMetaSection Debug:', {
     model,
@@ -521,7 +526,7 @@ export default function EditPostMetaSection({
             const modelId = getModelId(model)
             return getModelDisplayNameFromBackend({
               modelId: modelId,
-              modelEtc: model_etc
+              modelEtc: model_etc,
             })
           })()}
         </CustomBadge>
@@ -529,10 +534,12 @@ export default function EditPostMetaSection({
           {(() => {
             // Name → ID 변환 후 다시 표시명 결정
             const categoryId = getCategoryId(category)
-            return categoryId ? getCategoryDisplayNameFromBackend({
-              categoryId: categoryId,
-              categoryEtc: category_etc
-            }) : category
+            return categoryId
+              ? getCategoryDisplayNameFromBackend({
+                  categoryId: categoryId,
+                  categoryEtc: category_etc,
+                })
+              : category
           })()}
         </CustomBadge>
         {tags.map((tag, index) => (

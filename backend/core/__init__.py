@@ -1,1 +1,1 @@
-# Core utilities for common functionality across apps
+# 앱 간 공통 기능을 위한 코어 유틸리티

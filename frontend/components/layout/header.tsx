@@ -3,9 +3,14 @@
 import * as React from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-// import { useTheme } from 'next-themes'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTrigger,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -116,7 +121,7 @@ const NAVIGATION_ITEMS: NavigationItem[] = [
     label: '트렌딩',
     shortLabel: '트렌딩',
     icon: TrendingUp,
-    description: '인기 프롬프트 모음',
+    description: 'AI 모델 성능 랭킹 및 리뷰',
   },
   {
     href: '/extension',
@@ -223,6 +228,7 @@ export default function Header(): JSX.Element {
    */
   const isActive = React.useCallback(
     (href: string): boolean => {
+      if (!pathname) return false
       if (href === '/') {
         return pathname === '/' || pathname === '/home'
       }
@@ -270,7 +276,7 @@ export default function Header(): JSX.Element {
     setIsAuthOpen(false)
 
     // 현재 페이지가 특별한 페이지가 아니라면 홈으로 리다이렉트
-    if (pathname === '/test' || pathname.includes('/auth')) {
+    if (pathname && (pathname === '/test' || pathname.includes('/auth'))) {
       console.log('🏠 홈페이지로 리다이렉트')
       router.push('/')
     }
@@ -306,7 +312,7 @@ export default function Header(): JSX.Element {
   // 테마 및 언어 설정 초기화 (클라이언트에서만 실행)
   React.useEffect(() => {
     if (typeof window === 'undefined') return
-    
+
     const savedTheme = localStorage.getItem('theme') as Theme
     if (savedTheme && THEME_OPTIONS.some(option => option.value === savedTheme)) {
       setTheme(savedTheme)
@@ -320,7 +326,6 @@ export default function Header(): JSX.Element {
   // ========================================================================
   // 렌더링 헬퍼 함수들
   // ========================================================================
-
 
   /**
    * 사용자 아바타 렌더링
@@ -638,6 +643,9 @@ export default function Header(): JSX.Element {
                     </DialogTrigger>
                     <DialogContent className="max-w-md p-0 [&>button]:hidden">
                       <DialogTitle className="sr-only">로그인</DialogTitle>
+                      <DialogDescription className="sr-only">
+                        계정에 로그인하거나 새 계정을 만들어 PromptHub를 시작하세요
+                      </DialogDescription>
                       <AuthForm defaultTab="login" onSuccess={handleLoginSuccess} />
                     </DialogContent>
                   </Dialog>
@@ -645,7 +653,8 @@ export default function Header(): JSX.Element {
                   <Button
                     size="sm"
                     className="flex h-10 w-10 items-center justify-center bg-gradient-to-r from-blue-600 to-purple-600 p-0 text-white shadow-lg transition-all duration-200 hover:from-blue-700 hover:to-purple-700 hover:shadow-xl xl:h-auto xl:w-auto xl:justify-start xl:p-2 xl:px-4"
-                    aria-label="Chrome 확장프로그램 다운로드">
+                    aria-label="Chrome 확장프로그램 다운로드"
+                    onClick={() => router.push('/extension')}>
                     <Chrome className="h-4 w-4 flex-shrink-0 xl:mr-2" aria-hidden="true" />
                     <span className="hidden xl:inline">다운로드</span>
                   </Button>
@@ -678,6 +687,34 @@ export default function Header(): JSX.Element {
                               {user?.username || '사용자'}
                             </div>
                             <div className="text-sm text-gray-600">프로필 보기</div>
+                          </div>
+                        </Link>
+                      </div>
+                    )}
+
+                    {/* 모바일 로고 섹션 (로그인되지 않은 경우만 표시) */}
+                    {!isAuthenticated && (
+                      <div className="border-b bg-gradient-to-r from-blue-50 to-purple-50 p-4">
+                        <Link
+                          href="/"
+                          className="flex items-center gap-3 rounded-lg p-3 transition-colors hover:bg-white/80"
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          aria-label="PromptHub 홈페이지로 이동">
+                          <div className="relative">
+                            {/* 로고 아이콘 */}
+                            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 shadow-lg">
+                              <Star className="h-5 w-5 fill-white text-white" aria-hidden="true" />
+                            </div>
+                            {/* 상태 표시 점 */}
+                            <div
+                              className="absolute -right-1 -top-1 h-2.5 w-2.5 animate-pulse rounded-full bg-yellow-400"
+                              aria-hidden="true"></div>
+                          </div>
+                          <div>
+                            <h1 className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-lg font-bold text-transparent">
+                              PromptHub
+                            </h1>
+                            <p className="-mt-1 text-xs text-gray-500">AI 프롬프트 리뷰 플랫폼</p>
                           </div>
                         </Link>
                       </div>
@@ -762,13 +799,19 @@ export default function Header(): JSX.Element {
                               </DialogTrigger>
                               <DialogContent className="max-w-md p-0 [&>button]:hidden">
                                 <DialogTitle className="sr-only">로그인</DialogTitle>
+                                <DialogDescription className="sr-only">
+                                  계정에 로그인하거나 새 계정을 만들어 PromptHub를 시작하세요
+                                </DialogDescription>
                                 <AuthForm defaultTab="login" onSuccess={handleLoginSuccess} />
                               </DialogContent>
                             </Dialog>
 
                             <Button
-                              className="h-12 w-full justify-start gap-3 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                              onClick={() => setIsMobileMenuOpen(false)}
+                              className="h-12 w-full justify-start gap-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700"
+                              onClick={() => {
+                                setIsMobileMenuOpen(false)
+                                router.push('/extension')
+                              }}
                               aria-label="Chrome 확장프로그램 다운로드">
                               <Chrome className="h-5 w-5" aria-hidden="true" />
                               다운로드

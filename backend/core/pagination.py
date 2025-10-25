@@ -13,8 +13,8 @@ class CustomPagination(PageNumberPagination):
     필터와 정렬과 유기적으로 연동:
     1. 검색 → 2. 필터 → 3. 정렬 → 4. 페이지네이션 순서로 적용
     """
-    # 통일: 기본 20, 최대 100 (프론트 타입 기준과 일치)
-    page_size = 20
+    # 통일: 기본 10, 최대 100 (프론트 타입 기준과 일치)
+    page_size = 10
     page_size_query_param = 'page_size'
     max_page_size = 100
     page_query_param = 'page'
@@ -57,14 +57,4 @@ class PostPagination(CustomPagination):
     paginator = PostPagination()
     page = paginator.paginate_queryset(queryset, request)
     """
-    page_size = 20
-
-
-class UserPagination(CustomPagination):
-    """User 전용 페이지네이션"""
-    page_size = 20
-
-
-class CommentPagination(CustomPagination):
-    """Comment 전용 페이지네이션"""
-    page_size = 10 
+    page_size = 10

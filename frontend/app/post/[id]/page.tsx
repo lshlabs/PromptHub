@@ -12,7 +12,7 @@ import { GoBackButton } from '@/components/common/go-back-button'
 import { PostHeader, PostContentSections, PostActions, PostList } from '@/components/posts'
 import type { PostDetail, PostCard } from '@/types/api'
 import { useAuth } from '@/hooks/use-auth'
-import { postsApi } from '@/lib/api/posts'
+import { postsApi } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
 import { getPlatformName, getModelName, getCategoryName } from '@/lib/utils'
 

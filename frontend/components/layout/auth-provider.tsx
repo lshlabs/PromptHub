@@ -5,7 +5,6 @@
  */
 'use client'
 
-import type React from 'react'
 import { createContext, useContext, type ReactNode } from 'react'
 import { useAuth, type UseAuthReturn } from '@/hooks/use-auth'
 

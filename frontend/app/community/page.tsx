@@ -13,10 +13,9 @@ import { PostList } from '@/components/posts'
 import { SearchBar } from '@/components/common/search-bar'
 import type { SortOption } from '@/components/common/sort-selector'
 import { CreatePostDialog } from '@/components/common/create-post-dialog'
-import { postsApi } from '@/lib/api/posts'
-import { statsApi } from '@/lib/api/stats'
+import { postsApi, statsApi } from '@/lib/api'
 import type { Platform, Category } from '@/types/api'
-import { useMetadataUtils } from '@/lib/metadata-utils'
+import { useMetadataUtils } from '@/lib/utils'
 
 // 백엔드 API에서 받아올 통계 데이터 타입
 interface CommunityStats {
@@ -35,6 +34,7 @@ export default function CommunityPage() {
 
   // 상태 관리
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchType, setSearchType] = useState('title')
   const [currentPage, setCurrentPage] = useState(1)
   const [sortBy, setSortBy] = useState<SortOption>('latest')
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
@@ -59,43 +59,55 @@ export default function CommunityPage() {
     weeklyAdded: 0,
   })
 
-  // 통계 데이터 로드
+  // 통계 데이터 로드 (useRef로 마운트 상태 추적)
+  const statsLoadedRef = useRef(false)
+  const [statsLoading, setStatsLoading] = useState(false)
+
   useEffect(() => {
+    if (statsLoadedRef.current || statsLoading) return // 이미 로드되었거나 로딩 중인 경우 스킵
+
     const loadStats = async () => {
       try {
+        setStatsLoading(true)
         const response = await statsApi.getDashboardStats()
         const data = response.data
         setStats({
-          activeUsers: (data.active_users as number | undefined) ?? data.total_users,
+          activeUsers: data.total_users,
           sharedPrompts: data.total_posts,
           averageSatisfaction: (data.avg_satisfaction as number | undefined) ?? 0,
           totalBookmarks: data.total_bookmarks,
           totalViews: data.total_views,
           weeklyAdded: (data.weekly_added_posts as number | undefined) ?? 0,
         })
+        statsLoadedRef.current = true // ref로 로드 완료 표시 (리렌더링 방지)
       } catch (err) {
         console.error('통계 데이터 로드 실패:', err)
+        statsLoadedRef.current = true // 에러 발생해도 로드 완료로 표시
+      } finally {
+        setStatsLoading(false)
       }
     }
 
     loadStats()
-  }, [])
+  }, [statsLoading])
 
-  // 검색 매개변수 객체
-  const getSearchParams = () => ({
+  // 검색 매개변수 객체 (상태 기반)
+  const searchParams = {
     search: searchQuery || undefined,
+    search_type: searchType || undefined,
     categories: selectedCategories.length > 0 ? selectedCategories.join(',') : undefined,
     models: selectedModels.length > 0 ? selectedModels.join(',') : undefined,
-  })
+  }
 
   const handlePostClick = (postId: number) => {
     router.push(`/post/${postId}?from=community&from_page=${currentPage}`)
   }
 
-  const handleSearch = (query: string) => {
+  const handleSearch = (query: string, searchTypeValue: string = 'title') => {
     setSearchQuery(query)
+    setSearchType(searchTypeValue)
     setCurrentPage(1) // 검색 시 1페이지로 리셋
-    console.log('검색:', query)
+    console.log('검색:', query, '타입:', searchTypeValue)
   }
 
   const handleCreatePost = () => {
@@ -135,31 +147,42 @@ export default function CommunityPage() {
     scrollToActionSection()
   }
 
-  // 필터 데이터 로드
+  // 필터 데이터 로드 (useRef로 마운트 상태 추적)
+  const metadataLoadedRef = useRef(false)
+  const [metadataLoading, setMetadataLoading] = useState(false)
+
   useEffect(() => {
+    if (metadataLoadedRef.current || metadataLoading) return // 이미 로드되었거나 로딩 중인 경우 스킵
+
     const loadFilterData = async () => {
       try {
+        setMetadataLoading(true)
         setLoadingFilters(true)
+
         const [platformsResponse, categoriesResponse, modelsResponse] = await Promise.all([
           postsApi.getPlatforms(),
           postsApi.getCategories(),
           postsApi.getModels(),
         ])
+
         setPlatforms(platformsResponse.data)
         setCategories(categoriesResponse.data)
         setModels(modelsResponse.data)
 
         // 메타데이터 유틸리티에 설정
         setMetadata(platformsResponse.data, modelsResponse.data, categoriesResponse.data)
+        metadataLoadedRef.current = true // ref로 로드 완료 표시 (리렌더링 방지)
       } catch (error) {
         console.error('필터 데이터 로드 실패:', error)
+        metadataLoadedRef.current = true // 에러 발생해도 로드 완료로 표시
       } finally {
         setLoadingFilters(false)
+        setMetadataLoading(false)
       }
     }
 
     loadFilterData()
-  }, [])
+  }, [metadataLoading])
 
   const handleFilterChange = (filters: {
     categories: string[]
@@ -202,7 +225,7 @@ export default function CommunityPage() {
           {/* 게시글 목록 */}
           <PostList
             useApi={true}
-            searchParams={getSearchParams()}
+            searchParams={searchParams}
             sortBy={sortBy}
             onPostClick={handlePostClick}
             pagination={true}
@@ -210,6 +233,9 @@ export default function CommunityPage() {
             onPageChange={handlePageChange}
             itemsPerPage={10}
             key={refreshTrigger} // 새 게시글 작성 시 목록 새로고침
+            platformsData={platforms}
+            modelsData={models}
+            categoriesData={categories}
           />
 
           {/* 검색창 */}

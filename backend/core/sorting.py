@@ -1,6 +1,4 @@
-from django.db.models import F, Count, Avg, Q
-from django.utils import timezone
-from datetime import timedelta
+from django.db.models import F
 
 
 class PostSorting:

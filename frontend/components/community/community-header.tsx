@@ -43,7 +43,7 @@ export function CommunityHeader({ stats }: CommunityHeaderProps) {
               <Users className="h-4 w-4 text-blue-600" />
               <h1 className="text-blue-700">{stats.activeUsers}</h1>
             </div>
-            <p className="text-xs text-blue-600 sm:text-sm">활성 사용자</p>
+            <p className="text-xs text-blue-600 sm:text-sm">이용자 수</p>
           </div>
           <div className="rounded-xl border border-green-100 bg-green-50 p-4">
             <div className="mb-2 flex items-center justify-center gap-2">

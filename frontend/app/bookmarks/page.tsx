@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation'
 import { BookmarkHeader } from '@/components/bookmark/bookmark-header'
 import { PostList } from '@/components/posts'
 import { SearchBar } from '@/components/common/search-bar'
-import { postsApi } from '@/lib/api/posts'
-import { userDataApi } from '@/lib/api/userData'
-import { isAuthenticated } from '@/lib/api/client'
+import { postsApi, userDataApi } from '@/lib/api'
+import { useAuth } from '@/hooks/use-auth'
 import type { PostCard, Platform, Model, Category } from '@/types/api'
 
 export default function MyBookmarksPage() {
   const router = useRouter()
+  const { isAuthenticated } = useAuth()
   const [searchQuery, setSearchQuery] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
   const [bookmarks, setBookmarks] = useState<PostCard[]>([])
@@ -52,7 +52,7 @@ export default function MyBookmarksPage() {
 
     const loadBookmarks = async () => {
       // 로그인 체크
-      if (!isAuthenticated()) {
+      if (!isAuthenticated) {
         setError('로그인이 필요합니다.')
         setBookmarks([])
         return

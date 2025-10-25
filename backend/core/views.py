@@ -87,7 +87,7 @@ def get_filter_options(request):
     사용 가능한 필터 옵션 반환
     기존 프론트엔드 필터 UI에 맞춰 수정 (플랫폼, 모델, 카테고리만)
     """
-    from posts.models import Platform, Category, Model
+    from posts.models import Platform, Category, AiModel
     
     # 플랫폼 목록
     platforms = Platform.objects.values('id', 'name').order_by('id')
@@ -96,7 +96,7 @@ def get_filter_options(request):
     categories = Category.objects.values('id', 'name').order_by('id')
     
     # 모델 목록 (플랫폼별로 그룹화)
-    models = Model.objects.select_related('platform').values(
+    models = AiModel.objects.select_related('platform').values(
         'id', 'name', 'platform__id', 'platform__name'
     ).order_by('platform__id', 'id')
     

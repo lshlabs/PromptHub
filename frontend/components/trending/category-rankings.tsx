@@ -15,7 +15,7 @@ import {
   Wrench,
   Lightbulb,
 } from 'lucide-react'
-import { trendingApi } from '@/lib/api/trending'
+import { trendingApi } from '@/lib/api'
 import type { CategoryRankings as CategoryRankingsData, TrendingRanking } from '@/types/api'
 
 interface CategoryRankingsProps {
@@ -94,24 +94,30 @@ export default function CategoryRankings({
   const [categoryRankings, setCategoryRankings] = useState<CategoryRankingsData>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [dataLoaded, setDataLoaded] = useState(false) // 중복 API 호출 방지
 
   useEffect(() => {
+    // 이미 데이터가 로드된 경우 스킵
+    if (dataLoaded) return
+
     const fetchCategoryRankings = async () => {
       try {
         setLoading(true)
         setError(null)
         const response = await trendingApi.getCategoryRankings()
         setCategoryRankings(response.data)
+        setDataLoaded(true) // 데이터 로드 완료 표시
       } catch (err) {
         console.error('트렌딩 데이터 로드 실패:', err)
         setError('트렌딩 데이터를 불러오는데 실패했습니다.')
+        setDataLoaded(true) // 에러 발생해도 로드 완료로 표시
       } finally {
         setLoading(false)
       }
     }
 
     fetchCategoryRankings()
-  }, [])
+  }, [dataLoaded])
 
   if (loading) {
     return (

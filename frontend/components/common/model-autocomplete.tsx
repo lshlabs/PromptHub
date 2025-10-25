@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { ChevronDown, Search, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { postsApi } from '@/lib/api/posts'
+import { postsApi } from '@/lib/api'
 import type { ModelSuggestion } from '@/types/api'
 
 interface ModelAutocompleteProps {

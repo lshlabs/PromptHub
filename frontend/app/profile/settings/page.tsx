@@ -12,7 +12,7 @@ import { PrivacySection } from '@/components/profile/settings/privacy-section'
 import { SecuritySection } from '@/components/profile/settings/security-section'
 import { AccountManagement } from '@/components/profile/settings/account-management'
 import { useAuthContext } from '@/components/layout/auth-provider'
-import { authApi } from '@/lib/api/auth'
+import { authApi } from '@/lib/api'
 
 export default function SettingsPage() {
   const router = useRouter()

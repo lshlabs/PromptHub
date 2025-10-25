@@ -1,8 +1,13 @@
+'use client'
+
 import Link from 'next/link'
 import { ArrowRight, TrendingUp, Users, Puzzle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useSessionSync } from '@/hooks/use-session-sync'
 
 export default function HomePage() {
+  // Google 로그인 후 NextAuth 세션을 로컬 상태와 동기화
+  useSessionSync()
   return (
     <main className="relative isolate min-h-[100dvh] overflow-hidden bg-gradient-to-b from-sky-50 via-indigo-50 to-zinc-50 dark:from-zinc-950 dark:via-indigo-950/30 dark:to-zinc-900">
       {/* 배경 장식 */}

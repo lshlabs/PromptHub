@@ -1,5 +1,3 @@
-
-
 from django.db import models
 from django.core.validators import MinLengthValidator, MaxLengthValidator, MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
@@ -86,8 +84,6 @@ class AiModel(models.Model):
     )
     is_active = models.BooleanField(default=True, verbose_name="활성화")
     is_deprecated = models.BooleanField(default=False, verbose_name="사용중단")
-    deleted_at = models.DateTimeField(null=True, blank=True, verbose_name="삭제일시")
-    variant_free_text_allowed = models.BooleanField(default=True, verbose_name="상세 모델 자유 입력 허용")
     
     class Meta:
         verbose_name = "모델"
@@ -129,9 +125,6 @@ class AiModel(models.Model):
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = self._generate_unique_slug()
-        # '기타' 모델은 상세 모델 자유 입력을 허용하지 않도록 보정
-        if self.name == '기타':
-            self.variant_free_text_allowed = False
         super().save(*args, **kwargs)
 
 

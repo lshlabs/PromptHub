@@ -1,3 +1,3 @@
-# Package marker for post services
+# 게시글 서비스 패키지 마커
 
 

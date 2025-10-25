@@ -22,14 +22,10 @@ urlpatterns = [
     path('<int:post_id>/like/', views.post_like, name='post_like'),
     path('<int:post_id>/bookmark/', views.post_bookmark, name='post_bookmark'),
     
-    # 사용자별 게시글 조회 API
-    path('liked/', views.user_liked_posts, name='user_liked_posts'),
-    path('bookmarked/', views.user_bookmarked_posts, name='user_bookmarked_posts'),
-    path('my/', views.user_my_posts, name='user_my_posts'),
-    # RESTful alias (하이픈 컨벤션), 기존 경로와 병행 지원
-    path('liked-posts/', views.user_liked_posts, name='user_liked_posts_v2'),
-    path('bookmarked-posts/', views.user_bookmarked_posts, name='user_bookmarked_posts_v2'),
-    path('my-posts/', views.user_my_posts, name='user_my_posts_v2'),
+    # 사용자별 게시글 조회 API (RESTful 컨벤션)
+    path('liked-posts/', views.user_liked_posts, name='user_liked_posts'),
+    path('bookmarked-posts/', views.user_bookmarked_posts, name='user_bookmarked_posts'),
+    path('my-posts/', views.user_my_posts, name='user_my_posts'),
     
     # 게시글 삭제 API
     path('<int:post_id>/delete/', views.post_delete, name='post_delete'),

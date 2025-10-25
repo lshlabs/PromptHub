@@ -87,6 +87,12 @@ export interface UserProfileResponse extends UserData {
   total_likes: number
   total_views: number
   total_bookmarks: number
+  profile_completeness?: {
+    percentage: number
+    completed_fields: number
+    total_fields: number
+    missing_fields: string[]
+  }
 }
 
 export interface UserProfileUpdateRequest {
@@ -181,8 +187,8 @@ export interface PostCard {
   modelEtc?: string
   modelDetail?: string
   categoryEtc?: string
-  modelDisplayName?: string  // 백엔드에서 제공하는 계산된 모델명
-  categoryDisplayName?: string  // 백엔드에서 제공하는 계산된 카테고리명
+  modelDisplayName?: string // 백엔드에서 제공하는 계산된 모델명
+  categoryDisplayName?: string // 백엔드에서 제공하는 계산된 카테고리명
   likes: number
   isLiked: boolean
   bookmarks: number
@@ -340,6 +346,7 @@ export interface UserPostListParams {
   platform?: string
   sort?: string
   ordering?: string
+  author?: string
 }
 
 // ===========================================
@@ -403,6 +410,7 @@ export interface TrendingModelPostsResponse extends PaginatedResponse<PostCard> 
 
 export interface SearchParams {
   q: string
+  search_type?: string
   page?: number
   page_size?: number
   sort?: string
@@ -464,8 +472,8 @@ export interface ApiEndpoints {
     delete: (id: number) => string
     like: (id: number) => string
     bookmark: (id: number) => string
-    liked: '/api/posts/liked/'
-    bookmarked: '/api/posts/bookmarked/'
+    liked: '/api/posts/liked-posts/'
+    bookmarked: '/api/posts/bookmarked-posts/'
     my: '/api/posts/my/'
     platforms: '/api/posts/platforms/'
     models: '/api/posts/models/'
@@ -660,8 +668,8 @@ export const API_ENDPOINTS: ApiEndpoints = {
     delete: (id: number) => `/api/posts/${id}/delete/`,
     like: (id: number) => `/api/posts/${id}/like/`,
     bookmark: (id: number) => `/api/posts/${id}/bookmark/`,
-    liked: '/api/posts/liked/',
-    bookmarked: '/api/posts/bookmarked/',
+    liked: '/api/posts/liked-posts/',
+    bookmarked: '/api/posts/bookmarked-posts/',
     my: '/api/posts/my/',
     platforms: '/api/posts/platforms/',
     models: '/api/posts/models/',

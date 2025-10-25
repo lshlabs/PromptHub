@@ -6,19 +6,27 @@ import type { PostCard } from '@/types/api'
 interface ProfilePostsSectionProps {
   posts: PostCard[]
   onPostClick: (postId: number) => void
+  onRemoveBookmark?: (bookmarkId: number) => void
   isLoading?: boolean
   variant?: 'default' | 'bookmark' | 'trending' | 'user-posts'
   title?: string
   contained?: boolean
+  platformsData?: any[]
+  modelsData?: any[]
+  categoriesData?: any[]
 }
 
 export function ProfilePostsSection({
   posts,
   onPostClick,
+  onRemoveBookmark,
   isLoading = false,
   variant = 'user-posts',
   title = '내 리뷰',
   contained = false,
+  platformsData,
+  modelsData,
+  categoriesData,
 }: ProfilePostsSectionProps) {
   const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     contained ? (
@@ -40,9 +48,13 @@ export function ProfilePostsSection({
         <PostList
           posts={posts}
           onPostClick={onPostClick}
+          onRemoveBookmark={onRemoveBookmark}
           variant={variant}
           pagination={true}
           itemsPerPage={5}
+          platformsData={platformsData}
+          modelsData={modelsData}
+          categoriesData={categoriesData}
         />
       )}
     </Wrapper>

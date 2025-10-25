@@ -18,8 +18,8 @@ from django.core.wsgi import get_wsgi_application
 # Django 초기화
 django.setup()
 
-# WSGI application
+# WSGI 애플리케이션
 application = get_wsgi_application()
 
-# Vercel handler
+# Vercel 핸들러
 app = application

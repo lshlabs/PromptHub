@@ -4,7 +4,7 @@
  */
 'use client'
 
-import type React from 'react'
+import type { MouseEvent } from 'react'
 import { useState } from 'react'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -30,7 +30,7 @@ import {
   formatSatisfaction,
 } from '@/lib/utils'
 import { generateAvatarGradient } from '@/lib/utils'
-import { useMetadataUtils } from '@/lib/metadata-utils'
+import { useMetadataUtils } from '@/lib/utils'
 
 interface PostCardProps {
   data: PostCardData
@@ -57,7 +57,8 @@ export function PostCard({
 }: PostCardProps) {
   const [isHovered, setIsHovered] = useState(false)
   const [showRemoveDialog, setShowRemoveDialog] = useState(false)
-  const { getModelDisplayNameFromBackend, getCategoryDisplayNameFromBackend, setMetadata } = useMetadataUtils()
+  const { getModelDisplayNameFromBackend, getCategoryDisplayNameFromBackend, setMetadata } =
+    useMetadataUtils()
 
   // 메타데이터가 전달되면 설정 (컴포넌트 렌더 시점에 동기적으로 처리)
   if (platformsData && modelsData && categoriesData) {
@@ -80,7 +81,7 @@ export function PostCard({
   // 만족도 안전하게 포맷팅
   const satisfactionDisplay = formatSatisfaction(data)
 
-  const handleRemoveBookmark = (e: React.MouseEvent) => {
+  const handleRemoveBookmark = (e: MouseEvent) => {
     e.stopPropagation()
     setShowRemoveDialog(true)
   }
@@ -99,7 +100,7 @@ export function PostCard({
       return getModelDisplayNameFromBackend({
         modelDisplayName: (data as any).modelDisplayName,
         modelId: data.modelId || null,
-        modelEtc: data.modelEtc
+        modelEtc: data.modelEtc,
       })
     } else if (isFrontendPostCard(data)) {
       // 프론트엔드 샘플 데이터: model_detail 우선 확인
@@ -122,7 +123,7 @@ export function PostCard({
       return getCategoryDisplayNameFromBackend({
         categoryDisplayName: (data as any).categoryDisplayName,
         categoryId: data.categoryId,
-        categoryEtc: data.categoryEtc
+        categoryEtc: data.categoryEtc,
       })
     } else if (isFrontendPostCard(data)) {
       // 프론트엔드 샘플 데이터: 기존 로직 유지
@@ -200,7 +201,9 @@ export function PostCard({
 
   const getVariantStyles = () => {
     if (isCurrent) return variantStylesMap.current
-    return variantStylesMap[finalVariant as keyof typeof variantStylesMap] || variantStylesMap.normal
+    return (
+      variantStylesMap[finalVariant as keyof typeof variantStylesMap] || variantStylesMap.normal
+    )
   }
 
   const styles = getVariantStyles()

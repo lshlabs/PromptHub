@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { ChevronLeft, ChevronRight, Save, Plus, X } from 'lucide-react'
-import { postsApi } from '@/lib/api/posts'
+import { postsApi } from '@/lib/api'
 import type {
   Platform,
   Model,
@@ -24,7 +24,7 @@ import CustomButton from './custom-button'
 import CustomBadge from './custom-badge'
 import StarRating from './star-rating'
 import ModelAutocomplete from './model-autocomplete'
-import { useMetadataUtils } from '@/lib/metadata-utils'
+import { useMetadataUtils } from '@/lib/utils'
 
 interface CreatePostDialogProps {
   open: boolean

@@ -1,5 +1,5 @@
 // ===========================================
-// API 클라이언트 - Django 백엔드와의 통신을 위한 함수들
+// API 클라이언트 - Django 백엔드와의 통신을 위한 모든 함수들
 // ===========================================
 
 import axios, { AxiosInstance, AxiosError, AxiosResponse, AxiosRequestConfig } from 'axios'
@@ -19,9 +19,12 @@ import {
   UserProfileResponse,
   UserProfileUpdateRequest,
   PasswordChangeRequest,
+  ChangePasswordResponse,
   TokenRefreshRequest,
   TokenRefreshResponse,
   UserPostListParams,
+  UserSettingsDTO,
+  UserSessionDTO,
   // Posts 관련 타입들
   Platform,
   Model,
@@ -39,233 +42,264 @@ import {
   PostInteractionResponse,
   PostListParams,
   PlatformModelsResponse,
+  ModelSuggestResponse,
   // Core 관련 타입들
   SearchParams,
   SortOption,
   FilterOptions,
+  // Trending 관련 타입들
+  TrendingResponse,
+  CategoryRankings,
+  TrendingModelInfoResponse,
+  TrendingModelPostsResponse,
   // 상수들
   API_ENDPOINTS,
+  API_BASE_URL,
+  HTTP_STATUS,
 } from '@/types/api'
-// 새 모듈 import (호환 레이어용)
-import { authApi as newAuthApi } from '@/lib/api/auth'
-import { postsApi as newPostsApi } from '@/lib/api/posts'
-import { coreApi as newCoreApi } from '@/lib/api/core'
-import { metadataApi as newMetadataApi } from '@/lib/api/metadata'
-import { userDataApi as newUserDataApi } from '@/lib/api/userData'
-import { statsApi as newStatsApi } from '@/lib/api/stats'
-
-// 기존 import 경로 호환을 위한 named export 유지
-export { authApi } from '@/lib/api/auth'
-export { postsApi } from '@/lib/api/posts'
-export { coreApi } from '@/lib/api/core'
-export { metadataApi } from '@/lib/api/metadata'
-export { userDataApi } from '@/lib/api/userData'
-export { statsApi } from '@/lib/api/stats'
-// 모듈 분리 준비 중: 기존 파일은 호환성을 위해 유지
 
 // ===========================================
-// Axios 인스턴스 설정
+// API 클라이언트 설정
 // ===========================================
 
+// 토큰 관리 함수들 (외부에서 사용 가능하도록 export)
+export const getAccessToken = (): string | null => {
+  if (typeof window === 'undefined') return null
+  return localStorage.getItem('prompthub_access_token')
+}
+
+const setAccessToken = (token: string): void => {
+  if (typeof window === 'undefined') return
+  localStorage.setItem('prompthub_access_token', token)
+}
+
+const removeAccessToken = (): void => {
+  if (typeof window === 'undefined') return
+  localStorage.removeItem('prompthub_access_token')
+}
+
+export const clearTokens = (): void => {
+  if (typeof window === 'undefined') return
+  localStorage.removeItem('prompthub_access_token')
+  localStorage.removeItem('prompthub_session_key')
+}
+
+export const setTokens = (token: string): void => {
+  if (typeof window === 'undefined') return
+  localStorage.setItem('prompthub_access_token', token)
+}
+
+// Axios 인스턴스 생성
 const createApiClient = (): AxiosInstance => {
   const client = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000',
+    baseURL: API_BASE_URL,
     timeout: 30000,
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+    },
   })
 
+  // 요청 인터셉터
   client.interceptors.request.use(
     config => {
       const token = getAccessToken()
+      console.log('🌐 API 요청 준비:', {
+        url: config.url,
+        method: config.method?.toUpperCase(),
+        hasToken: !!token,
+        tokenPrefix: token ? token.substring(0, 10) + '...' : 'none',
+      })
+
       if (token) {
         config.headers.Authorization = `Token ${token}`
+      }
+      // 세션 키를 헤더로 전달해 서버가 현재 세션 식별 가능하도록 함
+      if (typeof window !== 'undefined') {
+        const sessionKey = localStorage.getItem('prompthub_session_key')
+        if (sessionKey) {
+          ;(config.headers as any)['X-Session-Key'] = sessionKey
+        }
       }
       return config
     },
     error => Promise.reject(error),
   )
 
+  // 응답 인터셉터
+  client.interceptors.response.use(
+    response => {
+      console.log('✅ API 응답 성공:', {
+        url: response.config.url,
+        status: response.status,
+        dataSize: JSON.stringify(response.data).length,
+      })
+      return response
+    },
+    error => {
+      // 에러 정보를 더 명확하게 로깅
+      const errorInfo = {
+        url: error.config?.url,
+        status: error.response?.status,
+        message: error.message,
+        data: error.response?.data,
+      }
+
+      // 401 에러는 인증 관련이므로 경고 수준으로 로깅
+      if (error.response?.status === 401) {
+        console.warn('🔐 인증 오류 (401):', errorInfo)
+      } else {
+        console.error('❌ API 응답 실패:', errorInfo)
+      }
+
+      // 401 에러 시 토큰 제거
+      if (error.response?.status === 401) {
+        removeAccessToken()
+        if (typeof window !== 'undefined') {
+          window.location.href = '/'
+        }
+      }
+
+      return Promise.reject(createApiError(error))
+    },
+  )
+
   return client
 }
 
-const apiClient = createApiClient()
-
-// ===========================================
-// 토큰 관리 함수들
-// ===========================================
-
-const TOKEN_KEYS = {
-  ACCESS: 'prompthub_access_token',
-  REFRESH: 'prompthub_refresh_token',
-} as const
-
-export const getAccessToken = (): string | null => {
-  if (typeof window === 'undefined') return null
-  return localStorage.getItem(TOKEN_KEYS.ACCESS)
-}
-
-export const getRefreshToken = (): string | null => {
-  // Django Token Authentication은 refresh token이 없음
-  return null
-}
-
-export const setTokens = (tokens: AuthTokens): void => {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(TOKEN_KEYS.ACCESS, tokens.access)
-  // Django Token Authentication은 refresh token 저장 불필요
-}
-
-export const setAccessToken = (token: string): void => {
-  if (typeof window === 'undefined') return
-  localStorage.setItem(TOKEN_KEYS.ACCESS, token)
-}
-
-export const clearTokens = (): void => {
-  if (typeof window === 'undefined') return
-  localStorage.removeItem(TOKEN_KEYS.ACCESS)
-  // Django Token Authentication은 refresh token 제거 불필요
-}
-
-export const isAuthenticated = (): boolean => {
-  return !!getAccessToken()
-}
-
-// ===========================================
-// 에러 처리 함수들
-// ===========================================
-
-// 에러 객체 표준화
+// API 에러 생성 함수
 const createApiError = (error: AxiosError): ApiRequestError => {
-  if (!error.response) {
-    return {
-      message: '네트워크 연결을 확인해주세요.',
-      code: error.code,
-      isNetworkError: true,
-    } as any
-  }
+  const status = error.response?.status || 0
+  const data = error.response?.data as any
 
-  const { status, data } = error.response
   let message = '알 수 없는 오류가 발생했습니다.'
+  let errors: unknown = null
 
-  if (typeof data === 'object' && data !== null) {
-    if ('detail' in (data as any)) {
-      message = String((data as any).detail)
-    } else if ('message' in (data as any)) {
-      message = String((data as any).message)
-    } else if ('error' in (data as any)) {
-      message = String((data as any).error)
-    } else if (
-      'non_field_errors' in (data as any) &&
-      Array.isArray((data as any).non_field_errors)
-    ) {
-      message = (data as any).non_field_errors.join(' ')
+  if (data) {
+    if (typeof data === 'string') {
+      message = data
+    } else if (data.message) {
+      message = data.message
+    } else if (data.error) {
+      message = data.error
+    } else if (data.detail) {
+      message = data.detail
+    } else if (data.non_field_errors && Array.isArray(data.non_field_errors)) {
+      message = data.non_field_errors.join(', ')
+    } else if (typeof data === 'object') {
+      // 필드별 에러가 있는 경우
+      const fieldErrors = Object.entries(data)
+        .filter(([_, value]) => Array.isArray(value) && value.length > 0)
+        .map(([field, value]) => `${field}: ${(value as string[]).join(', ')}`)
+
+      if (fieldErrors.length > 0) {
+        message = fieldErrors.join('; ')
+        errors = data
+      }
     }
+  } else if (error.message) {
+    message = error.message
   }
 
   return {
-    status: status as number,
     message,
-    detail: typeof data === 'object' ? JSON.stringify(data) : String(data),
-    errors: data as ValidationError,
+    status,
+    errors: data as ValidationError | undefined,
     timestamp: new Date().toISOString(),
   }
 }
 
+// API 클라이언트 인스턴스
+export const apiClient = createApiClient()
+
 // ===========================================
-// 공통 API 함수들
+// HTTP 메서드 래퍼 함수들
 // ===========================================
 
-const get = async <T>(url: string, params?: Record<string, any>): Promise<T> => {
+export const get = async <T>(url: string, params?: Record<string, any>): Promise<T> => {
   const response: AxiosResponse<T> = await apiClient.get(url, { params })
   return response.data
 }
 
-const post = async <T, D = any>(url: string, data?: D): Promise<T> => {
+export const post = async <T, D = any>(url: string, data?: D): Promise<T> => {
   const response: AxiosResponse<T> = await apiClient.post(url, data)
   return response.data
 }
 
-const put = async <T, D = any>(url: string, data?: D): Promise<T> => {
+export const put = async <T, D = any>(url: string, data?: D): Promise<T> => {
   const response: AxiosResponse<T> = await apiClient.put(url, data)
   return response.data
 }
 
-const patch = async <T, D = any>(url: string, data?: D): Promise<T> => {
+export const patch = async <T, D = any>(url: string, data?: D): Promise<T> => {
   const response: AxiosResponse<T> = await apiClient.patch(url, data)
   return response.data
 }
 
-const del = async <T>(url: string): Promise<T> => {
+export const del = async <T>(url: string): Promise<T> => {
   const response: AxiosResponse<T> = await apiClient.delete(url)
   return response.data
 }
 
-// 파일 업로드용 함수
-const postFormData = async <T>(url: string, formData: FormData): Promise<T> => {
-  const response: AxiosResponse<T> = await apiClient.post(url, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  })
-  return response.data
-}
-
 // ===========================================
-// Users 앱 API 함수들
+// 인증 관련 API
 // ===========================================
 
-const legacy_authApi = {
-  // 회원가입
+export const authApi = {
+  /** 회원가입 */
   register: async (data: UserRegistrationRequest): Promise<UserRegistrationResponse> => {
     const response = await post<UserRegistrationResponse>(API_ENDPOINTS.auth.register, data)
-
-    // 회원가입 성공 시 토큰 저장 (Django Token Authentication)
-    if (response.token) {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(TOKEN_KEYS.ACCESS, response.token)
-      }
+    if (response.token && typeof window !== 'undefined') {
+      setAccessToken(response.token)
     }
-
     return response
   },
 
-  // 로그인
+  /** 로그인 (세션 키 저장 포함) */
   login: async (data: UserLoginRequest): Promise<UserLoginResponse> => {
-    const response = await post<UserLoginResponse>(API_ENDPOINTS.auth.login, data)
-
-    // 로그인 성공 시 토큰 저장 (Django Token Authentication)
-    if (response.token) {
-      if (typeof window !== 'undefined') {
-        localStorage.setItem(TOKEN_KEYS.ACCESS, response.token)
+    const response = await post<any>(API_ENDPOINTS.auth.login, data)
+    if (response.token && typeof window !== 'undefined') {
+      setAccessToken(response.token)
+      // 서버에서 세션 정보가 오면 세션 키 저장
+      if (response.session?.key) {
+        localStorage.setItem('prompthub_session_key', response.session.key)
       }
     }
-
-    return response
+    return response as UserLoginResponse
   },
 
-  // 로그아웃
+  /** Google 로그인: id_token 제출 */
+  loginWithGoogle: async (idToken: string): Promise<UserLoginResponse> => {
+    const response = await post<any>(API_ENDPOINTS.auth.google, { id_token: idToken })
+    if (response.token && typeof window !== 'undefined') {
+      setAccessToken(response.token)
+      if (response.session?.key) {
+        localStorage.setItem('prompthub_session_key', response.session.key)
+      }
+    }
+    return response as UserLoginResponse
+  },
+
+  /** 로그아웃 (토큰 제거) */
   logout: async (): Promise<void> => {
     try {
       await post(API_ENDPOINTS.auth.logout)
     } finally {
-      // 로그아웃 성공/실패와 관계없이 토큰 제거
-      clearTokens()
+      removeAccessToken()
     }
   },
 
-  // Django Token Authentication은 토큰 갱신이 없음
-  refreshToken: async (refreshToken: string): Promise<TokenRefreshResponse> => {
+  /** TokenAuth 환경: 토큰 갱신 미지원 */
+  refreshToken: async (_refreshToken: string): Promise<TokenRefreshResponse> => {
     throw new Error('Django Token Authentication은 토큰 갱신을 지원하지 않습니다.')
   },
 
-  // 사용자 프로필 조회
+  /** 사용자 프로필 조회 */
   getProfile: async (): Promise<UserProfileResponse> => {
-    return get<UserProfileResponse>(API_ENDPOINTS.auth.profile)
+    return (await apiClient.get<UserProfileResponse>(API_ENDPOINTS.auth.profile)).data
   },
 
-  // 사용자 프로필 수정
+  /** 사용자 프로필 업데이트 (파일이면 multipart PUT) */
   updateProfile: async (data: UserProfileUpdateRequest): Promise<UserData> => {
-    // 서버는 PUT을 허용하므로 PUT으로 통일 (파일 포함 시 multipart PUT)
     if (data.profile_image instanceof File) {
       const formData = new FormData()
       Object.entries(data).forEach(([key, value]) => {
@@ -281,23 +315,71 @@ const legacy_authApi = {
     return put<UserData>(API_ENDPOINTS.auth.profile, data)
   },
 
-  // 비밀번호 변경
-  changePassword: async (data: PasswordChangeRequest): Promise<void> => {
-    return post(API_ENDPOINTS.auth.passwordChange, data)
+  /** 비밀번호 변경 (성공 시 신규 토큰 저장) */
+  changePassword: async (data: PasswordChangeRequest): Promise<ChangePasswordResponse> => {
+    const res = await post<ChangePasswordResponse>(API_ENDPOINTS.auth.passwordChange, data)
+    if (res.token && typeof window !== 'undefined') {
+      setAccessToken(res.token)
+    }
+    return res
   },
 
-  // 사용자 정보 조회 (간단한 정보)
+  /** 계정 삭제 (확인 문구 옵션) */
+  deleteAccount: async (confirmation?: string): Promise<{ message: string }> => {
+    const response = await apiClient.delete<{ message: string }>(API_ENDPOINTS.auth.profileDelete, {
+      data: confirmation ? { confirmation } : undefined,
+    })
+    return response.data
+  },
+
+  /** 간단 사용자 정보 */
   getUserInfo: async (): Promise<UserData> => {
-    return get<UserData>(API_ENDPOINTS.auth.userInfo)
+    return (await apiClient.get<UserData>(API_ENDPOINTS.auth.userInfo)).data
+  },
+
+  /** 사용자 설정 조회 */
+  getSettings: async (): Promise<UserSettingsDTO> => {
+    return (await apiClient.get<UserSettingsDTO>(API_ENDPOINTS.auth.settings)).data
+  },
+
+  /** 사용자 설정 업데이트 (Partial) */
+  updateSettings: async (data: Partial<UserSettingsDTO>): Promise<UserSettingsDTO> => {
+    return (await apiClient.patch<UserSettingsDTO>(API_ENDPOINTS.auth.settings, data)).data
+  },
+
+  /** 사용자 세션 목록 */
+  getSessions: async (): Promise<UserSessionDTO[]> => {
+    return (await apiClient.get<UserSessionDTO[]>(API_ENDPOINTS.auth.sessions)).data
+  },
+
+  /** 특정 세션 종료 */
+  endSession: async (key: string): Promise<{ message: string }> => {
+    return (
+      await apiClient.delete<{ message: string }>(
+        `${API_ENDPOINTS.auth.sessions}?key=${encodeURIComponent(key)}`,
+      )
+    ).data
+  },
+
+  /** 기타 모든 세션 종료 */
+  endOtherSessions: async (): Promise<{ message: string; count: number }> => {
+    return (
+      await apiClient.delete<{ message: string; count: number }>(
+        `${API_ENDPOINTS.auth.sessions}?all=true`,
+      )
+    ).data
   },
 }
 
 // ===========================================
-// Posts 앱 API 함수들
+// 게시글 관련 API
 // ===========================================
 
-const legacy_postsApi = {
-  // 게시글 목록 조회 (페이지네이션)
+export const postsApi = {
+  /**
+   * 게시글 목록 조회 (페이지네이션/검색/정렬)
+   * @returns PaginatedResponse<PostCard>
+   */
   getPosts: async (
     params?: PostListParams,
   ): Promise<{ status: 'success'; data: PaginatedResponse<PostCard> }> => {
@@ -307,129 +389,93 @@ const legacy_postsApi = {
     )
   },
 
-  // 게시글 상세 조회
+  /** 게시글 상세 조회 */
   getPost: async (id: number): Promise<ApiResponse<PostDetail>> => {
     return get<ApiResponse<PostDetail>>(API_ENDPOINTS.posts.detail(id))
   },
 
-  // 게시글 생성
+  /** 게시글 생성 */
   createPost: async (data: PostCreateRequest): Promise<ApiResponse<PostDetail>> => {
     return post<ApiResponse<PostDetail>>(API_ENDPOINTS.posts.create, data)
   },
 
-  // 게시글 수정용 데이터 조회
+  /** 게시글 수정용 데이터 조회 */
   getPostForEdit: async (id: number): Promise<ApiResponse<PostEditData>> => {
     return get<ApiResponse<PostEditData>>(API_ENDPOINTS.posts.detail(id))
   },
 
-  // 게시글 수정
+  /** 게시글 업데이트 */
   updatePost: async (id: number, data: PostUpdateRequest): Promise<ApiResponse<PostDetail>> => {
     return put<ApiResponse<PostDetail>>(API_ENDPOINTS.posts.update(id), data)
   },
 
-  // 게시글 좋아요/좋아요 취소
+  /** 게시글 삭제 */
+  deletePost: async (id: number): Promise<{ status: 'success' | 'error'; message?: string }> => {
+    return del<{ status: 'success' | 'error'; message?: string }>(API_ENDPOINTS.posts.delete(id))
+  },
+
+  /** 좋아요 토글 */
   toggleLike: async (id: number): Promise<ApiResponse<PostInteractionResponse>> => {
     return post<ApiResponse<PostInteractionResponse>>(API_ENDPOINTS.posts.like(id))
   },
 
-  // 게시글 북마크/북마크 취소
+  /** 북마크 토글 */
   toggleBookmark: async (id: number): Promise<ApiResponse<PostInteractionResponse>> => {
     return post<ApiResponse<PostInteractionResponse>>(API_ENDPOINTS.posts.bookmark(id))
   },
 
-  // 플랫폼 목록 조회
+  /** 플랫폼 목록 */
   getPlatforms: async (): Promise<ApiResponse<Platform[]>> => {
     return get<ApiResponse<Platform[]>>(API_ENDPOINTS.posts.platforms)
   },
 
-  // 모델 목록 조회
+  /** 모델 목록 */
   getModels: async (): Promise<ApiResponse<Model[]>> => {
     return get<ApiResponse<Model[]>>(API_ENDPOINTS.posts.models)
   },
 
-  // 특정 플랫폼의 모델 목록 조회 (기본 모델 포함)
+  /** 특정 플랫폼의 모델 목록 */
   getPlatformModels: async (platformId: number): Promise<ApiResponse<PlatformModelsResponse>> => {
     return get<ApiResponse<PlatformModelsResponse>>(API_ENDPOINTS.posts.platformModels(platformId))
   },
 
-  // 카테고리 목록 조회
+  /** 카테고리 목록 */
   getCategories: async (): Promise<ApiResponse<Category[]>> => {
     return get<ApiResponse<Category[]>>(API_ENDPOINTS.posts.categories)
   },
 
-  // 태그 목록 조회 (사용 빈도 포함)
+  /** 태그 목록 */
   getTags: async (): Promise<ApiResponse<Tag[]>> => {
     return get<ApiResponse<Tag[]>>(API_ENDPOINTS.posts.tags)
   },
-}
 
-// ===========================================
-// Core 앱 API 함수들
-// ===========================================
+  // 모델 자동완성
+  getModelSuggestions: async (params: {
+    query: string
+    platform_id?: number
+    limit?: number
+  }): Promise<ModelSuggestResponse> => {
+    const searchParams = new URLSearchParams()
+    searchParams.append('query', params.query)
+    if (params.platform_id) searchParams.append('platform_id', params.platform_id.toString())
+    if (params.limit) searchParams.append('limit', params.limit.toString())
 
-const legacy_coreApi = {
-  // 통합 검색
-  search: async (params: SearchParams): Promise<PaginatedResponse<PostCard>> => {
-    return get<PaginatedResponse<PostCard>>(API_ENDPOINTS.core.search, params)
-  },
-
-  // 정렬 옵션 조회
-  getSortOptions: async (): Promise<SortOption[]> => {
-    return get<SortOption[]>(API_ENDPOINTS.core.sortOptions)
-  },
-
-  // 필터 옵션 조회
-  getFilterOptions: async (): Promise<FilterOptions> => {
-    return get<FilterOptions>(API_ENDPOINTS.core.filterOptions)
+    const url = `${API_ENDPOINTS.posts.modelsSuggest}?${searchParams.toString()}`
+    return get<ModelSuggestResponse>(url)
   },
 }
 
 // ===========================================
-// 메타데이터 API (여러 앱의 데이터를 한 번에)
+// 사용자 데이터 관련 API
 // ===========================================
 
-const legacy_metadataApi = {
-  // 게시글 작성에 필요한 모든 메타데이터 조회
-  getPostMetadata: async () => {
-    const [platforms, categories, models, tags] = await Promise.all([
-      newPostsApi.getPlatforms(),
-      newPostsApi.getCategories(),
-      newPostsApi.getModels(),
-      newPostsApi.getTags(),
-    ])
-
-    return {
-      platforms,
-      categories,
-      models,
-      tags,
-    }
-  },
-
-  // 검색/필터링에 필요한 모든 옵션 조회
-  getSearchMetadata: async () => {
-    const [sortOptions, filterOptions] = await Promise.all([
-      newCoreApi.getSortOptions(),
-      newCoreApi.getFilterOptions(),
-    ])
-
-    return {
-      sortOptions,
-      filterOptions,
-    }
-  },
-}
-
-// ===========================================
-// 사용자별 데이터 API
-// ===========================================
-
-const legacy_userDataApi = {
+export const userDataApi = {
   getUserPosts: async (
     params?: UserPostListParams,
   ): Promise<{ status: 'success'; data: PaginatedResponse<PostCard> }> => {
+    // /api/posts/my/ 엔드포인트가 존재하지 않으므로 /api/posts/에 author 파라미터 사용
     return get<{ status: 'success'; data: PaginatedResponse<PostCard> }>(
-      API_ENDPOINTS.posts.my,
+      API_ENDPOINTS.posts.list,
       params,
     )
   },
@@ -437,6 +483,7 @@ const legacy_userDataApi = {
   getLikedPosts: async (
     params?: UserPostListParams,
   ): Promise<{ status: 'success'; data: PaginatedResponse<PostCard> }> => {
+    // 백엔드의 전용 liked-posts 엔드포인트 사용
     return get<{ status: 'success'; data: PaginatedResponse<PostCard> }>(
       API_ENDPOINTS.posts.liked,
       params,
@@ -446,6 +493,7 @@ const legacy_userDataApi = {
   getBookmarkedPosts: async (
     params?: UserPostListParams,
   ): Promise<{ status: 'success'; data: PaginatedResponse<PostCard> }> => {
+    // 백엔드의 전용 bookmarked-posts 엔드포인트 사용
     return get<{ status: 'success'; data: PaginatedResponse<PostCard> }>(
       API_ENDPOINTS.posts.bookmarked,
       params,
@@ -454,11 +502,11 @@ const legacy_userDataApi = {
 }
 
 // ===========================================
-// 통계 API
+// 통계 관련 API
 // ===========================================
 
-const legacy_statsApi = {
-  // 대시보드 통계
+export const statsApi = {
+  /** 대시보드 통계 */
   getDashboardStats: async () => {
     return get<
       ApiResponse<{
@@ -467,6 +515,9 @@ const legacy_statsApi = {
         total_views: number
         total_likes: number
         total_bookmarks: number
+        avg_satisfaction?: number
+        weekly_added_posts?: number
+        active_users?: number
         recent_posts: PostCard[]
         popular_tags: Tag[]
         platform_distribution: Array<{ platform: string; count: number }>
@@ -474,7 +525,7 @@ const legacy_statsApi = {
     >(API_ENDPOINTS.stats.dashboard)
   },
 
-  // 사용자별 통계
+  /** 사용자 통계 */
   getUserStats: async () => {
     return get<
       ApiResponse<{
@@ -496,31 +547,109 @@ const legacy_statsApi = {
 }
 
 // ===========================================
-// 내보내기할 기본 API 객체
+// 트렌딩 관련 API
 // ===========================================
 
-const api = {
-  auth: newAuthApi,
-  posts: newPostsApi,
-  core: newCoreApi,
-  metadata: newMetadataApi,
-  userData: newUserDataApi,
-  stats: newStatsApi,
+export const trendingApi = {
+  /**
+   * 트렌딩 카테고리 랭킹 데이터 가져오기
+   */
+  getCategoryRankings: async (): Promise<{
+    status: 'success' | 'error'
+    data: CategoryRankings
+    from_cache?: boolean
+  }> => {
+    return get<TrendingResponse>(API_ENDPOINTS.core.trending.categoryRankings)
+  },
 
-  // 토큰 관리 함수들도 포함
-  tokens: {
-    get: getAccessToken,
-    getRefresh: getRefreshToken,
-    set: setTokens,
-    clear: clearTokens,
-    isAuthenticated,
+  /**
+   * 트렌딩 캐시 새로고침 (관리자용)
+   */
+  refreshCache: async (): Promise<{ status: 'success' | 'error'; message: string }> => {
+    return post<{ status: 'success' | 'error'; message: string }>(
+      API_ENDPOINTS.core.trending.refreshCache,
+      {},
+    )
+  },
+
+  /**
+   * 특정 트렌딩 모델의 상세 정보 가져오기
+   */
+  getTrendingModelInfo: async (modelName: string): Promise<TrendingModelInfoResponse> => {
+    const url = `${API_ENDPOINTS.core.trending.modelInfo}${encodeURIComponent(modelName)}/info/`
+    return get<TrendingModelInfoResponse>(url)
+  },
+
+  /**
+   * 특정 트렌딩 모델과 관련된 게시글 목록 가져오기
+   */
+  getTrendingModelPosts: async (
+    modelName: string,
+    params?: Partial<SearchParams>,
+  ): Promise<TrendingModelPostsResponse> => {
+    const searchParams = new URLSearchParams()
+
+    if (params?.page) searchParams.append('page', params.page.toString())
+    if (params?.page_size) searchParams.append('page_size', params.page_size.toString())
+    if (params?.sort) searchParams.append('sort', params.sort)
+
+    const baseUrl = `${API_ENDPOINTS.core.trending.modelPosts}${encodeURIComponent(modelName)}/posts/`
+    const url = `${baseUrl}${searchParams.toString() ? `?${searchParams.toString()}` : ''}`
+
+    return get<TrendingModelPostsResponse>(url)
   },
 }
 
-export default api
+// ===========================================
+// 코어 관련 API
+// ===========================================
+
+export const coreApi = {
+  /** 통합 검색 */
+  search: async (params: SearchParams): Promise<PaginatedResponse<PostCard>> => {
+    return get<PaginatedResponse<PostCard>>(API_ENDPOINTS.core.search, params)
+  },
+
+  /** 정렬 옵션 목록 */
+  getSortOptions: async (): Promise<SortOption[]> => {
+    return get<SortOption[]>(API_ENDPOINTS.core.sortOptions)
+  },
+
+  /** 필터 옵션 */
+  getFilterOptions: async (): Promise<FilterOptions> => {
+    return get<FilterOptions>(API_ENDPOINTS.core.filterOptions)
+  },
+}
 
 // ===========================================
-// 타입들 re-export (다른 컴포넌트에서 사용할 수 있도록)
+// 메타데이터 관련 API
+// ===========================================
+
+export const metadataApi = {
+  /** 게시글 작성에 필요한 메타데이터 일괄 로드 */
+  getPostMetadata: async () => {
+    const [platforms, categories, models, tags] = await Promise.all([
+      postsApi.getPlatforms(),
+      postsApi.getCategories(),
+      postsApi.getModels(),
+      postsApi.getTags(),
+    ])
+
+    return { platforms, categories, models, tags }
+  },
+
+  /** 검색/필터링에 필요한 메타데이터 일괄 로드 */
+  getSearchMetadata: async () => {
+    const [sortOptions, filterOptions] = await Promise.all([
+      coreApi.getSortOptions(),
+      coreApi.getFilterOptions(),
+    ])
+    return { sortOptions, filterOptions }
+  },
+}
+
+// ===========================================
+// 타입 내보내기
 // ===========================================
 
 export type {
@@ -528,6 +657,7 @@ export type {
   ApiResponse,
   PaginatedResponse,
   ApiRequestError,
+  ValidationError,
   AuthTokens,
   // Users 관련 타입들
   UserRegistrationRequest,
@@ -538,8 +668,12 @@ export type {
   UserProfileResponse,
   UserProfileUpdateRequest,
   PasswordChangeRequest,
+  ChangePasswordResponse,
   TokenRefreshRequest,
   TokenRefreshResponse,
+  UserPostListParams,
+  UserSettingsDTO,
+  UserSessionDTO,
   // Posts 관련 타입들
   Platform,
   Model,
@@ -557,83 +691,14 @@ export type {
   PostInteractionResponse,
   PostListParams,
   PlatformModelsResponse,
+  ModelSuggestResponse,
   // Core 관련 타입들
   SearchParams,
   SortOption,
   FilterOptions,
-}
-
-// 호환성을 위한 타입 alias
-export type PostWrite = PostCreateRequest
-
-// ===========================================
-// 모든 API 객체와 함수들은 이미 위에서 개별적으로 export됨
-// ===========================================
-
-// ===========================================
-// 타입 가드 및 유틸리티 함수들
-// ===========================================
-
-export const handleApiError = (error: unknown): string => {
-  if (axios.isAxiosError(error)) {
-    const apiError = createApiError(error)
-    return apiError.message
-  }
-
-  if (error instanceof Error) {
-    return error.message
-  }
-
-  return '알 수 없는 오류가 발생했습니다.'
-}
-
-export const isApiResponse = <T>(response: any): response is ApiResponse<T> => {
-  return response && typeof response === 'object'
-}
-
-export const isPaginatedResponse = <T>(response: any): response is PaginatedResponse<T> => {
-  return (
-    response &&
-    typeof response === 'object' &&
-    'results' in response &&
-    Array.isArray(response.results) &&
-    'count' in response &&
-    typeof response.count === 'number'
-  )
-}
-
-// ===========================================
-// React Query 키 생성 함수들 (선택사항)
-// ===========================================
-
-export const queryKeys = {
-  // Users
-  userProfile: ['user', 'profile'] as const,
-  userInfo: ['user', 'info'] as const,
-
-  // Posts
-  posts: (params?: PostListParams) => ['posts', params] as const,
-  post: (id: number) => ['posts', id] as const,
-  postEdit: (id: number) => ['posts', id, 'edit'] as const,
-
-  // Metadata
-  platforms: ['metadata', 'platforms'] as const,
-  models: ['metadata', 'models'] as const,
-  platformModels: (platformId: number) => ['metadata', 'platforms', platformId, 'models'] as const,
-  categories: ['metadata', 'categories'] as const,
-  tags: ['metadata', 'tags'] as const,
-
-  // Search
-  search: (params: SearchParams) => ['search', params] as const,
-  sortOptions: ['search', 'sortOptions'] as const,
-  filterOptions: ['search', 'filterOptions'] as const,
-
-  // User Data (백엔드에 해당 엔드포인트 없음)
-  // userPosts: (params?: PostListParams) => ['user', 'posts', params] as const,
-  // likedPosts: (params?: PostListParams) => ['user', 'liked', params] as const,
-  // bookmarkedPosts: (params?: PostListParams) => ['user', 'bookmarked', params] as const,
-
-  // Stats (백엔드에 해당 엔드포인트 없음)
-  // dashboardStats: ['stats', 'dashboard'] as const,
-  // userStats: ['stats', 'user'] as const,
+  // Trending 관련 타입들
+  TrendingResponse,
+  CategoryRankings,
+  TrendingModelInfoResponse,
+  TrendingModelPostsResponse,
 }

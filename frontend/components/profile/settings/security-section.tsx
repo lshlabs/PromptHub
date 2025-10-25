@@ -14,7 +14,7 @@ import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { ChevronDown, ChevronUp, Monitor, Smartphone, Tablet } from 'lucide-react'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import { authApi } from '@/lib/api/auth'
+import { authApi } from '@/lib/api'
 import type { UserSessionDTO } from '@/types/api'
 
 // 활성 세션 샘플 데이터

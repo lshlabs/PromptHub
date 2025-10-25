@@ -14,8 +14,10 @@ from .serializers import (
     UserSessionSerializer,
 )
 from user_agents import parse as parse_ua
+from .utils import get_location_from_ip
 import os
 import requests
+import random
 
 
 class UserRegistrationView(APIView):
@@ -51,7 +53,6 @@ class UserRegistrationView(APIView):
             user = serializer.save()
             
             # 회원가입 시 위치 자동 설정
-            from .utils import get_location_from_ip
             # 클라이언트 IP 주소 가져오기
             x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
             if x_forwarded_for:
@@ -260,11 +261,85 @@ class GoogleLoginView(APIView):
             user = CustomUser.objects.filter(email=email).first()
             created = False
             if not user:
-                user = CustomUser.objects.create_user(email=email, password=None)
+                # Google OAuth 사용자 생성 시 명시적으로 활성화 상태 보장
+                user = CustomUser.objects.create_user(
+                    email=email, 
+                    password=None,
+                    is_active=True,  # 명시적으로 활성화
+                )
                 created = True
+                
+                # Google 사용자 정보를 실제 사용하는 필드에 설정
+                google_name = data.get('name', '')
+                if google_name:
+                    # username을 Google 이름 기반으로 설정
+                    name_parts = google_name.split()
+                    if name_parts:
+                        # 첫 번째 이름을 username으로 사용 (중복 방지)
+                        base_username = name_parts[0].lower()
+                        username = f"{base_username}_{random.randint(1000, 9999)}"
+                        user.username = username
+                
+                # 필수 필드에 기본값 설정 (일반 회원가입과 동일하게)
+                if not user.github_handle:
+                    user.github_handle = ""
+                
+                # IP 기반으로 위치 설정 (일반 계정과 동일한 로직)
+                try:
+                    # 클라이언트 IP 주소 가져오기
+                    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+                    if x_forwarded_for:
+                        ip = x_forwarded_for.split(',')[0]
+                    else:
+                        ip = request.META.get('REMOTE_ADDR')
+                    
+                    # IP 기반으로 위치 설정
+                    if ip:
+                        location = get_location_from_ip(ip)
+                        user.location = location
+                        print(f"📍 IP 기반 위치 설정 완료: {ip} → {location}")
+                    else:
+                        user.location = "위치 정보를 설정해주세요."
+                        print("⚠️ IP 주소를 찾을 수 없어 기본 위치 설정")
+                except Exception as e:
+                    print(f"⚠️ 위치 설정 중 오류 발생: {e}")
+                    user.location = "위치 정보를 설정해주세요."
+                
+                user.save()
+                
+                # UserSettings 자동 생성 및 기본값 설정
+                settings, created = UserSettings.objects.get_or_create(user=user)
+                if created:
+                    settings.email_notifications_enabled = True
+                    settings.in_app_notifications_enabled = True
+                    settings.public_profile = True
+                    settings.save()
+                print(f"✅ 새 Google OAuth 사용자 생성: {email}, is_active: {user.is_active}")
+                    
+            else:
+                # 기존 사용자인 경우에도 활성화 상태 확인
+                if not user.is_active:
+                    user.is_active = True
+                    user.save()
+                    print(f"✅ 기존 Google OAuth 사용자 활성화: {email}")
+
+            # 사용자 활성화 상태 최종 확인
+            if not user.is_active:
+                print(f"❌ 사용자가 비활성 상태임: {email}, is_active: {user.is_active}")
+                return Response({'message': '계정이 비활성화되어 있습니다.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Google OAuth 사용자 권한 보장
+            if not user.has_usable_password():
+                # Google OAuth 사용자인 경우 기본 권한 설정
+                user.is_active = True
+                user.is_staff = False  # 관리자 권한은 별도 부여
+                user.is_superuser = False
+                user.save()
+                print(f"✅ Google OAuth 사용자 권한 설정 완료: {email}")
 
             # 토큰 발급
             token, _ = Token.objects.get_or_create(user=user)
+            print(f"🔑 토큰 발급 완료: {email}, 토큰: {token.key[:10]}...")
 
             # 세션 생성 (일반 로그인과 동일한 포맷)
             from secrets import token_urlsafe
@@ -344,7 +419,15 @@ class UserProfileView(APIView):
         # 기본 설정 ensure
         UserSettings.objects.get_or_create(user=request.user)
         settings_data = UserSettingsSerializer(request.user.settings).data
-        return Response({'user': serializer.data, 'settings': settings_data}, status=status.HTTP_200_OK)
+        
+        # Google OAuth 사용자 프로필 완성도 검증
+        profile_completeness = self._check_profile_completeness(request.user)
+        
+        return Response({
+            'user': serializer.data, 
+            'settings': settings_data,
+            'profile_completeness': profile_completeness
+        }, status=status.HTTP_200_OK)
 
     def put(self, request):
         """
@@ -371,6 +454,25 @@ class UserProfileView(APIView):
             'message': '프로필 업데이트에 실패했습니다.',
             'errors': serializer.errors
         }, status=status.HTTP_400_BAD_REQUEST)
+
+    def _check_profile_completeness(self, user):
+        """프로필 완성도 검증"""
+        required_fields = ['username', 'bio', 'location', 'github_handle']
+        completed_fields = 0
+        
+        for field in required_fields:
+            value = getattr(user, field, None)
+            if value and str(value).strip():
+                completed_fields += 1
+        
+        completeness_percentage = (completed_fields / len(required_fields)) * 100
+        
+        return {
+            'percentage': completeness_percentage,
+            'completed_fields': completed_fields,
+            'total_fields': len(required_fields),
+            'missing_fields': [field for field in required_fields if not getattr(user, field, None) or not str(getattr(user, field, None)).strip()]
+        }
 
     def patch(self, request):
         """

@@ -11,18 +11,18 @@ User = get_user_model()
 
 class PostsApiTests(APITestCase):
     def setUp(self):
-        # Users and tokens
+        # 사용자와 토큰
         self.author = User.objects.create_user(email='author@example.com', password='Test1234!')
         self.liker = User.objects.create_user(email='liker@example.com', password='Test1234!')
         self.author_token, _ = Token.objects.get_or_create(user=self.author)
         self.liker_token, _ = Token.objects.get_or_create(user=self.liker)
 
-        # Metadata
+        # 메타데이터
         self.platform = Platform.objects.create(name='OpenAI')
         self.model = AiModel.objects.create(platform=self.platform, name='GPT-4')
         self.category = Category.objects.create(name='개발')
 
-        # URLs (namespaced by app_name)
+        # URL (앱 이름으로 네임스페이스됨)
         self.list_url = reverse('posts:posts_list')
         self.create_url = reverse('posts:post_create')
 
@@ -30,7 +30,7 @@ class PostsApiTests(APITestCase):
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {token.key}')
 
     def test_create_update_like_bookmark_and_user_lists(self):
-        # Create
+        # 생성
         self.auth(self.author_token)
         payload = {
             'title': '테스트 제목',
@@ -49,14 +49,14 @@ class PostsApiTests(APITestCase):
         self.assertEqual(data['status'], 'success')
         post_id = data['data']['id']
 
-        # Update by author
+        # 작성자에 의한 수정
         update_url = reverse('posts:post_update', kwargs={'post_id': post_id})
         res = self.client.patch(update_url, {'title': '수정된 제목'}, format='json')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         data = res.json()
         self.assertEqual(data['data']['title'], '수정된 제목')
 
-        # Detail view count increments
+        # 상세 보기 조회수 증가
         detail_url = reverse('posts:post_detail', kwargs={'post_id': post_id})
         res = self.client.get(detail_url)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
@@ -64,7 +64,7 @@ class PostsApiTests(APITestCase):
         self.assertEqual(data['status'], 'success')
         self.assertEqual(data['data']['views'], 1)
 
-        # Like and bookmark by another user
+        # 다른 사용자에 의한 좋아요 및 북마크
         self.auth(self.liker_token)
         like_url = reverse('posts:post_like', kwargs={'post_id': post_id})
         res = self.client.post(like_url)
@@ -78,7 +78,7 @@ class PostsApiTests(APITestCase):
         data = res.json()
         self.assertTrue(data['data']['is_bookmarked'])
 
-        # Liked list
+        # 좋아요 목록
         liked_url = reverse('posts:user_liked_posts')
         res = self.client.get(liked_url)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
@@ -86,7 +86,7 @@ class PostsApiTests(APITestCase):
         ids = [p['id'] for p in data['data']['results']]
         self.assertIn(post_id, ids)
 
-        # Bookmarked list
+        # 북마크 목록
         bookmarked_url = reverse('posts:user_bookmarked_posts')
         res = self.client.get(bookmarked_url)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
@@ -94,7 +94,7 @@ class PostsApiTests(APITestCase):
         ids = [p['id'] for p in data['data']['results']]
         self.assertIn(post_id, ids)
 
-        # Author's posts
+        # 작성자의 게시글
         self.auth(self.author_token)
         my_url = reverse('posts:user_my_posts')
         res = self.client.get(my_url)
@@ -103,7 +103,7 @@ class PostsApiTests(APITestCase):
         ids = [p['id'] for p in data['data']['results']]
         self.assertIn(post_id, ids)
 
-        # List with search
+        # 검색이 포함된 목록
         res = self.client.get(self.list_url, {'search': '수정된 제목'})
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         data = res.json()

@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { MessageCircle } from 'lucide-react'
 import { PostCard } from '@/components/common/post-card'
 import { useState, useEffect } from 'react'
-import { trendingApi } from '@/lib/api/trending'
+import { trendingApi } from '@/lib/api'
 import type { PostCard as ApiPostCard, TrendingModelInfo } from '@/types/api'
 
 interface PostsListProps {

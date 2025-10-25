@@ -20,13 +20,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    # Third party
+    # 서드파티 앱
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
     'django_filters',
 
-    # Local apps
+    # 로컬 앱
     'core',
     'users',
     'posts',
@@ -123,7 +123,7 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = list(default_headers) + ['x-session-key']
 
 
-# Basic logging (override DJANGO_LOG_LEVEL in env)
+# 기본 로깅 설정 (환경변수 DJANGO_LOG_LEVEL로 오버라이드 가능)
 LOG_LEVEL = os.getenv('DJANGO_LOG_LEVEL', 'INFO')
 LOGGING = {
     'version': 1,

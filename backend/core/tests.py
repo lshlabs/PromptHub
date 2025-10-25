@@ -16,7 +16,7 @@ class CoreSearchTests(APITestCase):
         self.platform = Platform.objects.create(name='OpenAI')
         self.model = AiModel.objects.create(platform=self.platform, name='GPT-4')
         self.category = Category.objects.create(name='개발')
-        # Seed a post
+        # 게시글 시드 데이터
         Post.objects.create(
             title='파이썬 예제',
             author=self.user,

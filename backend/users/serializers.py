@@ -234,14 +234,6 @@ class PasswordChangeSerializer(serializers.Serializer):
         return user
 
 
-# class AvatarRegenerateSerializer(serializers.Serializer):
-#     """아바타 재생성 시리얼라이저"""
-#     regenerate_username = serializers.BooleanField(default=False, required=False)
-    
-#     def validate(self, attrs):
-#         return attrs
-
-
 class UserDetailSerializer(serializers.ModelSerializer):
     """
     사용자 상세 정보 시리얼라이저
