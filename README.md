@@ -49,7 +49,7 @@ flowchart LR
   FE["Frontend\nNext.js\n:3000"] <--> API["Backend API\nDjango REST\n:8000"]
   API <--> DB["DB\nSQLite (dev)\nbackend/db.sqlite3"]
 ```
-![Architecture Diagram](docs/diagrams/architecture.svg)
+SVG: `docs/diagrams/architecture.svg`
 
 ## 요청 처리 흐름
 
@@ -65,7 +65,7 @@ flowchart TD
   C --> P
   P --> U
 ```
-![Request Flow](docs/diagrams/request-flow.svg)
+SVG: `docs/diagrams/request-flow.svg`
 
 ## 로그인/세션 흐름
 
@@ -87,7 +87,7 @@ sequenceDiagram
   DB-->>A: 결과 반환
   A-->>F: API 응답
 ```
-![Auth Session Flow](docs/diagrams/auth-session-flow.svg)
+SVG: `docs/diagrams/auth-session-flow.svg`
 
 ## 핵심 데이터 모델(ERD)
 
@@ -103,7 +103,7 @@ erDiagram
   TRENDINGCATEGORY ||--o{ TRENDINGRANKING : groups
   AIMODEL ||--o{ TRENDINGRANKING : linked_by_related_model
 ```
-![Core ERD](docs/diagrams/core-erd.svg)
+SVG: `docs/diagrams/core-erd.svg`
 
 다이어그램 원본/산출물 위치:
 - 원본: `docs/diagrams/*.mmd`
