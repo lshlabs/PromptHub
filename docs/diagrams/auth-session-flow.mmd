@@ -1,0 +1,16 @@
+sequenceDiagram
+  participant U as User
+  participant F as Frontend (:3000)
+  participant A as API (:8000)
+  participant DB as DB
+
+  U->>F: 이메일/비밀번호 입력
+  F->>A: POST /api/auth/login/
+  A->>DB: 사용자 검증 + Token 조회/생성 + UserSession 생성
+  DB-->>A: token, session_key
+  A-->>F: user + token + session
+  F->>F: localStorage 저장(token, session_key)
+  F->>A: 이후 요청(Authorization + X-Session-Key)
+  A->>DB: 인증/권한 검증 후 데이터 조회
+  DB-->>A: 결과 반환
+  A-->>F: API 응답
