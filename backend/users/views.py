@@ -14,7 +14,7 @@ from .serializers import (
     UserSessionSerializer,
 )
 from user_agents import parse as parse_ua
-from .utils import get_location_from_ip
+from .utils import get_location_from_ip, generate_random_avatar_colors, generate_random_username
 import os
 import requests
 import random
@@ -532,6 +532,46 @@ class UserSettingsView(APIView):
         return self.patch(request)
 
 
+class RegenerateAvatarView(APIView):
+    """
+    아바타(그라디언트 색상) 재생성 API
+
+    POST:
+      - avatar_color1 / avatar_color2를 랜덤 재생성
+      - regenerate_username=true인 경우 username도 랜덤 재생성
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        user: CustomUser = request.user
+
+        regenerate_username = request.data.get('regenerate_username', False)
+        if isinstance(regenerate_username, str):
+            regenerate_username = regenerate_username.lower() in ('1', 'true', 'yes', 'on')
+
+        old_color1 = user.avatar_color1
+        old_color2 = user.avatar_color2
+
+        # 동일 색상 쌍 재생성 확률을 낮추기 위해 최대 몇 번 재시도
+        for _ in range(5):
+            color1, color2 = generate_random_avatar_colors()
+            if color1 != old_color1 or color2 != old_color2:
+                break
+
+        user.avatar_color1 = color1
+        user.avatar_color2 = color2
+
+        if regenerate_username is True:
+            user.username = generate_random_username()
+
+        user.save(update_fields=['avatar_color1', 'avatar_color2', 'username'] if regenerate_username else ['avatar_color1', 'avatar_color2'])
+
+        return Response({
+            'message': '아바타가 재생성되었습니다.' if not regenerate_username else '아바타와 사용자명이 재생성되었습니다.',
+            'user': UserProfileSerializer(user).data,
+        }, status=status.HTTP_200_OK)
+
+
 class UserSessionsView(APIView):
     """
     활성 세션 목록 조회 및 세션 종료 API
@@ -550,7 +590,11 @@ class UserSessionsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        sessions = UserSession.objects.filter(user=request.user).order_by('-last_active')
+        # "활성 세션" 목록은 종료(revoked)된 세션을 제외해서 반환
+        sessions = UserSession.objects.filter(
+            user=request.user,
+            revoked_at__isnull=True,
+        ).order_by('-last_active')
         return Response(UserSessionSerializer(sessions, many=True).data, status=status.HTTP_200_OK)
 
     def delete(self, request):
@@ -560,7 +604,7 @@ class UserSessionsView(APIView):
         current_key = request.headers.get('X-Session-Key')
 
         if end_all:
-            qs = UserSession.objects.filter(user=request.user)
+            qs = UserSession.objects.filter(user=request.user, revoked_at__isnull=True)
             if current_key:
                 qs = qs.exclude(key=current_key)
             updated = qs.update(revoked_at=timezone.now())
@@ -570,7 +614,7 @@ class UserSessionsView(APIView):
             return Response({'message': '세션 키가 필요합니다.'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            session = UserSession.objects.get(user=request.user, key=key)
+            session = UserSession.objects.get(user=request.user, key=key, revoked_at__isnull=True)
             session.revoked_at = timezone.now()
             session.save()
             return Response({'message': '세션이 종료되었습니다.'}, status=status.HTTP_200_OK)

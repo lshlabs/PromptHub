@@ -15,12 +15,14 @@ interface GoBackButtonProps {
   fallbackPath?: string // 기본 돌아갈 경로 (예: /community)
   className?: string
   fromPage?: string // 이전 페이지 정보 (예: 'community', 'trending', 'bookmarks', 'profile')
+  label?: string
 }
 
 export function GoBackButton({
   fallbackPath = '/community',
   className = '',
   fromPage,
+  label = '목록으로',
 }: GoBackButtonProps) {
   const router = useRouter()
 
@@ -176,7 +178,7 @@ export function GoBackButton({
       icon={<ArrowLeft className="h-4 w-4" />}
       onClick={handleGoBack}
       className={`text-gray-600 hover:text-blue-600 ${className}`}>
-      목록으로
+      {label}
     </CustomButton>
   )
 }

@@ -5,6 +5,10 @@ import { useSession } from 'next-auth/react'
 import { authApi, getAccessToken, clearTokens, setTokens } from '@/lib/api'
 import type { UserData as BackendUserData } from '@/types/api'
 
+interface LogoutOptions {
+  skipBackendRequest?: boolean
+}
+
 export interface UseAuthReturn {
   user: BackendUserData | null
   token: string | null
@@ -19,7 +23,7 @@ export interface UseAuthReturn {
     password: string,
     passwordConfirm: string,
   ) => Promise<{ success: boolean; message: string }>
-  logout: () => Promise<void>
+  logout: (options?: LogoutOptions) => Promise<void>
   refreshUser: () => Promise<void>
   regenerateAvatar: (regenerateUsername?: boolean) => Promise<{ success: boolean; message: string }>
 }
@@ -269,12 +273,14 @@ export function useAuth(): UseAuthReturn {
     }
   }
 
-  const logout = async (): Promise<void> => {
-    try {
-      // Django 백엔드 로그아웃 시도 (실패해도 계속 진행)
-      await authApi.logout()
-    } catch (error) {
-      console.error('Django 로그아웃 요청 오류 (무시하고 계속 진행):', error)
+  const logout = async (options?: LogoutOptions): Promise<void> => {
+    if (!options?.skipBackendRequest) {
+      try {
+        // Django 백엔드 로그아웃 시도 (실패해도 계속 진행)
+        await authApi.logout()
+      } catch (error) {
+        console.error('Django 로그아웃 요청 오류 (무시하고 계속 진행):', error)
+      }
     }
 
     try {
@@ -312,11 +318,22 @@ export function useAuth(): UseAuthReturn {
     regenerateUsername = false,
   ): Promise<{ success: boolean; message: string }> => {
     try {
-      // regenerateAvatar API가 구현되지 않은 경우를 위한 임시 처리
-      // TODO: 실제 API 구현 후 수정 필요
-      return { success: false, message: '아바타 재생성 기능이 아직 구현되지 않았습니다.' }
+      if (!token) {
+        return { success: false, message: '로그인이 필요합니다.' }
+      }
+
+      const response = await authApi.regenerateAvatar(regenerateUsername)
+      if (response?.user) {
+        setUser(response.user)
+      }
+
+      return {
+        success: true,
+        message: response?.message || '아바타 재생성에 성공했습니다.',
+      }
     } catch (error: any) {
-      const message = error.message || '아바타 재생성 중 오류가 발생했습니다.'
+      const message =
+        error?.response?.data?.message || error?.message || '아바타 재생성 중 오류가 발생했습니다.'
       return { success: false, message }
     }
   }

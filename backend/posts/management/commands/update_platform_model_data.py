@@ -11,61 +11,71 @@ PLATFORM_DEFINITIONS = {
     5: 'xAI',
     6: 'Mistral',
     7: '기타',  # 기타 플랫폼 ID를 7로 변경
+    8: 'DeepSeek',
 }
 
 # 각 플랫폼별 모델 목록을 (모델 ID, 모델명) 형식으로 정의
 # 공백 이름은 무시되고, 동일 플랫폼 내 중복 모델명은 최초 항목만 생성됩니다.
 MODEL_DEFINITIONS = {
     1: [
-        (10, 'GPT-5'),
-        (11, 'GPT-4'),
-        (12, 'o4'),
+        (10, 'GPT 5.2'),
+        (11, 'GPT 5.1'),
+        (12, 'GPT-5'),
         (13, 'o3'),
-        (14, 'o1'),
-        (15, '기타'),
+        (14, 'o4-mini'),
+        (15, 'o1'),
+        (16, '기타'),
     ],
     2: [
-        (20, 'Claude 4.1'),
-        (21, 'Claude 4'),
-        (22, 'Claude 3.7'),
-        (23, 'Claude 3.5'),
-        (24, 'Claude 3'),
+        (20, 'Claude Sonnet 4.6'),
+        (21, 'Claude Opus 4.6'),
+        (22, 'Claude Sonnet 4.5'),
+        (23, 'Claude Opus 4.5'),
+        (24, 'Claude 4.1 Opus'),
         (25, '기타'),
     ],
     3: [
-        (30, 'Gemini 2.5'),
-        (31, 'Gemini 2.0'),
-        (32, 'Gemini 1.5'),
-        (33, ''),  # 공백 → 무시됨
-        (34, ''),  # 공백 → 무시됨
+        (30, 'Gemini 3.1 Pro'),
+        (31, 'Gemini 3 Pro'),
+        (32, 'Gemini 2.5 Pro'),
+        (33, 'Gemini 2.5 Flash'),
+        (34, 'Gemini 2.0 Flash'),
         (35, '기타'),
     ],
     4: [
-        (40, 'Llama 4'),
-        (41, 'Llama 3'),
-        (42, 'Llama 2'),
-        (43, 'Llama 4'),  # 중복 → 무시됨
-        (44, 'Llama 4'),  # 중복 → 무시됨
+        (40, 'Llama 4 Behemoth'),
+        (41, 'Llama 4 Maverick'),
+        (42, 'Llama 4 Scout'),
+        (43, 'Llama 3.3 70B'),
+        (44, 'Llama 3.1 405B'),
         (45, '기타'),
     ],
     5: [
-        (50, 'Grok 4'),
-        (51, 'Grok 3'),
-        (52, 'Grok 2'),
-        (53, 'Grok 1'),
-        (54, ''),  # 공백 → 무시됨
+        (50, 'Grok-4.1'),
+        (51, 'Grok-4.1 Fast'),
+        (52, 'Grok-2'),
+        (53, 'Grok-4'),
+        (54, 'Grok-3'),
         (55, '기타'),
     ],
     6: [
-        (60, 'Mistral Large 2'),
-        (61, 'Mistral Large'),
-        (62, 'Mistral Medium'),
-        (63, 'Mistral Small'),
-        (64, ''),  # 공백 → 무시됨
+        (60, 'Mistral Large 3'),
+        (61, 'Mistral Medium 3.1'),
+        (62, 'Devstral 2'),
+        (63, 'Codestral 25.08'),
+        (64, 'Magistral Medium'),
         (65, '기타'),
     ],
     7: [
         (70, '기타'),
+    ],
+    8: [
+        (80, 'DeepSeek V3.2'),
+        (81, 'DeepSeek V3.2-Exp'),
+        (82, 'DeepSeek R1'),
+        (83, 'DeepSeek R1-0528'),
+        (84, 'DeepSeek V3-0324'),
+        (85, '기타'),
     ],
 }
 

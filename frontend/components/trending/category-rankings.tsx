@@ -17,6 +17,9 @@ import {
 } from 'lucide-react'
 import { trendingApi } from '@/lib/api'
 import type { CategoryRankings as CategoryRankingsData, TrendingRanking } from '@/types/api'
+import { useDelayedLoading } from '@/hooks/use-delayed-loading'
+
+let categoryRankingsCache: CategoryRankingsData | null = null
 
 interface CategoryRankingsProps {
   selectedModel: string | null
@@ -91,10 +94,13 @@ export default function CategoryRankings({
   setSelectedModel,
   onSelectModel,
 }: CategoryRankingsProps) {
-  const [categoryRankings, setCategoryRankings] = useState<CategoryRankingsData>({})
-  const [loading, setLoading] = useState(true)
+  const [categoryRankings, setCategoryRankings] = useState<CategoryRankingsData>(
+    categoryRankingsCache ?? {},
+  )
+  const [loading, setLoading] = useState(!categoryRankingsCache)
   const [error, setError] = useState<string | null>(null)
-  const [dataLoaded, setDataLoaded] = useState(false) // 중복 API 호출 방지
+  const [dataLoaded, setDataLoaded] = useState(!!categoryRankingsCache) // 중복 API 호출 방지
+  const showLoading = useDelayedLoading(loading, { delayMs: 180, minVisibleMs: 320 })
 
   useEffect(() => {
     // 이미 데이터가 로드된 경우 스킵
@@ -106,6 +112,7 @@ export default function CategoryRankings({
         setError(null)
         const response = await trendingApi.getCategoryRankings()
         setCategoryRankings(response.data)
+        categoryRankingsCache = response.data
         setDataLoaded(true) // 데이터 로드 완료 표시
       } catch (err) {
         console.error('트렌딩 데이터 로드 실패:', err)
@@ -119,7 +126,30 @@ export default function CategoryRankings({
     fetchCategoryRankings()
   }, [dataLoaded])
 
-  if (loading) {
+  if (loading && !showLoading) {
+    return (
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3" aria-hidden="true">
+        {Array.from({ length: 6 }).map((_, idx) => (
+          <div key={idx} className="rounded-xl border border-gray-100 bg-white/70 p-6">
+            <div className="mb-4 flex items-start gap-3">
+              <div className="h-10 w-10 animate-pulse rounded-lg bg-gray-200" />
+              <div className="flex-1 space-y-2">
+                <div className="h-5 w-2/3 animate-pulse rounded bg-gray-200" />
+                <div className="h-4 w-5/6 animate-pulse rounded bg-gray-100" />
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div className="h-16 animate-pulse rounded-lg bg-gray-100" />
+              <div className="h-16 animate-pulse rounded-lg bg-gray-100" />
+              <div className="h-16 animate-pulse rounded-lg bg-gray-100" />
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  if (showLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">

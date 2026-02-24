@@ -17,6 +17,9 @@ import {
   UserLoginResponse,
   UserData,
   UserProfileResponse,
+  UserProfileEnvelope,
+  UserProfileUpdateResponse,
+  AvatarRegenerateResponse,
   UserProfileUpdateRequest,
   PasswordChangeRequest,
   ChangePasswordResponse,
@@ -294,12 +297,12 @@ export const authApi = {
   },
 
   /** 사용자 프로필 조회 */
-  getProfile: async (): Promise<UserProfileResponse> => {
-    return (await apiClient.get<UserProfileResponse>(API_ENDPOINTS.auth.profile)).data
+  getProfile: async (): Promise<UserProfileEnvelope> => {
+    return (await apiClient.get<UserProfileEnvelope>(API_ENDPOINTS.auth.profile)).data
   },
 
   /** 사용자 프로필 업데이트 (파일이면 multipart PUT) */
-  updateProfile: async (data: UserProfileUpdateRequest): Promise<UserData> => {
+  updateProfile: async (data: UserProfileUpdateRequest): Promise<UserProfileUpdateResponse> => {
     if (data.profile_image instanceof File) {
       const formData = new FormData()
       Object.entries(data).forEach(([key, value]) => {
@@ -307,12 +310,25 @@ export const authApi = {
           formData.append(key, value as File | string)
         }
       })
-      const response = await apiClient.put<UserData>(API_ENDPOINTS.auth.profile, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      })
+      const response = await apiClient.put<UserProfileUpdateResponse>(
+        API_ENDPOINTS.auth.profile,
+        formData,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        },
+      )
       return response.data
     }
-    return put<UserData>(API_ENDPOINTS.auth.profile, data)
+    return put<UserProfileUpdateResponse>(API_ENDPOINTS.auth.profile, data)
+  },
+
+  /** 아바타(그라디언트) 재생성 / 옵션으로 username 재생성 */
+  regenerateAvatar: async (
+    regenerate_username = false,
+  ): Promise<AvatarRegenerateResponse> => {
+    return post<AvatarRegenerateResponse>(API_ENDPOINTS.auth.avatarRegenerate, {
+      regenerate_username,
+    })
   },
 
   /** 비밀번호 변경 (성공 시 신규 토큰 저장) */
@@ -473,9 +489,8 @@ export const userDataApi = {
   getUserPosts: async (
     params?: UserPostListParams,
   ): Promise<{ status: 'success'; data: PaginatedResponse<PostCard> }> => {
-    // /api/posts/my/ 엔드포인트가 존재하지 않으므로 /api/posts/에 author 파라미터 사용
     return get<{ status: 'success'; data: PaginatedResponse<PostCard> }>(
-      API_ENDPOINTS.posts.list,
+      API_ENDPOINTS.posts.my,
       params,
     )
   },
@@ -666,6 +681,8 @@ export type {
   UserLoginResponse,
   UserData,
   UserProfileResponse,
+  UserProfileEnvelope,
+  UserProfileUpdateResponse,
   UserProfileUpdateRequest,
   PasswordChangeRequest,
   ChangePasswordResponse,

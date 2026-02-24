@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog'
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet'
 import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   Menu,
   LogIn,
@@ -32,6 +32,9 @@ import {
 } from 'lucide-react'
 import { default as AuthForm } from '@/components/auth/auth-form'
 import { useAuthContext } from '@/components/layout/auth-provider'
+import { getAvatarGradientStyle, getAvatarInitialFromUsername } from '@/lib/utils'
+import { API_BASE_URL } from '@/types/api'
+import { useDelayedLoading } from '@/hooks/use-delayed-loading'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -194,19 +197,14 @@ export default function Header(): JSX.Element {
   // ========================================================================
 
   const navigationItems = NAVIGATION_ITEMS.filter(item => !item.requiresAuth || isAuthenticated)
+  const authPending = isLoading && !isAuthenticated && !user
+  const showAuthPending = useDelayedLoading(authPending, { delayMs: 150, minVisibleMs: 300 })
 
   const getAvatarColors = () => {
-    if (user?.avatar_color1 && user?.avatar_color2) {
-      return {
-        color1: user.avatar_color1,
-        color2: user.avatar_color2,
-        gradient: `linear-gradient(135deg, ${user.avatar_color1} 0%, ${user.avatar_color2} 100%)`,
-      }
-    }
     return {
-      color1: '#6B73FF',
-      color2: '#9EE5FF',
-      gradient: 'linear-gradient(135deg, #6B73FF 0%, #9EE5FF 100%)',
+      color1: user?.avatar_color1 || '#6B73FF',
+      color2: user?.avatar_color2 || '#9EE5FF',
+      gradient: getAvatarGradientStyle(user?.avatar_color1, user?.avatar_color2),
     }
   }
 
@@ -336,46 +334,31 @@ export default function Header(): JSX.Element {
   const renderUserAvatar = React.useCallback(
     (size: string = 'w-8 h-8'): JSX.Element => {
       // 로딩 중일 때 스켈레톤 반환
-      if (isLoading) {
+      if (showAuthPending) {
         return <div className={`${size} animate-pulse rounded-full bg-gray-200`}></div>
       }
 
+      const profileImage =
+        typeof (user as any)?.profile_image === 'string' && (user as any).profile_image
+          ? (user as any).profile_image.startsWith('http')
+            ? (user as any).profile_image
+            : `${API_BASE_URL}${(user as any).profile_image}`
+          : null
+
       return (
         <Avatar className={size}>
+          {profileImage ? <AvatarImage src={profileImage} alt={`${user?.username || '사용자'} 아바타`} /> : null}
           <AvatarFallback
             className="border-2 border-white text-sm font-semibold text-white shadow-sm"
             style={{ background: getAvatarColors().gradient }}
             aria-label={`${user?.username || '사용자'}의 아바타`}>
-            {user?.username?.charAt(0).toUpperCase() || 'U'}
+            {getAvatarInitialFromUsername(user?.username)}
           </AvatarFallback>
         </Avatar>
       )
     },
-    [user?.username, isLoading],
+    [user?.avatar_color1, user?.avatar_color2, user?.email, user?.username, showAuthPending],
   )
-
-  // ========================================================================
-  // 로딩 상태 처리
-  // ========================================================================
-
-  if (isLoading) {
-    return (
-      <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-        <div className="w-full px-4 sm:px-6">
-          <div className="flex h-14 items-center justify-between sm:h-16">
-            <div className="flex items-center">
-              <div className="h-8 w-8 animate-pulse rounded-lg bg-gray-200 sm:h-9 sm:w-9"></div>
-              <div className="ml-3 h-4 w-24 animate-pulse rounded bg-gray-200"></div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="h-8 w-20 animate-pulse rounded bg-gray-200"></div>
-              <div className="h-8 w-8 animate-pulse rounded-full bg-gray-200"></div>
-            </div>
-          </div>
-        </div>
-      </header>
-    )
-  }
 
   // ========================================================================
   // 메인 렌더링
@@ -511,7 +494,16 @@ export default function Header(): JSX.Element {
 
             {/* 데스크톱 인증 버튼 (md 이상) */}
             <div className="hidden items-center space-x-2 md:flex lg:space-x-3">
-              {isAuthenticated ? (
+              {authPending ? (
+                <>
+                  <div
+                    className={`h-10 w-10 rounded-lg xl:w-24 ${showAuthPending ? 'animate-pulse bg-gray-200' : 'invisible'}`}
+                  />
+                  <div
+                    className={`h-10 w-10 rounded-full ${showAuthPending ? 'animate-pulse bg-gray-200' : 'invisible'}`}
+                  />
+                </>
+              ) : isAuthenticated ? (
                 /* 로그인된 상태: 사용자 드롭다운 메뉴 */
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -755,7 +747,7 @@ export default function Header(): JSX.Element {
                     </nav>
 
                     {/* 모바일 빠른 액션 (로그인된 경우만 표시) */}
-                    {isAuthenticated && (
+                    {!authPending && isAuthenticated && (
                       <div className="border-t bg-gray-50 p-4">
                         <Link
                           href="/bookmarks"
@@ -770,7 +762,16 @@ export default function Header(): JSX.Element {
                     {/* 모바일 인증 섹션 */}
                     <div className="border-t p-4">
                       <div className="space-y-3">
-                        {isAuthenticated ? (
+                        {authPending ? (
+                          <>
+                            <div
+                              className={`h-12 w-full rounded-lg ${showAuthPending ? 'animate-pulse bg-gray-200' : 'invisible'}`}
+                            />
+                            <div
+                              className={`h-12 w-full rounded-lg ${showAuthPending ? 'animate-pulse bg-gray-200' : 'invisible'}`}
+                            />
+                          </>
+                        ) : isAuthenticated ? (
                           /* 로그인된 상태: 로그아웃 버튼 */
                           <Button
                             variant="outline"

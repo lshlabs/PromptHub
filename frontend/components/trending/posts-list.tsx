@@ -5,6 +5,7 @@ import { PostCard } from '@/components/common/post-card'
 import { useState, useEffect } from 'react'
 import { trendingApi } from '@/lib/api'
 import type { PostCard as ApiPostCard, TrendingModelInfo } from '@/types/api'
+import { useDelayedLoading } from '@/hooks/use-delayed-loading'
 
 interface PostsListProps {
   selectedModel: string | null
@@ -16,6 +17,8 @@ export default function PostsList({ selectedModel, setSelectedModel }: PostsList
   const [modelInfo, setModelInfo] = useState<TrendingModelInfo | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [hasFetchedForSelection, setHasFetchedForSelection] = useState(false)
+  const showLoading = useDelayedLoading(loading, { delayMs: 180, minVisibleMs: 320 })
 
   // 선택된 모델이 변경될 때마다 관련 게시글 조회
   useEffect(() => {
@@ -23,6 +26,7 @@ export default function PostsList({ selectedModel, setSelectedModel }: PostsList
       setPosts([])
       setModelInfo(null)
       setError(null)
+      setHasFetchedForSelection(false)
       return
     }
 
@@ -46,6 +50,7 @@ export default function PostsList({ selectedModel, setSelectedModel }: PostsList
         setModelInfo(null)
       } finally {
         setLoading(false)
+        setHasFetchedForSelection(true)
       }
     }
 
@@ -84,7 +89,20 @@ export default function PostsList({ selectedModel, setSelectedModel }: PostsList
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
-            {loading ? (
+            {!hasFetchedForSelection && !showLoading ? (
+              <div className="space-y-3 py-2" aria-hidden="true">
+                <div className="h-20 animate-pulse rounded-xl bg-gray-100" />
+                <div className="h-20 animate-pulse rounded-xl bg-gray-100" />
+              </div>
+            ) : null}
+
+            {showLoading && posts.length > 0 ? (
+              <div className="rounded-md border border-gray-100 bg-white/80 px-4 py-2 text-sm text-gray-500">
+                게시글 목록을 업데이트하는 중...
+              </div>
+            ) : null}
+
+            {!hasFetchedForSelection ? null : showLoading && posts.length === 0 ? (
               <div className="py-8 text-center">
                 <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-orange-600"></div>
                 <div className="text-gray-600">게시글을 불러오는 중...</div>
@@ -111,21 +129,19 @@ export default function PostsList({ selectedModel, setSelectedModel }: PostsList
                   key={item.id}
                   data={item}
                   onClick={() => {
-                    window.location.href = `/post/${item.id}`
+                    window.location.href = `/post/${item.id}?from=trending`
                   }}
                 />
               ))
             ) : (
               <div className="py-8 text-center">
-                <div className="mb-2 text-gray-500">
-                  {modelInfo?.related_model
-                    ? `${selectedModel} 모델로 작성된 게시물이 없습니다.`
-                    : `${selectedModel} 모델이 연결되지 않았습니다.`}
+                <div className="mb-2 text-base font-medium text-gray-700">
+                  아직 등록된 리뷰가 없어요
                 </div>
                 <div className="text-sm text-gray-400">
                   {modelInfo?.related_model
-                    ? '다른 모델을 선택해보세요.'
-                    : '관리자가 관련 모델을 설정해야 합니다.'}
+                    ? `${selectedModel} 관련 리뷰가 아직 올라오지 않았습니다. 첫 리뷰를 작성해보세요.`
+                    : `${selectedModel} 모델은 아직 PromptHub 모델 목록과 연결되지 않았습니다. 잠시 후 다시 확인해주세요.`}
                 </div>
               </div>
             )}

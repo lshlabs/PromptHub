@@ -11,8 +11,9 @@ interface ModelAutocompleteProps {
   value: string
   onChange: (value: string) => void
   onInputChange?: (value: string) => void // 입력값 변경 시 호출
-  onModelSelect?: (value: string) => void // 드롭다운에서 모델 선택 시 호출
+  onModelSelect?: (model: ModelSuggestion) => void // 드롭다운에서 모델 선택 시 호출
   onCustomModelToggle?: (isCustom: boolean) => void
+  preloadedSuggestions?: ModelSuggestion[] // 사전 로드된 모델 목록(로컬 검색 최적화)
   platformId?: number
   placeholder?: string
   className?: string
@@ -26,6 +27,7 @@ export default function ModelAutocomplete({
   onInputChange,
   onModelSelect,
   onCustomModelToggle,
+  preloadedSuggestions,
   platformId,
   placeholder = '모델명을 입력하세요...',
   className = '',
@@ -44,6 +46,43 @@ export default function ModelAutocomplete({
   const containerRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<NodeJS.Timeout>()
   const suppressDropdownRef = useRef<boolean>(false)
+  const cacheRef = useRef<Map<string, ModelSuggestion[]>>(new Map())
+  const requestSeqRef = useRef(0)
+
+  const searchLocalSuggestions = (query: string): ModelSuggestion[] => {
+    if (!preloadedSuggestions?.length) return []
+
+    const normalized = query.trim().toLowerCase()
+
+    const byPlatform = platformId
+      ? preloadedSuggestions.filter(item => item.platform.id === platformId)
+      : preloadedSuggestions
+
+    const scored = byPlatform
+      .map(item => {
+        const modelName = item.name.toLowerCase()
+        const platformName = item.platform.name.toLowerCase()
+        const modelStarts = modelName.startsWith(normalized)
+        const platformStarts = platformName.startsWith(normalized)
+        const modelIncludes = modelName.includes(normalized)
+        const platformIncludes = platformName.includes(normalized)
+
+        if (!modelIncludes && !platformIncludes) return null
+
+        const score = modelStarts ? 0 : platformStarts ? 1 : modelIncludes ? 2 : 3
+        return { item, score }
+      })
+      .filter(Boolean as unknown as <T>(v: T | null) => v is T)
+      .sort((a, b) => {
+        if (a.score !== b.score) return a.score - b.score
+        const platformCmp = a.item.platform.name.localeCompare(b.item.platform.name, 'ko')
+        if (platformCmp !== 0) return platformCmp
+        return a.item.name.localeCompare(b.item.name, 'ko')
+      })
+      .slice(0, 8)
+
+    return scored.map(x => x.item)
+  }
 
   // value prop이 변경될 때 inputValue 동기화
   useEffect(() => {
@@ -64,26 +103,51 @@ export default function ModelAutocomplete({
       return
     }
 
+    const normalizedQuery = query.trim().toLowerCase()
+    const cacheKey = `${platformId ?? 'all'}::${normalizedQuery}::${preloadedSuggestions ? 'local' : 'api'}`
+
+    if (cacheRef.current.has(cacheKey)) {
+      const cached = cacheRef.current.get(cacheKey) || []
+      setSuggestions(cached)
+      const hasResults = cached.length > 0
+      const canShowCustom = showCustomOption && query.trim().length >= 2
+      setIsOpen(hasResults || canShowCustom)
+      setSelectedIndex(-1)
+      return
+    }
+
     try {
       setLoading(true)
-      const response = await postsApi.getModelSuggestions({
-        query: query.trim(),
-        platform_id: platformId,
-        limit: 8,
-      })
+      const seq = ++requestSeqRef.current
 
-      if (response.status === 'success') {
-        setSuggestions(response.data.suggestions)
-        // 검색결과가 없어도 직접 입력 옵션을 보여주기 위해 드롭다운을 연다
-        const hasResults = response.data.suggestions.length > 0
-        const canShowCustom = showCustomOption && query.trim().length >= 2
-        setIsOpen(hasResults || canShowCustom)
-        setSelectedIndex(-1)
+      let nextSuggestions: ModelSuggestion[] = []
+      if (preloadedSuggestions?.length) {
+        nextSuggestions = searchLocalSuggestions(query)
       } else {
-        setSuggestions([])
-        // 오류 시에는 닫음
-        setIsOpen(false)
+        const response = await postsApi.getModelSuggestions({
+          query: query.trim(),
+          platform_id: platformId,
+          limit: 8,
+        })
+
+        if (response.status === 'success') {
+          nextSuggestions = response.data.suggestions
+        } else {
+          nextSuggestions = []
+        }
       }
+
+      if (seq !== requestSeqRef.current) {
+        return
+      }
+
+      cacheRef.current.set(cacheKey, nextSuggestions)
+      setSuggestions(nextSuggestions)
+
+      const hasResults = nextSuggestions.length > 0
+      const canShowCustom = showCustomOption && query.trim().length >= 2
+      setIsOpen(hasResults || canShowCustom)
+      setSelectedIndex(-1)
     } catch (error) {
       console.error('모델 자동완성 검색 실패:', error)
       setSuggestions([])
@@ -132,10 +196,10 @@ export default function ModelAutocomplete({
       clearTimeout(debounceRef.current)
     }
 
-    // 500ms 후 검색 실행
+    // 사전 로드 데이터가 있으면 더 빠르게 반응
     debounceRef.current = setTimeout(() => {
       fetchSuggestions(newValue)
-    }, 500)
+    }, preloadedSuggestions?.length ? 150 : 350)
   }
 
   // 제안 항목 선택
@@ -153,7 +217,7 @@ export default function ModelAutocomplete({
 
     // 모델 선택 콜백 호출 (드롭다운에서 실제 선택)
     if (onModelSelect) {
-      onModelSelect(selectedName)
+      onModelSelect(suggestion)
     }
 
     setIsOpen(false)

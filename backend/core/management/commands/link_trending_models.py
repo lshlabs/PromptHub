@@ -1,16 +1,23 @@
 """
 트렌딩 모델들을 새로 생성된 AiModel과 연결하는 명령어
 """
+import re
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from core.models.trending import TrendingRanking
 from posts.models import Platform, AiModel
 
 
+def normalize_key(value: str) -> str:
+    return re.sub(r'[\s\-_]+', '', (value or '').strip().lower())
+
+
 # 트렌딩 모델명 → (플랫폼명, 모델명) 매핑
 TRENDING_MODEL_MAPPING = {
     # OpenAI 모델들
     'GPT-5': ('OpenAI', 'GPT-5'),
+    'GPT 5.1': ('OpenAI', 'GPT 5.1'),
+    'GPT 5.2': ('OpenAI', 'GPT 5.2'),
     'GPT oss 20b': ('OpenAI', 'GPT OSS 20B'),  
     'GPT oss 120b': ('OpenAI', 'GPT OSS 120B'),
     'GPT-4o': ('OpenAI', 'GPT-4o'),
@@ -20,23 +27,32 @@ TRENDING_MODEL_MAPPING = {
     
     # Google 모델들  
     'Gemini 2.5 Pro': ('Google', 'Gemini 2.5 Pro'),
+    'Gemini 3 Pro': ('Google', 'Gemini 3 Pro'),
     'Gemini 1.5 Flash': ('Google', 'Gemini 1.5 Flash'),
     'Gemma 3 27b': ('Google', 'Gemma 3 27B'),
     
     # Anthropic 모델들
     'Claude 4.1 Opus': ('Anthropic', 'Claude 4.1 Opus'),
+    'Claude Opus 4.1': ('Anthropic', 'Claude 4.1 Opus'),
     'Claude 4 Sonnet': ('Anthropic', 'Claude 4 Sonnet'),
     'Claude 4 Opus': ('Anthropic', 'Claude 4 Opus'),
+    'Claude Sonnet 4.5': ('Anthropic', 'Claude Sonnet 4.5'),
+    'Claude Opus 4.5': ('Anthropic', 'Claude Opus 4.5'),
     
     # Meta 모델들
-    'Llama 3.1 405b': ('Meta', 'Llama 3.1 405B Instruct'),
-    'Llama 3.3 70b': ('Meta', 'Llama 3.3 70B Instruct'),  
-    'Llama 3.1 70b': ('Meta', 'Llama 3.1 70B Instruct'),
-    'Llama 3.1 8b': ('Meta', 'Llama 3.1 8B Instruct'),
+    'Llama 3.1 405b': ('Meta', 'Llama 3.1'),
+    'Llama 3.3 70b': ('Meta', 'Llama 3.3'),
+    'Llama 3.1 70b': ('Meta', 'Llama 3.1'),
+    'Llama 3.1 8b': ('Meta', 'Llama 3.1'),
     'Llama 4 Scout': ('Meta', 'Llama 4 Scout'),
     
     # 기타 (매핑되지 않는 모델들)
-    'Nova Micro': ('Other', '기타'),  # Amazon → Other로 매핑
+    'Nova Micro': ('기타', '기타'),  # Amazon → 기타 플랫폼으로 매핑
+    'Kimi K2 Thinking': ('기타', '기타'),  # Moonshot AI 플랫폼 미도입 환경 대응
+}
+
+TRENDING_MODEL_MAPPING_NORMALIZED = {
+    normalize_key(key): value for key, value in TRENDING_MODEL_MAPPING.items()
 }
 
 
@@ -65,8 +81,12 @@ class Command(BaseCommand):
             for trending in trending_models:
                 model_name = trending.name
                 
-                if model_name in TRENDING_MODEL_MAPPING:
-                    platform_name, ai_model_name = TRENDING_MODEL_MAPPING[model_name]
+                mapping = TRENDING_MODEL_MAPPING.get(model_name)
+                if not mapping:
+                    mapping = TRENDING_MODEL_MAPPING_NORMALIZED.get(normalize_key(model_name))
+
+                if mapping:
+                    platform_name, ai_model_name = mapping
                     
                     try:
                         platform = Platform.objects.get(name=platform_name)

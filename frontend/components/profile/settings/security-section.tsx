@@ -75,7 +75,8 @@ export function SecuritySection({
       setLoading(true)
       setError(null)
       const data = await authApi.getSessions()
-      setSessions(data)
+      // 방어적 처리: 백엔드가 종료된 세션을 포함해도 화면에는 활성 세션만 표시
+      setSessions(data.filter(session => !session.revoked_at))
     } catch (e: any) {
       setError(e?.message || '세션 목록을 불러오지 못했습니다.')
     } finally {

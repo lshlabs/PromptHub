@@ -7,6 +7,7 @@ import { EmptyState } from '@/components/common/empty-state'
 import { postsApi } from '@/lib/api'
 import type { PostCard as ApiPostCard } from '@/types/api'
 import type { SortOption } from '@/components/common/sort-selector'
+import { useDelayedLoading } from '@/hooks/use-delayed-loading'
 
 type PostListVariant = 'default' | 'bookmark' | 'trending' | 'user-posts'
 
@@ -62,6 +63,7 @@ export function PostList({
   const [apiPosts, setApiPosts] = useState<ApiPostCard[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [hasFetchedOnce, setHasFetchedOnce] = useState(!useApi)
   const [apiPagination, setApiPagination] = useState({
     current_page: 1,
     total_pages: 1,
@@ -75,6 +77,7 @@ export function PostList({
   const [categoriesData, setCategoriesData] = useState<any[]>(externalCategoriesData || [])
 
   const [internalCurrentPage, setInternalCurrentPage] = useState(1)
+  const showLoading = useDelayedLoading(loading, { delayMs: 180, minVisibleMs: 320 })
 
   // 메타데이터는 상위 컴포넌트에서 전달받은 것만 사용 (중복 로드 방지)
   useEffect(() => {
@@ -96,7 +99,9 @@ export function PostList({
           page,
           page_size: itemsPerPage,
           search: searchParams?.search,
+          search_type: searchParams?.search_type,
           ...(searchParams?.categories ? { categories: searchParams.categories } : ({} as any)),
+          ...(searchParams?.platforms ? { platforms: searchParams.platforms } : ({} as any)),
           models: searchParams?.models,
           sort_by: sortBy,
         })
@@ -109,6 +114,7 @@ export function PostList({
         setApiPosts([])
       } finally {
         setLoading(false)
+        setHasFetchedOnce(true)
       }
     }
 
@@ -119,7 +125,9 @@ export function PostList({
     internalCurrentPage,
     itemsPerPage,
     searchParams?.search,
+    searchParams?.search_type,
     searchParams?.categories,
+    searchParams?.platforms,
     searchParams?.models,
     sortBy,
   ])
@@ -201,6 +209,36 @@ export function PostList({
     }
   }
 
+  if (useApi && !hasFetchedOnce) {
+    if (!showLoading) {
+      return (
+        <div className={`space-y-3 ${className}`}>
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <div key={idx} className="h-28 animate-pulse rounded-xl border bg-gray-100/70" />
+          ))}
+        </div>
+      )
+    }
+
+    return (
+      <div className={`flex items-center justify-center py-8 ${className}`}>
+        <div className="text-gray-500">게시글을 불러오는 중...</div>
+      </div>
+    )
+  }
+
+  if (useApi && showLoading && posts.length === 0) {
+    return (
+      <div className={`flex items-center justify-center py-8 ${className}`}>
+        <div className="text-gray-500">게시글을 불러오는 중...</div>
+      </div>
+    )
+  }
+
+  if (useApi && error) {
+    return <div className={`rounded-lg bg-red-50 p-4 text-red-700 ${className}`}>{error}</div>
+  }
+
   if (posts.length === 0) {
     // 검색 상황인지 판단 (검색어가 있거나 필터가 적용된 경우)
     const isSearching =
@@ -221,20 +259,13 @@ export function PostList({
     )
   }
 
-  if (useApi && loading) {
-    return (
-      <div className={`flex items-center justify-center py-8 ${className}`}>
-        <div className="text-gray-500">게시글을 불러오는 중...</div>
-      </div>
-    )
-  }
-
-  if (useApi && error) {
-    return <div className={`rounded-lg bg-red-50 p-4 text-red-700 ${className}`}>{error}</div>
-  }
-
   return (
     <div className={`space-y-4 ${className}`}>
+      {useApi && showLoading && posts.length > 0 ? (
+        <div className="rounded-lg border border-gray-100 bg-white/80 px-4 py-2 text-sm text-gray-500">
+          목록을 업데이트하는 중...
+        </div>
+      ) : null}
       {currentPosts.map(post => (
         <PostCard
           key={post.id}

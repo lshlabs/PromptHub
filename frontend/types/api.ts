@@ -81,18 +81,29 @@ export interface UserData {
   created_at: string
 }
 
-export interface UserProfileResponse extends UserData {
-  posts: PostCard[]
-  posts_count: number
-  total_likes: number
-  total_views: number
-  total_bookmarks: number
-  profile_completeness?: {
-    percentage: number
-    completed_fields: number
-    total_fields: number
-    missing_fields: string[]
-  }
+export interface UserProfileCompleteness {
+  percentage: number
+  completed_fields: number
+  total_fields: number
+  missing_fields: string[]
+}
+
+export interface UserProfileEnvelope {
+  user: UserData
+  settings: UserSettingsDTO
+  profile_completeness?: UserProfileCompleteness
+}
+
+export type UserProfileResponse = UserProfileEnvelope
+
+export interface UserProfileUpdateResponse {
+  message: string
+  user: UserData
+}
+
+export interface AvatarRegenerateResponse {
+  message: string
+  user: UserData
 }
 
 export interface UserProfileUpdateRequest {
@@ -101,6 +112,8 @@ export interface UserProfileUpdateRequest {
   location?: string
   github_handle?: string
   profile_image?: File
+  avatar_color1?: string
+  avatar_color2?: string
 }
 
 export interface PasswordChangeRequest {
@@ -455,6 +468,7 @@ export interface ApiEndpoints {
     logout: '/api/auth/logout/'
     refresh: '/api/auth/token/refresh/'
     profile: '/api/auth/profile/'
+    avatarRegenerate: '/api/auth/profile/avatar/regenerate/'
     passwordChange: '/api/auth/profile/password/'
     userInfo: '/api/auth/info/'
     profileDelete: '/api/auth/profile/delete/'
@@ -474,7 +488,7 @@ export interface ApiEndpoints {
     bookmark: (id: number) => string
     liked: '/api/posts/liked-posts/'
     bookmarked: '/api/posts/bookmarked-posts/'
-    my: '/api/posts/my/'
+    my: '/api/posts/my-posts/'
     platforms: '/api/posts/platforms/'
     models: '/api/posts/models/'
     modelsSuggest: '/api/posts/models/suggest/'
@@ -653,6 +667,7 @@ export const API_ENDPOINTS: ApiEndpoints = {
     logout: '/api/auth/logout/',
     refresh: '/api/auth/token/refresh/',
     profile: '/api/auth/profile/',
+    avatarRegenerate: '/api/auth/profile/avatar/regenerate/',
     passwordChange: '/api/auth/profile/password/',
     userInfo: '/api/auth/info/',
     profileDelete: '/api/auth/profile/delete/',
@@ -670,7 +685,7 @@ export const API_ENDPOINTS: ApiEndpoints = {
     bookmark: (id: number) => `/api/posts/${id}/bookmark/`,
     liked: '/api/posts/liked-posts/',
     bookmarked: '/api/posts/bookmarked-posts/',
-    my: '/api/posts/my/',
+    my: '/api/posts/my-posts/',
     platforms: '/api/posts/platforms/',
     models: '/api/posts/models/',
     modelsSuggest: '/api/posts/models/suggest/',

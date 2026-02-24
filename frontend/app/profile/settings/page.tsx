@@ -112,8 +112,9 @@ export default function SettingsPage() {
     try {
       const res = await authApi.deleteAccount(confirmation)
       alert(res.message || '계정이 성공적으로 삭제되었습니다.')
-      await logout()
-      router.push('/auth/login')
+      // 계정 삭제 성공 시 서버 토큰/사용자가 이미 무효화되므로 추가 logout API 호출은 생략
+      await logout({ skipBackendRequest: true })
+      router.push('/')
     } catch (error: any) {
       const message = error?.message || '계정 삭제 중 오류가 발생했습니다.'
       alert(message)

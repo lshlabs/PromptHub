@@ -193,3 +193,28 @@ def generate_avatar_colors(email: str) -> Tuple[str, str]:
     color1 = email_to_hex_color(email)
     color2 = get_complementary_color(color1)
     return color1, color2
+
+
+def _random_bright_hex_color() -> str:
+    """
+    UI 아바타용 랜덤 고채도 색상을 생성합니다.
+    너무 어둡거나 탁한 색을 피하기 위해 각 채널의 최솟값을 보정합니다.
+    """
+    r = random.randint(40, 235)
+    g = random.randint(40, 235)
+    b = random.randint(40, 235)
+    return f'#{r:02X}{g:02X}{b:02X}'
+
+
+def generate_random_avatar_colors() -> Tuple[str, str]:
+    """
+    랜덤 아바타 그라디언트 색상 쌍을 생성합니다.
+    두 색이 지나치게 비슷하면 재생성합니다.
+    """
+    for _ in range(10):
+        color1 = _random_bright_hex_color()
+        color2 = _random_bright_hex_color()
+        if color1 != color2:
+            return color1, color2
+
+    return '#6B73FF', '#9EE5FF'

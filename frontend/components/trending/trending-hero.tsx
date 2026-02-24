@@ -24,13 +24,13 @@ export default function TrendingHero() {
         <div className="text-sm text-gray-500">
           데이터 출처:{' '}
           <a
-            href="https://www.vellum.ai"
+            href="https://www.vellum.ai/llm-leaderboard?utm_source=direct&utm_medium=none"
             target="_blank"
             rel="noopener noreferrer"
             className="text-orange-600 hover:underline">
             vellum.ai
           </a>{' '}
-          | 최종 업데이트: 2025년 8월 7일
+          | 최종 업데이트: 2026년 2월
         </div>
       </div>
     </div>

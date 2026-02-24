@@ -6,7 +6,7 @@ class AiModelInline(admin.TabularInline):
     model = AiModel
     fields = (
         'name', 'slug', 'sort_order', 'is_active', 'is_deprecated',
-        'variant_free_text_allowed', 'released_at', 'posts_count_inline'
+        'released_at', 'posts_count_inline'
     )
     readonly_fields = ('slug', 'posts_count_inline')
     extra = 0
@@ -56,7 +56,7 @@ class AiModelAdmin(admin.ModelAdmin):
             'fields': ('platform', 'name', 'slug')
         }),
         ('상태', {
-            'fields': ('is_active', 'is_deprecated', 'variant_free_text_allowed')
+            'fields': ('is_active', 'is_deprecated')
         }),
         ('릴리스', {
             'fields': ('released_at', 'sort_order')

@@ -38,6 +38,8 @@ PLATFORM_MODELS = {
         ('GPT-5 nano', 0),
         ('GPT-5 mini', 0),
         ('GPT-5', 0),
+        ('GPT 5.1', 0),
+        ('GPT 5.2', 0),
         ('기타', 0),
     ],
     'Anthropic': [
@@ -50,7 +52,12 @@ PLATFORM_MODELS = {
         ('Claude 4 Sonnet', 7),
         ('Claude 4 Opus', 8),
         ('Claude 4.1 Opus', 9),
-        ('기타', 10),
+        ('Claude Haiku 4.5', 10),
+        ('Claude Sonnet 4.5', 11),
+        ('Claude Opus 4.5', 12),
+        ('Claude Opus 4.6', 13),
+        ('Claude Sonnet 4.6', 14),
+        ('기타', 15),
     ],
     'Google': [
         ('Gemini 1.0 Pro', 1),
@@ -64,21 +71,23 @@ PLATFORM_MODELS = {
         ('Gemini 2.5 Pro', 9),
         ('Gemini 2.5 Flash', 10),
         ('Gemini 2.5 Flash-Lite', 11),
-        ('Gemma 2 9B', 12),
-        ('Gemma 2 27B', 13),
-        ('Gemma 3 1B', 14),
-        ('Gemma 3 4B', 15),
-        ('Gemma 3 12B', 16),
-        ('Gemma 3 27B', 17),
-        ('Gemma 3n E2B', 18),
-        ('Gemma 3n E2B Instructed', 19),
-        ('Gemma 3n E2B Instructed LiteRT (Preview)', 20),
-        ('Gemma 3n E4B', 21),
-        ('Gemma 3n E4B Instructed', 22),
-        ('Gemma 3n E4B Instructed LiteRT Preview', 23),
-        ('MedGemma 4B IT', 24),
-        ('Gemini Diffusion', 25),
-        ('기타', 26),
+        ('Gemini 3 Pro', 12),
+        ('Gemini 3.1 Pro', 13),
+        ('Gemma 2 9B', 14),
+        ('Gemma 2 27B', 15),
+        ('Gemma 3 1B', 16),
+        ('Gemma 3 4B', 17),
+        ('Gemma 3 12B', 18),
+        ('Gemma 3 27B', 19),
+        ('Gemma 3n E2B', 20),
+        ('Gemma 3n E2B Instructed', 21),
+        ('Gemma 3n E2B Instructed LiteRT (Preview)', 22),
+        ('Gemma 3n E4B', 23),
+        ('Gemma 3n E4B Instructed', 24),
+        ('Gemma 3n E4B Instructed LiteRT Preview', 25),
+        ('MedGemma 4B IT', 26),
+        ('Gemini Diffusion', 27),
+        ('기타', 28),
     ],
     'xAI': [
         ('Grok-1.5', 1),
@@ -89,7 +98,10 @@ PLATFORM_MODELS = {
         ('Grok-3', 6),
         ('Grok-4', 7),
         ('Grok-4 Heavy', 8),
-        ('기타', 9),
+        ('Grok-4.1', 9),
+        ('Grok-4 Fast', 10),
+        ('Grok-4.1 Fast', 11),
+        ('기타', 12),
     ],
     'Meta': [
         ('Llama 3.1 8B Instruct', 1),
@@ -101,7 +113,8 @@ PLATFORM_MODELS = {
         ('Llama 3.3 70B Instruct', 7),
         ('Llama 4 Maverick', 8),
         ('Llama 4 Scout', 9),
-        ('기타', 10),
+        ('Llama 4 Behemoth', 10),
+        ('기타', 11),
     ],
     'Mistral': [
         ('Magistral Small 2506', 1),
@@ -116,10 +129,15 @@ PLATFORM_MODELS = {
         ('Mistral Small 3.2 24B Instruct', 10),
         ('Mistral NeMo Instruct', 11),
         ('Mistral Large 2', 12),
-        ('Pixtral-12B', 13),
-        ('Pixtral Large', 14),
-        ('Codestral-22B', 15),
-        ('기타', 16),
+        ('Mistral Large 3', 13),
+        ('Mistral Medium 3', 14),
+        ('Mistral Medium 3.1', 15),
+        ('Pixtral-12B', 16),
+        ('Pixtral Large', 17),
+        ('Codestral-22B', 18),
+        ('Codestral 25.08', 19),
+        ('Devstral 2', 20),
+        ('기타', 21),
     ],
     'Qwen': [
         ('Qwen2 7B Instruct', 1),
@@ -161,7 +179,9 @@ PLATFORM_MODELS = {
         ('DeepSeek VL2 Tiny', 13),
         ('DeepSeek VL2 Small', 14),
         ('DeepSeek VL2', 15),
-        ('기타', 16),
+        ('DeepSeek-V3.2', 16),
+        ('DeepSeek-V3.2-Exp', 17),
+        ('기타', 18),
     ],
     'Other': [
         ('기타', 1),
@@ -267,6 +287,8 @@ class Command(BaseCommand):
         created_platforms = 0
         created_models = 0
         updated_models = 0
+        aimodel_field_names = {f.name for f in AiModel._meta.get_fields()}
+        supports_variant_free_text = 'variant_free_text_allowed' in aimodel_field_names
         with transaction.atomic():
             for platform_name, models in source.items():
                 platform, p_created = Platform.objects.get_or_create(name=platform_name)
@@ -286,18 +308,24 @@ class Command(BaseCommand):
                     aimodel, m_created = AiModel.objects.get_or_create(
                         platform=platform,
                         name=model_name,
-                        defaults={
-                            'variant_free_text_allowed': vfta,
-                            'slug': slug_val,
-                            'sort_order': sort_order,
-                        }
+                        defaults=(
+                            {
+                                'slug': slug_val,
+                                'sort_order': sort_order,
+                                **(
+                                    {'variant_free_text_allowed': vfta}
+                                    if supports_variant_free_text
+                                    else {}
+                                ),
+                            }
+                        )
                     )
                     if m_created:
                         created_models += 1
                     else:
                         changed = False
                     # 플랫폼 변경 없이 이름 동일 레코드 기준으로만 업데이트
-                        if aimodel.variant_free_text_allowed != vfta:
+                        if supports_variant_free_text and aimodel.variant_free_text_allowed != vfta:
                             aimodel.variant_free_text_allowed = vfta
                             changed = True
                         # slug 보정: 비어있으면 채움
@@ -309,11 +337,18 @@ class Command(BaseCommand):
                             aimodel.sort_order = sort_order
                             changed = True
                         # '기타' 모델은 상세 자유 입력 금지 보정
-                        if aimodel.name == '기타' and aimodel.variant_free_text_allowed:
+                        if (
+                            supports_variant_free_text
+                            and aimodel.name == '기타'
+                            and aimodel.variant_free_text_allowed
+                        ):
                             aimodel.variant_free_text_allowed = False
                             changed = True
                         if changed:
-                            aimodel.save(update_fields=['variant_free_text_allowed', 'slug', 'sort_order'])
+                            update_fields = ['slug', 'sort_order']
+                            if supports_variant_free_text:
+                                update_fields.insert(0, 'variant_free_text_allowed')
+                            aimodel.save(update_fields=update_fields)
                             updated_models += 1
 
         self.stdout.write(
@@ -321,5 +356,3 @@ class Command(BaseCommand):
                 f"완료: 플랫폼 {created_platforms}개 생성, 모델 {created_models}개 생성, {updated_models}개 업데이트"
             )
         )
-
-

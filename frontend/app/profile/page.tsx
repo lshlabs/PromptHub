@@ -10,7 +10,7 @@ import { ProfileCompleteness } from '@/components/profile/profile-completeness'
 import { authApi, userDataApi, statsApi, postsApi } from '@/lib/api'
 import { getErrorMessage } from '@/lib/utils'
 import { useAuthContext } from '@/components/layout/auth-provider'
-import { useAuth } from '@/hooks/use-auth'
+import { useDelayedLoading } from '@/hooks/use-delayed-loading'
 
 // 프론트엔드 사용자 데이터 타입
 interface ProfileUserData {
@@ -24,12 +24,11 @@ interface ProfileUserData {
 }
 
 // PostCard 타입 import
-import type { PostCard } from '@/types/api'
+import { API_BASE_URL, type PostCard } from '@/types/api'
 
 export default function ProfilePage() {
   const router = useRouter()
-  const { refreshUser } = useAuthContext()
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
+  const { user, isAuthenticated, isLoading: authLoading, refreshUser } = useAuthContext()
   const { toast } = useToast()
 
   // 중복 실행 방지 플래그 (useRef 사용)
@@ -60,8 +59,11 @@ export default function ProfilePage() {
   const [bookmarkedPosts, setBookmarkedPosts] = useState<PostCard[]>([])
   const [isEditing, setIsEditing] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [hasProfileLoadedOnce, setHasProfileLoadedOnce] = useState(false)
   const [likedLoading, setLikedLoading] = useState(false)
   const [bookmarkedLoading, setBookmarkedLoading] = useState(false)
+  const [likedLoaded, setLikedLoaded] = useState(false)
+  const [bookmarkedLoaded, setBookmarkedLoaded] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [activeTab, setActiveTab] = useState<'my' | 'liked' | 'bookmarked'>('my')
   const [backendStats, setBackendStats] = useState({
@@ -75,6 +77,15 @@ export default function ProfilePage() {
   const [platformsData, setPlatformsData] = useState<any[]>([])
   const [modelsData, setModelsData] = useState<any[]>([])
   const [categoriesData, setCategoriesData] = useState<any[]>([])
+  const delayedProfileLoading = useDelayedLoading(isLoading, { delayMs: 180, minVisibleMs: 320 })
+  const delayedLikedLoading = useDelayedLoading(likedLoading, { delayMs: 180, minVisibleMs: 320 })
+  const delayedBookmarkedLoading = useDelayedLoading(bookmarkedLoading, {
+    delayMs: 180,
+    minVisibleMs: 320,
+  })
+  const showProfileLoading = hasProfileLoadedOnce ? delayedProfileLoading : isLoading
+  const showLikedLoading = likedLoaded ? delayedLikedLoading : likedLoading
+  const showBookmarkedLoading = bookmarkedLoaded ? delayedBookmarkedLoading : bookmarkedLoading
 
   // (간소화) 백엔드→프론트 데이터 변환은 각 API에서 이미 일관화되어 있어 별도 변환 함수 생략
 
@@ -89,12 +100,18 @@ export default function ProfilePage() {
   // 백엔드 데이터를 프론트엔드 형식으로 변환
   const transformBackendData = (backendData: any): ProfileUserData => {
     const userData = backendData.user || backendData
+    const normalizedProfileImage =
+      typeof userData.profile_image === 'string' && userData.profile_image
+        ? userData.profile_image.startsWith('http')
+          ? userData.profile_image
+          : `${API_BASE_URL}${userData.profile_image}`
+        : null
     return {
       username: userData.username || '사용자',
       bio: userData.bio || '',
       location: userData.location || '',
       githubHandle: userData.github_handle || '',
-      profileImage: userData.profile_image || null,
+      profileImage: normalizedProfileImage,
       avatarColor1: userData.avatar_color1 || '#6B73FF',
       avatarColor2: userData.avatar_color2 || '#9EE5FF',
     }
@@ -156,16 +173,13 @@ export default function ProfilePage() {
 
       // 사용자 게시글은 프로필 로드 후 별도 호출
       let myPostsRes = null
-      if (profileRes?.username) {
-        try {
-          myPostsRes = await userDataApi.getUserPosts({
-            page: 1,
-            page_size: 50,
-            author: profileRes.username,
-          })
-        } catch (postsError) {
-          console.warn('⚠️ 사용자 게시글 로드 실패 (무시하고 계속):', postsError)
-        }
+      try {
+        myPostsRes = await userDataApi.getUserPosts({
+          page: 1,
+          page_size: 50,
+        })
+      } catch (postsError) {
+        console.warn('⚠️ 사용자 게시글 로드 실패 (무시하고 계속):', postsError)
       }
 
       // 통계 API는 별도로 호출 (인증 오류 시 무시)
@@ -181,8 +195,9 @@ export default function ProfilePage() {
       }
 
       // 사용자 프로필 데이터 변환
-      const transformedData = transformBackendData(profileRes)
+      const transformedData = transformBackendData(profileRes.user)
       setUserData(transformedData)
+      setHasProfileLoadedOnce(true)
 
       // 프로필 완성도 정보 추출
       if (profileRes.profile_completeness) {
@@ -238,9 +253,6 @@ export default function ProfilePage() {
   }, [user, authLoading, isAuthenticated])
 
   // 탭 전환 시 좋아요/북마크 Lazy-load (무한 루프 방지)
-  const [likedLoaded, setLikedLoaded] = useState(false)
-  const [bookmarkedLoaded, setBookmarkedLoaded] = useState(false)
-
   useEffect(() => {
     const loadLiked = async () => {
       if (likedLoaded) return // 이미 로드된 경우 스킵
@@ -293,7 +305,7 @@ export default function ProfilePage() {
   }, [activeTab, likedLoaded, bookmarkedLoaded, likedLoading, bookmarkedLoading])
 
   // 이벤트 핸들러들
-  const handleSave = async (newUserData: ProfileUserData) => {
+  const handleSave = async (newUserData: ProfileUserData, profileImageFile?: File | null) => {
     try {
       setIsSaving(true)
 
@@ -304,11 +316,22 @@ export default function ProfilePage() {
       if (newUserData.location !== userData.location) updateData.location = newUserData.location
       if (newUserData.githubHandle !== userData.githubHandle)
         updateData.github_handle = newUserData.githubHandle
+      if (newUserData.avatarColor1 !== userData.avatarColor1)
+        updateData.avatar_color1 = newUserData.avatarColor1
+      if (newUserData.avatarColor2 !== userData.avatarColor2)
+        updateData.avatar_color2 = newUserData.avatarColor2
 
-      // 프로필 이미지 업로드는 추후 파일 업로드 구현 시 처리
+      // 프로필 이미지 업로드/삭제 반영
+      if (profileImageFile instanceof File) {
+        updateData.profile_image = profileImageFile
+      }
+
+      if (userData.profileImage && !newUserData.profileImage) {
+        updateData.profile_image = null
+      }
 
       const response = await authApi.updateProfile(updateData)
-      const updatedBackendData = response
+      const updatedBackendData = response.user
       if (!updatedBackendData) {
         throw new Error('업데이트된 사용자 데이터를 찾을 수 없습니다.')
       }
@@ -316,6 +339,23 @@ export default function ProfilePage() {
 
       setUserData(transformedData)
       setIsEditing(false)
+
+      const applyAuthorAvatarUpdate = (posts: PostCard[]) =>
+        posts.map(post =>
+          post.author === userData.username || post.author === transformedData.username
+            ? ({
+                ...post,
+                author: transformedData.username,
+                authorInitial: transformedData.username.charAt(0).toUpperCase() || 'U',
+                authorAvatarColor1: transformedData.avatarColor1,
+                authorAvatarColor2: transformedData.avatarColor2,
+              } as PostCard)
+            : post,
+        )
+
+      setUserPosts(prev => applyAuthorAvatarUpdate(prev))
+      setLikedPosts(prev => applyAuthorAvatarUpdate(prev))
+      setBookmarkedPosts(prev => applyAuthorAvatarUpdate(prev))
 
       // 프로필 완성도 재계산 및 업데이트
       const updatedCompleteness = calculateProfileCompleteness(transformedData)
@@ -387,13 +427,13 @@ export default function ProfilePage() {
             onSave={handleSave}
             onCancel={handleCancel}
             onAccountSettings={handleAccountSettingsClick}
-            isLoading={isLoading || isSaving}
+            isLoading={showProfileLoading || isSaving}
           />
         </div>
 
         {/* Right Column */}
         <div className="space-y-8 lg:col-span-2">
-          <ProfileStatsSection stats={getStats()} isLoading={isLoading} title={''} contained />
+          <ProfileStatsSection stats={getStats()} isLoading={showProfileLoading} title={''} contained />
           <Card className="overflow-hidden border border-gray-100 bg-white">
             <CardHeader className="pb-2">
               <Tabs
@@ -416,10 +456,10 @@ export default function ProfilePage() {
                       : bookmarkedPosts
                 const loadingForTab =
                   activeTab === 'my'
-                    ? isLoading
+                    ? showProfileLoading
                     : activeTab === 'liked'
-                      ? likedLoading
-                      : bookmarkedLoading
+                      ? showLikedLoading
+                      : showBookmarkedLoading
                 const variantForTab: 'default' | 'bookmark' | 'trending' | 'user-posts' =
                   activeTab === 'bookmarked'
                     ? 'bookmark'

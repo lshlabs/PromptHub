@@ -17,6 +17,7 @@ import type {
   Platform,
   Model,
   Category,
+  ModelSuggestion,
   PostCreateRequest,
   PlatformModelsResponse,
 } from '@/types/api'
@@ -133,12 +134,12 @@ export function CreatePostDialog({
   }
 
   // 드롭다운에서 모델 선택: 기본 모델 메타 고정
-  const handleModelSelect = (modelName: string) => {
-    setSelectedModel(modelName)
+  const handleModelSelect = (model: ModelSuggestion) => {
+    setSelectedModel(model.name)
     setShowCustomModelInput(false)
     setCustomModel('')
 
-    const modelData = allModels.find(model => model.name === modelName)
+    const modelData = allModels.find(item => item.id === model.id)
     setSelectedModelData(modelData || null)
     if (modelData && modelData.name !== '기타') {
       setModelDetail(modelData.name)
@@ -173,6 +174,15 @@ export function CreatePostDialog({
       setShowCustomCategoryInput(false)
     }
   }, [selectedCategory])
+
+  const preloadedModelSuggestions: ModelSuggestion[] = allModels.map(model => ({
+    id: model.id,
+    name: model.name,
+    platform: {
+      id: model.platform,
+      name: platforms.find(p => p.id === model.platform)?.name || model.platformName || 'Unknown',
+    },
+  }))
 
   // 유효성 검사
   const validateStep = (step: number) => {
@@ -436,6 +446,7 @@ export function CreatePostDialog({
                   onChange={handleModelInputChange}
                   onModelSelect={handleModelSelect}
                   onCustomModelToggle={handleCustomModelToggle}
+                  preloadedSuggestions={preloadedModelSuggestions}
                   placeholder="사용한 플랫폼 또는 AI 모델을 검색하세요 (예: OpenAI, GPT-5, Claude, Grok...)"
                   showCustomOption={true}
                   className="w-full"

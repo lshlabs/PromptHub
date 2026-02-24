@@ -11,6 +11,7 @@
 import { useState } from 'react'
 import type { Platform, Category } from '@/types/api'
 import CustomButton from '@/components/common/custom-button'
+import { useDelayedLoading } from '@/hooks/use-delayed-loading'
 
 interface FilterPanelProps {
   showFilters: boolean
@@ -63,6 +64,8 @@ export function FilterPanel({
   models = [],
   loadingFilters = false,
 }: FilterPanelProps) {
+  const showLoadingState = useDelayedLoading(loadingFilters, { delayMs: 150, minVisibleMs: 280 })
+
   const getActiveFiltersCount = () => {
     // 플랫폼은 카운트에서 제외하고 모델과 카테고리만 카운트합니다.
     return selectedCategories.length + selectedModels.length
@@ -75,9 +78,26 @@ export function FilterPanel({
       <div className="animate-fadeIn overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
         <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
         <div className="p-6">
-          <div className="flex items-center justify-center py-8">
-            <div className="text-gray-500">필터 데이터를 불러오는 중...</div>
-          </div>
+          {showLoadingState ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="text-gray-500">필터 데이터를 불러오는 중...</div>
+            </div>
+          ) : (
+            <div className="space-y-5" aria-hidden="true">
+              <div className="h-5 w-40 animate-pulse rounded bg-gray-200" />
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <div key={idx} className="h-9 animate-pulse rounded-lg bg-gray-100" />
+                ))}
+              </div>
+              <div className="h-5 w-24 animate-pulse rounded bg-gray-200" />
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, idx) => (
+                  <div key={`c-${idx}`} className="h-9 animate-pulse rounded-lg bg-gray-100" />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     )

@@ -15,6 +15,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { postsApi } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
 import { getPlatformName, getModelName, getCategoryName } from '@/lib/utils'
+import { useDelayedLoading } from '@/hooks/use-delayed-loading'
 
 export default function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter()
@@ -27,13 +28,28 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
 
   // URL에서 from_page 파라미터 읽기
   const [initialPage, setInitialPage] = useState(1)
+  const [fromPage, setFromPage] = useState<'community' | 'trending' | 'bookmarks' | 'profile'>(
+    'community',
+  )
+  const backButtonLabel = fromPage === 'trending' || fromPage === 'profile' ? '뒤로가기' : '목록으로'
 
   useEffect(() => {
+    let fromValue = searchParams.get('from')
     // useSearchParams가 준비되지 않았을 경우를 대비해 window.location.search도 확인
     let fromPage = searchParams.get('from_page')
-    if (!fromPage) {
+    if (!fromPage || !fromValue) {
       const urlParams = new URLSearchParams(window.location.search)
-      fromPage = urlParams.get('from_page')
+      fromPage = fromPage || urlParams.get('from_page')
+      fromValue = fromValue || urlParams.get('from')
+    }
+
+    if (
+      fromValue === 'community' ||
+      fromValue === 'trending' ||
+      fromValue === 'bookmarks' ||
+      fromValue === 'profile'
+    ) {
+      setFromPage(fromValue)
     }
 
     if (fromPage) {
@@ -69,6 +85,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
     isBookmarked: boolean
     count: number
   } | null>(null)
+  const showPageLoading = useDelayedLoading(loading, { delayMs: 180, minVisibleMs: 320 })
 
   // initialPage가 변경될 때 currentPage 업데이트
   useEffect(() => {
@@ -168,7 +185,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   }, [id, isLoading, hasViewIncremented])
 
   const handlePostClick = (postId: number) => {
-    router.push(`/post/${postId}?from_page=${currentPage}`)
+    router.push(`/post/${postId}?from=${fromPage}&from_page=${currentPage}`)
   }
 
   const handleEdit = () => {
@@ -321,6 +338,26 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
 
   // 로딩 상태
   if (loading) {
+    if (!showPageLoading) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+          <div className="container mx-auto px-2 py-2 pb-4 sm:px-4 sm:py-4">
+            <div className="mx-auto max-w-7xl">
+              <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
+                <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
+                <div className="space-y-4 p-6">
+                  <div className="h-8 w-2/3 animate-pulse rounded bg-gray-200" />
+                  <div className="h-5 w-1/3 animate-pulse rounded bg-gray-200" />
+                  <div className="h-40 animate-pulse rounded-xl bg-gray-100" />
+                  <div className="h-56 animate-pulse rounded-xl bg-gray-100" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
         <div className="text-center">
@@ -355,7 +392,11 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
           <div className="px-2 py-2">
             {/* 목록으로 가기 버튼 */}
             <div className="flex justify-start pb-2">
-              <GoBackButton />
+              <GoBackButton
+                fromPage={fromPage}
+                fallbackPath="/community"
+                label={backButtonLabel}
+              />
             </div>
 
             {/* 메인 포스트 카드 */}

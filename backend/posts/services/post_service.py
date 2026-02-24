@@ -52,6 +52,7 @@ def build_posts_page(request) -> Tuple:
     page = request.GET.get("page", 1)
     page_size = request.GET.get("page_size", 10)
     search = request.GET.get("search", "")
+    search_type = request.GET.get("search_type", "title")
     exclude_id = request.GET.get("exclude_id", "")
     sort_by = request.GET.get("sort_by", "latest")
 
@@ -78,7 +79,7 @@ def build_posts_page(request) -> Tuple:
 
     # 검색어가 있으면 SearchManager를 사용하여 검색
     if search:
-        queryset = SearchManager.search_posts(queryset, search)
+        queryset = SearchManager.search_posts(queryset, search, search_type)
 
     if exclude_id:
         try:
@@ -143,6 +144,7 @@ def build_user_posts_page(
     page = request.GET.get("page", 1)
     page_size = request.GET.get("page_size", 10)
     search = request.GET.get("search", "")
+    search_type = request.GET.get("search_type", "title")
     sort_by = request.GET.get(sort_param_name, default_sort)
 
     try:
@@ -165,7 +167,7 @@ def build_user_posts_page(
         queryset = SortManager.sort_posts(queryset, sort_by)
 
     if search:
-        queryset = SearchManager.search_posts(queryset, search)
+        queryset = SearchManager.search_posts(queryset, search, search_type)
 
     # 현재 사용자의 상호작용 데이터 미리 가져오기 최적화
     user = getattr(request, "user", None)
@@ -186,5 +188,4 @@ def build_user_posts_page(
         posts_page = paginator.page(paginator.num_pages)
 
     return posts_page, paginator
-
 

@@ -40,6 +40,87 @@ export function PostContentSections({
   const finalAdditionalOpinion = additionalOpinion || post?.additionalOpinion || ''
   const finalTags = tags || post?.tags || []
 
+  const looksLikeCode = (text: string): boolean => {
+    const trimmed = text.trim()
+    if (!trimmed) return false
+    if (trimmed.includes('```')) return true
+    const lines = trimmed.split('\n').filter(Boolean)
+    if (lines.length < 2) return false
+
+    const codeLikeLineCount = lines.filter(line =>
+      /[{}();=<>\[\]]/.test(line) ||
+      /^\s*(const|let|var|function|class|if|for|while|return|import|export|def)\b/.test(line) ||
+      /^\s*#include\b/.test(line) ||
+      /^\s*<\/?[a-zA-Z]/.test(line),
+    ).length
+
+    return codeLikeLineCount >= Math.max(2, Math.ceil(lines.length * 0.35))
+  }
+
+  const renderRichText = (text: string, options?: { disableHeuristicCodeDetection?: boolean }) => {
+    const normalized = (text || '').replace(/\r\n/g, '\n')
+    const fencedMatches = [...normalized.matchAll(/```(\w+)?\n?([\s\S]*?)```/g)]
+
+    // 코드 펜스가 없으면 일반 텍스트(줄바꿈 보존) 또는 전체 코드 블록으로 렌더링
+    if (fencedMatches.length === 0) {
+      if (!options?.disableHeuristicCodeDetection && looksLikeCode(normalized)) {
+        return (
+          <pre className="overflow-x-auto rounded-lg bg-gray-900 p-4 text-sm text-gray-100">
+            <code className="whitespace-pre">{normalized}</code>
+          </pre>
+        )
+      }
+
+      return <p className="whitespace-pre-wrap break-words text-gray-600">{normalized}</p>
+    }
+
+    // fenced code + 일반 텍스트 혼합 렌더링
+    const parts: Array<{ type: 'text' | 'code'; content: string; lang?: string }> = []
+    let lastIndex = 0
+    for (const match of fencedMatches) {
+      const full = match[0]
+      const lang = (match[1] || '').trim()
+      const code = (match[2] || '').replace(/\n$/, '')
+      const start = match.index ?? 0
+
+      if (start > lastIndex) {
+        const textPart = normalized.slice(lastIndex, start)
+        if (textPart.trim()) parts.push({ type: 'text', content: textPart })
+      }
+
+      parts.push({ type: 'code', content: code, lang })
+      lastIndex = start + full.length
+    }
+
+    if (lastIndex < normalized.length) {
+      const tail = normalized.slice(lastIndex)
+      if (tail.trim()) parts.push({ type: 'text', content: tail })
+    }
+
+    return (
+      <div className="space-y-3">
+        {parts.map((part, index) =>
+          part.type === 'code' ? (
+            <div key={index} className="overflow-hidden rounded-lg border border-gray-700 bg-gray-900">
+              {part.lang ? (
+                <div className="border-b border-gray-700 px-3 py-1 text-xs text-gray-300">
+                  {part.lang}
+                </div>
+              ) : null}
+              <pre className="overflow-x-auto p-4 text-sm text-gray-100">
+                <code className="whitespace-pre">{part.content}</code>
+              </pre>
+            </div>
+          ) : (
+            <p key={index} className="whitespace-pre-wrap break-words text-gray-600">
+              {part.content.trim()}
+            </p>
+          ),
+        )}
+      </div>
+    )
+  }
+
   // 클립보드 복사 함수
   const copyToClipboard = async (text: string, sectionName: string) => {
     try {
@@ -75,8 +156,8 @@ export function PostContentSections({
             </CustomBadge>
           </div>
         </div>
-        <div className="scrollbar-force max-h-60 overflow-y-auto p-4">
-          <p className="text-gray-600">{finalPrompt}</p>
+        <div className="scrollbar-force max-h-[32rem] overflow-y-auto p-4">
+          {renderRichText(finalPrompt)}
         </div>
       </div>
 
@@ -95,8 +176,8 @@ export function PostContentSections({
             </CustomBadge>
           </div>
         </div>
-        <div className="scrollbar-force max-h-60 overflow-y-auto p-4">
-          <p className="text-gray-600">{finalAiResponse}</p>
+        <div className="scrollbar-force max-h-[32rem] overflow-y-auto p-4">
+          {renderRichText(finalAiResponse, { disableHeuristicCodeDetection: true })}
         </div>
       </div>
 
@@ -106,8 +187,8 @@ export function PostContentSections({
           <div className="rounded-t-xl border-b border-gray-200 bg-blue-50 px-4 py-3">
             <h3 className="font-bold text-gray-800">추가 의견</h3>
           </div>
-          <div className="scrollbar-force max-h-60 overflow-y-auto p-4">
-            <p className="text-gray-600">{finalAdditionalOpinion}</p>
+          <div className="scrollbar-force max-h-[32rem] overflow-y-auto p-4">
+            {renderRichText(finalAdditionalOpinion)}
           </div>
         </div>
       )}

@@ -1,6 +1,6 @@
 """
 헬스체크 API 뷰
-Docker 컨테이너와 render.com 배포 상태 확인용
+Docker 컨테이너/배포 환경 상태 확인용
 """
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods

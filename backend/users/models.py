@@ -118,6 +118,8 @@ class CustomUser(AbstractUser):
             str or None: 프로필 이미지가 있으면 URL, 없으면 None
         """
         """프로필 이미지 URL 반환"""
+        if self.profile_image:
+            return self.profile_image.url
         if self.avatar:
             return self.avatar.url
         return None

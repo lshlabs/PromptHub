@@ -1,11 +1,25 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { MapPin, Github, Camera, X } from 'lucide-react'
+import { MapPin, Github, Camera, RefreshCcw, X } from 'lucide-react'
+import {
+  getAvatarGradientStyle,
+  getAvatarInitialFromUsername,
+  generateRandomAvatarColors,
+} from '@/lib/utils'
+
+const MAX_PROFILE_IMAGE_SIZE_BYTES = 5 * 1024 * 1024 // 5MB
+const ALLOWED_PROFILE_IMAGE_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+])
+const ALLOWED_PROFILE_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif']
 
 interface UserData {
   username: string
@@ -21,7 +35,7 @@ interface ProfileInfoCardProps {
   userData: UserData
   isEditing: boolean
   onEdit: () => void
-  onSave: (data: UserData) => void
+  onSave: (data: UserData, profileImageFile?: File | null) => void
   onCancel: () => void
   onAccountSettings: () => void
   isLoading?: boolean
@@ -37,31 +51,57 @@ export function ProfileInfoCard({
   isLoading = false,
 }: ProfileInfoCardProps) {
   const [localData, setLocalData] = useState<UserData>(userData)
+  const [selectedProfileImageFile, setSelectedProfileImageFile] = useState<File | null>(null)
+  const [imageUploadError, setImageUploadError] = useState<string>('')
+  const profileImageInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     setLocalData(userData)
+    setSelectedProfileImageFile(null)
+    setImageUploadError('')
   }, [userData])
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target
     const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onload = e => {
-        setLocalData(prev => ({
-          ...prev,
-          profileImage: e.target?.result as string,
-        }))
-      }
-      reader.readAsDataURL(file)
+    if (!file) return
+
+    const extension = file.name.split('.').pop()?.toLowerCase() || ''
+    const isAllowedType = ALLOWED_PROFILE_IMAGE_TYPES.has(file.type)
+    const isAllowedExtension = ALLOWED_PROFILE_IMAGE_EXTENSIONS.includes(extension)
+
+    if (!isAllowedType && !isAllowedExtension) {
+      setImageUploadError('JPG, PNG, WEBP, GIF 형식만 업로드할 수 있습니다.')
+      input.value = ''
+      return
     }
+
+    if (file.size > MAX_PROFILE_IMAGE_SIZE_BYTES) {
+      setImageUploadError('이미지 용량은 5MB 이하만 업로드할 수 있습니다.')
+      input.value = ''
+      return
+    }
+
+    setImageUploadError('')
+    setSelectedProfileImageFile(file)
+    const reader = new FileReader()
+    reader.onload = e => {
+      setLocalData(prev => ({
+        ...prev,
+        profileImage: e.target?.result as string,
+      }))
+    }
+    reader.readAsDataURL(file)
   }
 
   const handleSave = () => {
-    onSave(localData)
+    onSave(localData, selectedProfileImageFile)
   }
 
   const handleCancel = () => {
     setLocalData(userData)
+    setSelectedProfileImageFile(null)
+    setImageUploadError('')
     onCancel()
   }
 
@@ -77,16 +117,18 @@ export function ProfileInfoCard({
               <div
                 className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full text-4xl font-bold text-white"
                 style={{
-                  background: `linear-gradient(135deg, ${userData.avatarColor1}, ${userData.avatarColor2})`,
+                  background: userData.profileImage
+                    ? 'transparent'
+                    : getAvatarGradientStyle(userData.avatarColor1, userData.avatarColor2),
                 }}>
                 {userData.profileImage ? (
                   <img
                     src={userData.profileImage}
-                    alt="Profile"
+                    alt={`${userData.username} profile`}
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  (userData.username || '').charAt(0)?.toUpperCase() || 'A'
+                  getAvatarInitialFromUsername(userData.username, 'A')
                 )}
               </div>
             )}
@@ -170,7 +212,9 @@ export function ProfileInfoCard({
                 <div
                   className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-full text-4xl font-bold text-white"
                   style={{
-                    background: `linear-gradient(135deg, ${localData.avatarColor1}, ${localData.avatarColor2})`,
+                    background: localData.profileImage
+                      ? 'transparent'
+                      : getAvatarGradientStyle(localData.avatarColor1, localData.avatarColor2),
                   }}>
                   {localData.profileImage ? (
                     <img
@@ -179,31 +223,59 @@ export function ProfileInfoCard({
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    (localData.username || '').charAt(0)?.toUpperCase() || 'A'
+                    getAvatarInitialFromUsername(localData.username, 'A')
                   )}
                 </div>
 
-                <label
-                  htmlFor="profile-image"
+                <button
+                  type="button"
+                  onClick={() => {
+                    profileImageInputRef.current?.click()
+                  }}
                   className="absolute bottom-0 right-0 cursor-pointer rounded-full bg-white p-1 shadow-md hover:bg-gray-50">
                   <Camera className="h-4 w-4 text-gray-600" />
-                  <input
-                    id="profile-image"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                  />
-                </label>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = generateRandomAvatarColors()
+                    setLocalData(prev => ({
+                      ...prev,
+                      avatarColor1: next.color1,
+                      avatarColor2: next.color2,
+                    }))
+                  }}
+                  title="아바타 그라디언트 재생성"
+                  className="absolute bottom-0 left-0 rounded-full bg-white p-1 shadow-md transition-colors hover:bg-gray-50">
+                  <RefreshCcw className="h-4 w-4 text-gray-600" />
+                </button>
+                <input
+                  ref={profileImageInputRef}
+                  id="profile-image"
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.webp,.gif"
+                  onChange={handleImageUpload}
+                  className="sr-only"
+                />
 
                 {localData.profileImage && (
                   <button
-                    onClick={() => setLocalData(prev => ({ ...prev, profileImage: null }))}
+                    onClick={() => {
+                      setLocalData(prev => ({ ...prev, profileImage: null }))
+                      setSelectedProfileImageFile(null)
+                      setImageUploadError('')
+                    }}
                     className="absolute right-0 top-0 rounded-full bg-red-500 p-1 text-white opacity-0 shadow-md transition-opacity duration-200 hover:bg-red-600 group-hover:opacity-100">
                     <X className="h-3 w-3" />
                   </button>
                 )}
               </div>
+              {imageUploadError ? (
+                <p className="max-w-xs text-center text-xs text-red-600">{imageUploadError}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">JPG, PNG, WEBP, GIF / 최대 5MB</p>
+              )}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="username" className="text-foreground">

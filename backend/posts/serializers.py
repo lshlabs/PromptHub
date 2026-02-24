@@ -165,7 +165,14 @@ class PostCardSerializer(serializers.ModelSerializer):
     def get_avatarSrc(self, obj):
         # 사용자 아바타 이미지 URL (없으면 None)
         try:
-            return obj.author.avatar_url
+            avatar_file = getattr(obj.author, 'profile_image', None) or getattr(obj.author, 'avatar', None)
+            avatar_url = avatar_file.url if avatar_file else None
+            if not avatar_url:
+                return None
+            request = self.context.get('request')
+            if request and isinstance(avatar_url, str) and avatar_url.startswith('/'):
+                return request.build_absolute_uri(avatar_url)
+            return avatar_url
         except Exception:
             return None
 
@@ -257,7 +264,14 @@ class PostDetailSerializer(serializers.ModelSerializer):
 
     def get_avatarSrc(self, obj):
         try:
-            return obj.author.avatar_url
+            avatar_file = getattr(obj.author, 'profile_image', None) or getattr(obj.author, 'avatar', None)
+            avatar_url = avatar_file.url if avatar_file else None
+            if not avatar_url:
+                return None
+            request = self.context.get('request')
+            if request and isinstance(avatar_url, str) and avatar_url.startswith('/'):
+                return request.build_absolute_uri(avatar_url)
+            return avatar_url
         except Exception:
             return None
 

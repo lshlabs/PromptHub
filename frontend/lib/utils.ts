@@ -17,6 +17,7 @@ import {
   ValidationError,
   UserData,
   UserProfileResponse,
+  API_BASE_URL,
 } from '@/types/api'
 
 // ===========================================
@@ -25,6 +26,61 @@ import {
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
+}
+
+// ===========================================
+// 아바타 유틸리티
+// ===========================================
+
+export function getAvatarGradientStyle(color1?: string | null, color2?: string | null): string {
+  const start = color1 || '#6B73FF'
+  const end = color2 || '#9EE5FF'
+  return `linear-gradient(135deg, ${start} 0%, ${end} 100%)`
+}
+
+export function getAvatarInitialFromUsername(
+  username?: string | null,
+  fallback: string = 'U',
+): string {
+  const first = username?.trim()?.charAt(0)
+  if (!first) return fallback
+  return first.toUpperCase()
+}
+
+export function generateRandomAvatarColors(): { color1: string; color2: string } {
+  const hue1 = Math.floor(Math.random() * 360)
+  const hueOffset = 40 + Math.floor(Math.random() * 120) // 40~159도 차이
+  const hue2 = (hue1 + hueOffset) % 360
+  const saturation1 = 70 + Math.floor(Math.random() * 20) // 70~89
+  const saturation2 = 70 + Math.floor(Math.random() * 20)
+  const lightness1 = 50 + Math.floor(Math.random() * 10) // 50~59
+  const lightness2 = 62 + Math.floor(Math.random() * 10) // 62~71
+
+  const hslToHex = (h: number, s: number, l: number) => {
+    const sNorm = s / 100
+    const lNorm = l / 100
+    const c = (1 - Math.abs(2 * lNorm - 1)) * sNorm
+    const x = c * (1 - Math.abs(((h / 60) % 2) - 1))
+    const m = lNorm - c / 2
+    let r = 0
+    let g = 0
+    let b = 0
+
+    if (h < 60) [r, g, b] = [c, x, 0]
+    else if (h < 120) [r, g, b] = [x, c, 0]
+    else if (h < 180) [r, g, b] = [0, c, x]
+    else if (h < 240) [r, g, b] = [0, x, c]
+    else if (h < 300) [r, g, b] = [x, 0, c]
+    else [r, g, b] = [c, 0, x]
+
+    const toHex = (v: number) => Math.round((v + m) * 255).toString(16).padStart(2, '0')
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase()
+  }
+
+  return {
+    color1: hslToHex(hue1, saturation1, lightness1),
+    color2: hslToHex(hue2, saturation2, lightness2),
+  }
 }
 
 // ===========================================
@@ -644,16 +700,23 @@ export function getIsBookmarked(post: PostCardData): boolean {
 // ===========================================
 
 export function transformBackendData(backendData: UserProfileResponse): UserData {
+  const userData = (backendData as any).user || backendData
+  const profileImage =
+    typeof userData.profile_image === 'string' && userData.profile_image
+      ? userData.profile_image.startsWith('http')
+        ? userData.profile_image
+        : `${API_BASE_URL}${userData.profile_image}`
+      : null
   return {
-    id: backendData.id,
-    username: backendData.username,
-    email: backendData.email,
-    bio: backendData.bio || '',
-    location: backendData.location || '',
-    github_handle: backendData.github_handle || '',
-    profile_image: backendData.profile_image,
-    avatar_color1: backendData.avatar_color1 || '#6B73FF',
-    avatar_color2: backendData.avatar_color2 || '#9EE5FF',
-    created_at: backendData.created_at,
+    id: userData.id,
+    username: userData.username,
+    email: userData.email,
+    bio: userData.bio || '',
+    location: userData.location || '',
+    github_handle: userData.github_handle || '',
+    profile_image: profileImage,
+    avatar_color1: userData.avatar_color1 || '#6B73FF',
+    avatar_color2: userData.avatar_color2 || '#9EE5FF',
+    created_at: userData.created_at,
   }
 }

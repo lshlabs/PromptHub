@@ -10,11 +10,15 @@ import { Star, Github, MessageCircle, Twitter, Youtube } from 'lucide-react'
  */
 interface SocialLink {
   /** 링크 URL */
-  href: string
+  href?: string
   /** 아이콘 컴포넌트 */
   icon: React.ComponentType<{ className?: string }>
   /** 접근성을 위한 라벨 */
   label: string
+  /** 활성 여부 */
+  available?: boolean
+  /** 상태 텍스트 */
+  statusLabel?: string
 }
 
 /**
@@ -22,13 +26,14 @@ interface SocialLink {
  */
 interface FooterMenuItem {
   /** 링크 URL */
-  href: string
+  href?: string
   /** 표시 텍스트 */
   label: string
   /** 뱃지 텍스트 (옵션) */
   badge?: string
   /** 뱃지 스타일 (옵션) */
   badgeStyle?: string
+  available?: boolean
 }
 
 // 푸터 섹션 타입은 간소화에 따라 제거되었습니다.
@@ -47,17 +52,20 @@ const SOCIAL_LINKS: SocialLink[] = [
     label: 'GitHub 프로필',
   },
   {
-    href: '#',
+    available: false,
+    statusLabel: '준비 중',
     icon: MessageCircle,
     label: 'Discord 커뮤니티',
   },
   {
-    href: '#',
+    available: false,
+    statusLabel: '준비 중',
     icon: Twitter,
     label: 'Twitter 팔로우',
   },
   {
-    href: '#',
+    available: false,
+    statusLabel: '준비 중',
     icon: Youtube,
     label: 'YouTube 채널',
   },
@@ -69,9 +77,9 @@ const SOCIAL_LINKS: SocialLink[] = [
  * 하단 링크 목록
  */
 const BOTTOM_LINKS: FooterMenuItem[] = [
-  { href: '#', label: '개인정보처리방침' },
-  { href: '#', label: '이용약관' },
-  { href: '#', label: '쿠키 정책' },
+  { href: '/privacy', label: '개인정보처리방침', available: true },
+  { href: '/terms', label: '이용약관', available: true },
+  { href: '/cookies', label: '쿠키 정책', available: true },
 ] as const
 
 // ============================================================================
@@ -118,15 +126,32 @@ export default function Footer(): JSX.Element {
    */
   const renderSocialLink = (link: SocialLink): JSX.Element => {
     const Icon = link.icon
+    const isActive = !!link.href && link.available !== false
+
+    if (!isActive) {
+      return (
+        <div
+          key={link.label}
+          className="group relative flex h-8 w-8 items-center justify-center rounded-lg bg-gray-800/60 text-gray-500"
+          aria-label={`${link.label} (${link.statusLabel || '준비 중'})`}>
+          <Icon className="h-4 w-4" aria-hidden="true" />
+          <span className="pointer-events-none absolute -top-8 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded bg-gray-700 px-2 py-1 text-[10px] text-gray-100 group-hover:block">
+            {link.statusLabel || '준비 중'}
+          </span>
+        </div>
+      )
+    }
+
+    const href = link.href as string
 
     return (
       <Link
         key={link.label}
-        href={link.href}
+        href={href}
         className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-800 transition-colors duration-200 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-900"
         aria-label={link.label}
-        target={link.href.startsWith('http') ? '_blank' : undefined}
-        rel={link.href.startsWith('http') ? 'noopener noreferrer' : undefined}>
+        target={href.startsWith('http') ? '_blank' : undefined}
+        rel={href.startsWith('http') ? 'noopener noreferrer' : undefined}>
         <Icon className="h-4 w-4" aria-hidden="true" />
       </Link>
     )
@@ -217,12 +242,18 @@ export default function Footer(): JSX.Element {
             </p>
             <nav className="flex gap-6 text-sm text-gray-400" aria-label="법적 링크">
               {BOTTOM_LINKS.map(link => (
-                <Link
-                  key={link.label}
-                  href={link.href}
-                  className="transition-colors duration-200 hover:text-white focus:text-white focus:outline-none">
-                  {link.label}
-                </Link>
+                link.href && link.available !== false ? (
+                  <Link
+                    key={link.label}
+                    href={link.href}
+                    className="transition-colors duration-200 hover:text-white focus:text-white focus:outline-none">
+                    {link.label}
+                  </Link>
+                ) : (
+                  <span key={link.label} className="cursor-not-allowed text-gray-500">
+                    {link.label}
+                  </span>
+                )
               ))}
             </nav>
           </div>

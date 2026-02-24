@@ -6,11 +6,17 @@
         { "name": "기타",     "slug": "other",    "variant_free_text_allowed": false },
         { "name": "o1",       "slug": "o1",       "variant_free_text_allowed": true },
         { "name": "o3",       "slug": "o3",       "variant_free_text_allowed": true },
+        { "name": "o3-mini",  "slug": "o3-mini",  "variant_free_text_allowed": true },
         { "name": "o4",       "slug": "o4",       "variant_free_text_allowed": true },
+        { "name": "o4-mini",  "slug": "o4-mini",  "variant_free_text_allowed": true },
         { "name": "GPT-4.1",  "slug": "gpt-4-1",  "variant_free_text_allowed": true },
         { "name": "GPT-4.5",  "slug": "gpt-4-5",  "variant_free_text_allowed": true },
         { "name": "GPT-4o",   "slug": "gpt-4o",   "variant_free_text_allowed": true },
-        { "name": "GPT-5",    "slug": "gpt-5",    "variant_free_text_allowed": true }
+        { "name": "GPT OSS 20B", "slug": "gpt-oss-20b", "variant_free_text_allowed": true },
+        { "name": "GPT OSS 120B", "slug": "gpt-oss-120b", "variant_free_text_allowed": true },
+        { "name": "GPT-5",    "slug": "gpt-5",    "variant_free_text_allowed": true },
+        { "name": "GPT 5.1",  "slug": "gpt-5-1",  "variant_free_text_allowed": true },
+        { "name": "GPT 5.2",  "slug": "gpt-5-2",  "variant_free_text_allowed": true }
       ]
     },
     {
@@ -21,7 +27,12 @@
         { "name": "Claude 3.7 Sonnet",  "slug": "claude-3-7-sonnet",   "variant_free_text_allowed": true },
         { "name": "Claude 4 Sonnet",    "slug": "claude-4-sonnet",     "variant_free_text_allowed": true },
         { "name": "Claude 4 Opus",      "slug": "claude-4-opus",       "variant_free_text_allowed": true },
-        { "name": "Claude 4.1 Opus",    "slug": "claude-4-1-opus",     "variant_free_text_allowed": true }
+        { "name": "Claude 4.1 Opus",    "slug": "claude-4-1-opus",     "variant_free_text_allowed": true },
+        { "name": "Claude Haiku 4.5",   "slug": "claude-haiku-4-5",    "variant_free_text_allowed": true },
+        { "name": "Claude Sonnet 4.5",  "slug": "claude-sonnet-4-5",   "variant_free_text_allowed": true },
+        { "name": "Claude Opus 4.5",    "slug": "claude-opus-4-5",     "variant_free_text_allowed": true },
+        { "name": "Claude Opus 4.6",    "slug": "claude-opus-4-6",     "variant_free_text_allowed": true },
+        { "name": "Claude Sonnet 4.6",  "slug": "claude-sonnet-4-6",   "variant_free_text_allowed": true }
       ]
     },
     {
@@ -32,7 +43,10 @@
         { "name": "Gemini 1.5 Pro",    "slug": "gemini-1-5-pro",    "variant_free_text_allowed": true },
         { "name": "Gemini 2.0 Flash",  "slug": "gemini-2-0-flash",  "variant_free_text_allowed": true },
         { "name": "Gemini 2.5 Flash",  "slug": "gemini-2-5-flash",  "variant_free_text_allowed": true },
-        { "name": "Gemini 2.5 Pro",    "slug": "gemini-2-5-pro",    "variant_free_text_allowed": true }
+        { "name": "Gemini 2.5 Pro",    "slug": "gemini-2-5-pro",    "variant_free_text_allowed": true },
+        { "name": "Gemma 3 27B",       "slug": "gemma-3-27b",       "variant_free_text_allowed": true },
+        { "name": "Gemini 3 Pro",      "slug": "gemini-3-pro",      "variant_free_text_allowed": true },
+        { "name": "Gemini 3.1 Pro",    "slug": "gemini-3-1-pro",    "variant_free_text_allowed": true }
       ]
     },
     {
@@ -42,7 +56,10 @@
         { "name": "Grok-1.5", "slug": "grok-1-5",  "variant_free_text_allowed": true },
         { "name": "Grok-2",   "slug": "grok-2",    "variant_free_text_allowed": true },
         { "name": "Grok-3",   "slug": "grok-3",    "variant_free_text_allowed": true },
-        { "name": "Grok-4",   "slug": "grok-4",    "variant_free_text_allowed": true }
+        { "name": "Grok-4",   "slug": "grok-4",    "variant_free_text_allowed": true },
+        { "name": "Grok-4.1", "slug": "grok-4-1",  "variant_free_text_allowed": true },
+        { "name": "Grok-4 Fast", "slug": "grok-4-fast", "variant_free_text_allowed": true },
+        { "name": "Grok-4.1 Fast", "slug": "grok-4-1-fast", "variant_free_text_allowed": true }
       ]
     },
     {
@@ -53,7 +70,8 @@
         { "name": "Llama 3.2",     "slug": "llama-3-2",      "variant_free_text_allowed": true },
         { "name": "Llama 3.3",     "slug": "llama-3-3",      "variant_free_text_allowed": true },
         { "name": "Llama 4 Scout", "slug": "llama-4-scout",  "variant_free_text_allowed": true },
-        { "name": "Llama 4 Maverick", "slug": "llama-4-maverick", "variant_free_text_allowed": true }
+        { "name": "Llama 4 Maverick", "slug": "llama-4-maverick", "variant_free_text_allowed": true },
+        { "name": "Llama 4 Behemoth", "slug": "llama-4-behemoth", "variant_free_text_allowed": true }
       ]
     },
     {
@@ -64,7 +82,15 @@
         { "name": "Mistral Small 3",  "slug": "mistral-small-3",  "variant_free_text_allowed": true },
         { "name": "Mistral Small 3.1","slug": "mistral-small-3-1","variant_free_text_allowed": true },
         { "name": "Mistral Small 3.2","slug": "mistral-small-3-2","variant_free_text_allowed": true },
-        { "name": "Mistral Large 2",  "slug": "mistral-large-2",  "variant_free_text_allowed": true }
+        { "name": "Mistral Large 2",  "slug": "mistral-large-2",  "variant_free_text_allowed": true },
+        { "name": "Mistral Large 3",  "slug": "mistral-large-3",  "variant_free_text_allowed": true },
+        { "name": "Mistral Medium 3", "slug": "mistral-medium-3", "variant_free_text_allowed": true },
+        { "name": "Mistral Medium 3.1", "slug": "mistral-medium-3-1", "variant_free_text_allowed": true },
+        { "name": "Codestral 25.08",  "slug": "codestral-25-08",  "variant_free_text_allowed": true },
+        { "name": "Devstral 2",       "slug": "devstral-2",       "variant_free_text_allowed": true },
+        { "name": "Devstral Medium",  "slug": "devstral-medium",  "variant_free_text_allowed": true },
+        { "name": "Magistral Small 2506", "slug": "magistral-small-2506", "variant_free_text_allowed": true },
+        { "name": "Magistral Medium", "slug": "magistral-medium", "variant_free_text_allowed": true }
       ]
     },
     {
@@ -74,10 +100,12 @@
         { "name": "DeepSeek V2.5", "slug": "deepseek-v2-5", "variant_free_text_allowed": true },
         { "name": "DeepSeek VL2",  "slug": "deepseek-vl2",  "variant_free_text_allowed": true },
         { "name": "DeepSeek V3",   "slug": "deepseek-v3",   "variant_free_text_allowed": true },
-        { "name": "DeepSeek R1",   "slug": "deepseek-r1",   "variant_free_text_allowed": true }
+        { "name": "DeepSeek V3-0324", "slug": "deepseek-v3-0324", "variant_free_text_allowed": true },
+        { "name": "DeepSeek V3.2", "slug": "deepseek-v3-2", "variant_free_text_allowed": true },
+        { "name": "DeepSeek V3.2-Exp", "slug": "deepseek-v3-2-exp", "variant_free_text_allowed": true },
+        { "name": "DeepSeek R1",   "slug": "deepseek-r1",   "variant_free_text_allowed": true },
+        { "name": "DeepSeek R1-0528", "slug": "deepseek-r1-0528", "variant_free_text_allowed": true }
       ]
     }
   ]
 }
-
-
