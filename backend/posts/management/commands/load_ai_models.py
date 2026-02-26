@@ -4,7 +4,7 @@
 
 사용 예시:
   - 기본 내장 목록 사용:    manage.py load_ai_models
-  - JSON에서 로드:         manage.py load_ai_models --file backend/posts/fixtures/platform_models.openai.json
+  - JSON에서 로드:         manage.py load_ai_models --file backend/posts/fixtures/platform_models.curated.json
   - 초기화 후 재생성:      manage.py load_ai_models --reset
   - JSON + 초기화:         manage.py load_ai_models --file path.json --reset
 """

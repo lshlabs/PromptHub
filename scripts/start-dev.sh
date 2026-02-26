@@ -3,6 +3,16 @@
 # PromptHub 개발 서버 원클릭 시작 스크립트
 # 백엔드 (Django) + 프론트엔드 (Next.js) 동시 실행
 
+cleanup_ports() {
+    local pids
+    pids=$(lsof -ti:3000,3001,8000,8001 2>/dev/null || true)
+    if [ -n "$pids" ]; then
+        echo "🧹 사용 중인 개발 포트 프로세스를 종료합니다: $pids"
+        echo "$pids" | xargs kill -9 2>/dev/null || true
+        sleep 1
+    fi
+}
+
 echo "🚀 PromptHub 개발 서버를 시작합니다..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
@@ -17,14 +27,14 @@ fi
 # 가상환경 확인
 if [ ! -d "backend/venv" ]; then
     echo "❌ Python 가상환경이 없습니다."
-    echo "   먼저 초기 설정을 진행해주세요: ./scripts/setup.sh"
+    echo "   먼저 backend 가상환경과 패키지를 설치해주세요."
     exit 1
 fi
 
 # Node.js 모듈 확인
 if [ ! -d "frontend/node_modules" ]; then
     echo "❌ Node.js 모듈이 설치되지 않았습니다."
-    echo "   먼저 초기 설정을 진행해주세요: ./scripts/setup.sh"
+    echo "   먼저 프론트엔드 의존성을 설치해주세요: cd frontend && npm install"
     exit 1
 fi
 
@@ -44,9 +54,7 @@ fi
 if [ "$DJANGO_RUNNING" = true ] || [ "$NEXTJS_RUNNING" = true ]; then
     echo "⚠️  서버가 실행 중입니다. 포트를 정리합니다..."
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    
-    # clean-ports.sh 실행
-    ./scripts/clean-ports.sh
+    cleanup_ports
     
     echo ""
     echo "🔄 포트 정리 완료. 서버를 시작합니다..."

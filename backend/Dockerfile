@@ -1,5 +1,5 @@
-# Python 3.11을 기반으로 하는 공식 이미지 사용
-FROM python:3.11-slim
+# Python 3.12를 기반으로 하는 공식 이미지 사용 (Render 배포 환경과 정렬)
+FROM python:3.12-slim
 
 # Python 출력 버퍼링 비활성화 및 .pyc 파일 생성 방지
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -17,11 +17,11 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Python 의존성 파일 복사 및 설치
-COPY requirements.txt .
+COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Django 프로젝트 파일 복사
-COPY . .
+COPY backend/ .
 
 # 정적 파일 수집 (production용)
 RUN python manage.py collectstatic --noinput --settings=config.settings_prod

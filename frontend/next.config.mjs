@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'standalone',
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -9,7 +10,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // Vercel 환경에서 API 라우팅 설정
+  // 배포 환경에서도 동일하게 동작하도록 API 경로 유지
   async rewrites() {
     return [
       {

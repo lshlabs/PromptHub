@@ -11,12 +11,16 @@ services:
       args:
         NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
         NEXT_INTERNAL_API_BASE_URL: http://backend:8000
-        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${175447969923-mfuhbg98jvk98khm7t50h6m2csdavdoe.apps.googleusercontent.com}
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}
+        GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-docker-dev-google-secret}
+        NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-docker-dev-nextauth-secret}
+        NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
     environment:
       - NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
       - NEXT_INTERNAL_API_BASE_URL=http://backend:8000
-      - NEXT_PUBLIC_GOOGLE_CLIENT_ID=${175447969923-mfuhbg98jvk98khm7t50h6m2csdavdoe.apps.googleusercontent.com}
+      - NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-docker-dev-google-secret}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-docker-dev-nextauth-secret}
+      - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
     ports:
       - "3000:3000"
-
-

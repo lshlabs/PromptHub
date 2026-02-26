@@ -56,10 +56,10 @@ coverage/
 # Editor backups
 *~
 
-# Repo docs and local servers
-CLAUDE.md
-.claude/
-CURSOR_RULES.md
-PROJECT_PROGRESS.md
-rules/
-servers/
+
+# Generated build artifacts
+frontend/tsconfig.tsbuildinfo
+backend/media/
+
+# 개인 포트폴리오 메모 (로컬 유지, Git 추적 제외)
+PORTFOLIO_CORE_FEATURES.md
