@@ -61,7 +61,10 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='platform',
             name='slug',
-            field=models.SlugField(max_length=50, null=True, blank=True, verbose_name='슬러그'),
+            # SlugField는 기본적으로 db_index=True라 PostgreSQL에서 *_like 인덱스를 만듭니다.
+            # 이후 unique=True로 AlterField할 때 동일한 *_like 인덱스명이 다시 생성되어 충돌할 수 있어
+            # 초기 추가 단계에서는 db_index를 끕니다.
+            field=models.SlugField(max_length=50, null=True, blank=True, verbose_name='슬러그', db_index=False),
         ),
         migrations.AddField(
             model_name='platform',
@@ -142,5 +145,4 @@ class Migration(migrations.Migration):
             constraint=models.UniqueConstraint(fields=['platform', 'slug'], name='unique_model_slug_per_platform'),
         ),
     ]
-
 
