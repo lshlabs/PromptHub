@@ -1,13 +1,30 @@
 # PromptHub
 
-프롬프트/모델 사용 경험을 공유하는 커뮤니티 플랫폼입니다.  
+AI 프롬프트/모델 사용 경험을 공유하는 커뮤니티 플랫폼입니다.  
 백엔드는 Django REST API, 프론트엔드는 Next.js(App Router)로 구성되어 있습니다.
+
+## Release Status
+
+- 상태: **Production 배포 완료 (Render + Render Postgres + Cloudinary)**
+- Frontend: `https://prompthub-frontend.onrender.com`
+- Backend API: `https://prompthub-backend-06wq.onrender.com`
+- Health Check: `https://prompthub-backend-06wq.onrender.com/api/core/health/`
+
+### 배포 환경에서 확인 완료
+- Backend health ✅
+- Frontend live ✅
+- Google 로그인 ✅
+- 프로필 이미지 업로드 (Cloudinary) ✅
+- 초기 카테고리/모델/트렌딩 데이터 로딩 ✅
+- Django 관리자 페이지 접근 ✅
 
 ## 기술 스택
 
 - Backend: Django 5.2, Django REST Framework, Token Auth
 - Frontend: Next.js 15, React 18, TypeScript, Tailwind CSS, Radix UI
-- Infra: Docker Compose (`backend` + `frontend`)
+- Auth: Django Token Auth + NextAuth (Google OAuth)
+- Infra: Render (Frontend, Backend, Postgres), Cloudinary (media)
+- Dev Infra: Docker Compose (`backend` + `frontend`)
 
 ## 핵심 기능
 
@@ -17,6 +34,7 @@
 - 검색/정렬/필터
 - 트렌딩 카테고리/랭킹 + 연관 게시글 조회
 - 프로필/계정 설정/세션 관리
+- 프로필 이미지 업로드 (Cloudinary 연동)
 
 ## 프로젝트 구조
 
@@ -37,7 +55,10 @@
 │   ├── hooks/
 │   ├── types/
 │   └── package.json
+├── docs/
+│   └── diagrams/
 ├── scripts/                    # 개발 스크립트
+├── ROADMAP.md                  # 중장기 기능 로드맵
 ├── docker-compose.yml
 └── package.json
 ```
@@ -46,8 +67,9 @@
 
 ```mermaid
 flowchart LR
-  FE["Frontend\nNext.js\n:3000"] <--> API["Backend API\nDjango REST\n:8000"]
-  API <--> DB["DB\nSQLite (dev)\nbackend/db.sqlite3"]
+  FE["Frontend\nNext.js\n(Render)"] <--> API["Backend API\nDjango REST\n(Render)"]
+  API <--> DB["Render Postgres"]
+  API <--> MEDIA["Cloudinary"]
 ```
 SVG: `docs/diagrams/architecture.svg`
 
@@ -59,7 +81,7 @@ flowchart TD
   P --> C["frontend/lib/api.ts (Axios Client)"]
   C --> E["Django API Endpoint\n/api/auth | /api/posts | /api/core | /api/stats"]
   E --> S["Service/Query Logic"]
-  S --> D[("SQLite DB")]
+  S --> D[("Postgres / SQLite(dev)")]
   D --> E
   E --> C
   C --> P
@@ -72,8 +94,8 @@ SVG: `docs/diagrams/request-flow.svg`
 ```mermaid
 sequenceDiagram
   participant U as User
-  participant F as Frontend (:3000)
-  participant A as API (:8000)
+  participant F as Frontend
+  participant A as API
   participant DB as DB
 
   U->>F: 이메일/비밀번호 입력
@@ -120,8 +142,8 @@ done
 
 ## 요구 사항
 
-- Python 3.11+
-- Node.js 18+
+- Python 3.11+ (배포는 Python `3.12.9` 고정)
+- Node.js 18+ (Render에서는 Node 22 사용 가능)
 - npm
 
 ## 로컬 실행
@@ -137,7 +159,7 @@ python3 -m venv backend/venv
 source backend/venv/bin/activate
 pip install -r backend/requirements.txt
 
-# frontend (root workspace 기준)
+# frontend (repo root)
 npm install
 ```
 
@@ -167,6 +189,142 @@ npm run dev
 - Admin: `http://localhost:8000/admin/`
 - Health Check: `http://localhost:8000/api/core/health/`
 
+## 프로덕션 배포 구성 (정식 릴리즈)
+
+### 구성
+- `Render Web Service` (Backend / Django)
+- `Render Web Service` (Frontend / Next.js)
+- `Render Postgres`
+- `Cloudinary` (프로필 이미지/미디어)
+
+### Render Backend (권장 설정)
+- Root Directory: `backend`
+- Build Command:
+
+```bash
+pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
+```
+
+- Start Command:
+
+```bash
+gunicorn config.wsgi:application --bind 0.0.0.0:$PORT
+```
+
+### Render Frontend (권장 설정)
+- Root Directory: `frontend`
+- Build Command:
+
+```bash
+npm ci && npm run build
+```
+
+- Start Command:
+
+```bash
+npm run start
+```
+
+## 환경 변수
+
+### Frontend (`frontend/.env.local` / Render Frontend env)
+
+로컬 예시:
+
+```env
+NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
+NEXT_INTERNAL_API_BASE_URL=http://localhost:8000
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=replace-with-your-secret
+
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+```
+
+프로덕션(Render) 예시:
+
+```env
+NEXT_PUBLIC_API_BASE_URL=https://prompthub-backend-06wq.onrender.com
+NEXT_INTERNAL_API_BASE_URL=https://prompthub-backend-06wq.onrender.com
+
+NEXTAUTH_URL=https://prompthub-frontend.onrender.com
+NEXTAUTH_SECRET=replace-with-your-secret
+
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+```
+
+### Backend (Render Backend env)
+
+```env
+DJANGO_SETTINGS_MODULE=config.settings_prod
+SECRET_KEY=replace-with-your-secret
+DJANGO_SECRET_KEY=replace-with-your-secret
+DEBUG=False
+DJANGO_DEBUG=False
+DJANGO_ALLOWED_HOSTS=prompthub-backend-06wq.onrender.com
+
+DATABASE_URL=postgresql://... # Render Postgres Internal Database URL
+
+CORS_ALLOWED_ORIGINS=https://prompthub-frontend.onrender.com
+CSRF_TRUSTED_ORIGINS=https://prompthub-frontend.onrender.com
+
+PYTHONUNBUFFERED=1
+PYTHON_VERSION=3.12.9
+
+# Google OAuth (backend verification용)
+GOOGLE_CLIENT_ID=your-google-client-id
+
+# Cloudinary
+CLOUDINARY_CLOUD_NAME=your-cloud-name
+CLOUDINARY_API_KEY=your-cloudinary-api-key
+CLOUDINARY_API_SECRET=your-cloudinary-api-secret
+```
+
+참고:
+- `backend/.env.example`, `frontend/.env.example`에 배포용 키 예시가 정리되어 있습니다.
+
+## 프로덕션 DB 초기 데이터 로딩 (1회)
+
+배포 직후 Render Postgres는 비어 있으므로 아래 커맨드를 실행해야 커뮤니티/트렌딩 데이터가 표시됩니다.
+
+### 권장 방식 (로컬에서 Render Postgres External URL로 연결)
+
+```bash
+cd backend
+source venv/bin/activate
+
+export DJANGO_SETTINGS_MODULE=config.settings_prod
+export DATABASE_URL='postgresql://<user>:<password>@<host>.singapore-postgres.render.com/<dbname>?sslmode=require'
+export SECRET_KEY='temporary-local-command-key'
+export DJANGO_SECRET_KEY="$SECRET_KEY"
+export DJANGO_ALLOWED_HOSTS='prompthub-backend-06wq.onrender.com'
+export CORS_ALLOWED_ORIGINS='https://prompthub-frontend.onrender.com'
+export CSRF_TRUSTED_ORIGINS='https://prompthub-frontend.onrender.com'
+export DJANGO_DEBUG='False'
+```
+
+실행 순서:
+
+```bash
+venv/bin/python manage.py load_categories
+venv/bin/python manage.py load_ai_models --file posts/fixtures/platform_models.curated.json
+venv/bin/python manage.py load_trending_data
+venv/bin/python manage.py link_trending_models
+```
+
+선택(더미 유저/샘플 데이터):
+
+```bash
+# 더미 유저 10명 (데이터 마이그레이션 적용)
+venv/bin/python manage.py migrate users
+
+# 샘플 게시글 생성 (관리자 제외, 최대 10명 사용자 라운드로빈)
+venv/bin/python manage.py generate_sample_posts --count 10
+```
+
 ## 주요 페이지
 
 - `/home`
@@ -186,45 +344,18 @@ npm run dev
 - Core: `/api/core/...`
 - Stats: `/api/stats/...`
 
-## 환경 변수
-
-### Frontend (`frontend/.env.local`)
-
-```env
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
-
-NEXTAUTH_URL=http://localhost:3000
-NEXTAUTH_SECRET=replace-with-your-secret
-
-NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-client-id
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-```
-
-### Backend (옵션, 미설정 시 기본값 사용)
-
-`backend/config/settings_base.py`에서 아래 키를 읽습니다.
-
-```env
-DJANGO_SECRET_KEY=change-me
-DJANGO_DEBUG=true
-DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1
-CORS_ALLOWED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
-CSRF_TRUSTED_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
-GOOGLE_CLIENT_ID=your-google-client-id
-```
-
 ## 자주 쓰는 명령어
 
 - `./scripts/start-dev.sh`: 백엔드 + 프론트 동시 실행
 - `./scripts/check-servers.sh`: 3000/8000 상태 확인
 - `./scripts/clean-ports.sh`: 포트 점유 프로세스 정리
 - `./scripts/migrate.sh`: `makemigrations` + `migrate`
-- `npm run lint`: 프론트 린트
+- `cd frontend && npm run lint`: 프론트 린트
 - `cd frontend && npm run typecheck`: 타입 체크
+- `cd frontend && npm run build`: 프론트 프로덕션 빌드
 - `cd backend && python manage.py test`: 백엔드 테스트
 
-## Docker
+## Docker (개발용)
 
 ```bash
 docker compose up --build
@@ -234,7 +365,15 @@ docker compose up --build
 - Frontend `3000`
 - Backend `8000`
 
+## 운영 메모 / 보안 체크리스트
+
+- [ ] Render Postgres 비밀번호 rotate (대화/스크린샷 노출 이력)
+- [ ] Google OAuth Client Secret rotate (노출 이력)
+- [ ] Cloudinary API Secret 외부 공유 금지
+- [ ] 프로덕션 콘솔 로그/민감정보 노출 점검
+- [ ] `ROADMAP.md` 우선순위 기반 후속 기능 진행
+
 ## 참고
 
-- 현재 저장소의 일부 자동화 스크립트는 과거 경로/커맨드를 참조할 수 있습니다.  
-  (`scripts/start-dev.sh`, `scripts/migrate.sh`, `scripts/check-servers.sh`, `scripts/clean-ports.sh`) 중심으로 사용하는 것을 권장합니다.
+- 로드맵: `ROADMAP.md`
+- 일부 구형 스크립트/문서는 과거 경로를 참조할 수 있으므로 최신 배포 절차는 본 README 기준으로 진행하세요.
