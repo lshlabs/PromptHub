@@ -13,6 +13,7 @@ import CustomButton from '@/components/common/custom-button'
 import { SortSelector, type SortOption } from '@/components/common/sort-selector'
 import { FilterPanel } from '@/components/community/community-filter'
 import type { Platform, Category } from '@/types/api'
+import { logger } from '@/lib/logger'
 
 interface CommunityActionProps {
   onCreatePost: () => void
@@ -67,7 +68,7 @@ export function CommunityAction({
 
   const handleSortChange = (value: SortOption) => {
     onSortChange?.(value)
-    console.log('정렬 변경:', value)
+    logger.debug('정렬 변경:', value)
   }
 
   const handleToggleCategory = (categoryId: string) => {

@@ -3,6 +3,7 @@
 // ===========================================
 
 import axios, { AxiosInstance, AxiosError, AxiosResponse, AxiosRequestConfig } from 'axios'
+import { logger } from '@/lib/logger'
 import {
   // 공통 타입들
   ApiResponse,
@@ -106,7 +107,7 @@ const createApiClient = (): AxiosInstance => {
   client.interceptors.request.use(
     config => {
       const token = getAccessToken()
-      console.log('🌐 API 요청 준비:', {
+      logger.debug('🌐 API 요청 준비:', {
         url: config.url,
         method: config.method?.toUpperCase(),
         hasToken: !!token,
@@ -131,7 +132,7 @@ const createApiClient = (): AxiosInstance => {
   // 응답 인터셉터
   client.interceptors.response.use(
     response => {
-      console.log('✅ API 응답 성공:', {
+      logger.debug('✅ API 응답 성공:', {
         url: response.config.url,
         status: response.status,
         dataSize: JSON.stringify(response.data).length,
@@ -149,9 +150,9 @@ const createApiClient = (): AxiosInstance => {
 
       // 401 에러는 인증 관련이므로 경고 수준으로 로깅
       if (error.response?.status === 401) {
-        console.warn('🔐 인증 오류 (401):', errorInfo)
+        logger.warn('🔐 인증 오류 (401):', errorInfo)
       } else {
-        console.error('❌ API 응답 실패:', errorInfo)
+        logger.error('❌ API 응답 실패:', errorInfo)
       }
 
       // 401 에러 시 토큰 제거

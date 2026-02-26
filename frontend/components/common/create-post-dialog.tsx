@@ -26,6 +26,7 @@ import CustomBadge from './custom-badge'
 import StarRating from './star-rating'
 import ModelAutocomplete from './model-autocomplete'
 import { useMetadataUtils } from '@/lib/utils'
+import { logger } from '@/lib/logger'
 
 interface CreatePostDialogProps {
   open: boolean
@@ -115,7 +116,7 @@ export function CreatePostDialog({
         // 메타데이터 유틸리티에 설정
         setMetadata(platformsRes.data, modelsRes.data, categoriesRes.data)
       } catch (err) {
-        console.error('메타데이터 로드 실패:', err)
+        logger.error('메타데이터 로드 실패:', err)
         setError('데이터를 불러오는데 실패했습니다.')
       } finally {
         setLoading(false)
@@ -280,7 +281,7 @@ export function CreatePostDialog({
         additional_opinion: additionalOpinion.trim() || undefined,
       }
 
-      console.log('저장할 데이터:', postData)
+      logger.debug('저장할 데이터:', postData)
 
       // 실제 백엔드 API 사용
       await postsApi.createPost(postData)
@@ -305,7 +306,7 @@ export function CreatePostDialog({
       onOpenChange(false)
       if (onSuccess) onSuccess()
     } catch (err) {
-      console.error('게시글 저장 실패:', err)
+      logger.error('게시글 저장 실패:', err)
       setError(err instanceof Error ? err.message : '게시글 저장에 실패했습니다.')
     } finally {
       setLoading(false)

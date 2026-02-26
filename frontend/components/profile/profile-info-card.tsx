@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { MapPin, Github, Camera, RefreshCcw, X } from 'lucide-react'
+import { MapPin, Github, Camera, RefreshCcw, X, LocateFixed, Loader2 } from 'lucide-react'
 import {
   getAvatarGradientStyle,
   getAvatarInitialFromUsername,
@@ -38,6 +38,7 @@ interface ProfileInfoCardProps {
   onSave: (data: UserData, profileImageFile?: File | null) => void
   onCancel: () => void
   onAccountSettings: () => void
+  onRequestLocationUpdate?: () => Promise<string | null>
   isLoading?: boolean
 }
 
@@ -48,17 +49,22 @@ export function ProfileInfoCard({
   onSave,
   onCancel,
   onAccountSettings,
+  onRequestLocationUpdate,
   isLoading = false,
 }: ProfileInfoCardProps) {
   const [localData, setLocalData] = useState<UserData>(userData)
   const [selectedProfileImageFile, setSelectedProfileImageFile] = useState<File | null>(null)
   const [imageUploadError, setImageUploadError] = useState<string>('')
+  const [isLocationUpdating, setIsLocationUpdating] = useState(false)
+  const [locationUpdateError, setLocationUpdateError] = useState('')
   const profileImageInputRef = useRef<HTMLInputElement | null>(null)
 
   useEffect(() => {
     setLocalData(userData)
     setSelectedProfileImageFile(null)
     setImageUploadError('')
+    setIsLocationUpdating(false)
+    setLocationUpdateError('')
   }, [userData])
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -102,7 +108,27 @@ export function ProfileInfoCard({
     setLocalData(userData)
     setSelectedProfileImageFile(null)
     setImageUploadError('')
+    setLocationUpdateError('')
     onCancel()
+  }
+
+  const handleRequestLocationUpdate = async () => {
+    if (!onRequestLocationUpdate || isLocationUpdating) return
+
+    try {
+      setIsLocationUpdating(true)
+      setLocationUpdateError('')
+      const nextLocation = await onRequestLocationUpdate()
+      if (nextLocation) {
+        setLocalData(prev => ({ ...prev, location: nextLocation }))
+      } else {
+        setLocationUpdateError('위치를 가져오지 못했습니다. 직접 입력해주세요.')
+      }
+    } catch (error: any) {
+      setLocationUpdateError(error?.message || '위치를 가져오지 못했습니다. 직접 입력해주세요.')
+    } finally {
+      setIsLocationUpdating(false)
+    }
   }
 
   return (
@@ -306,13 +332,34 @@ export function ProfileInfoCard({
               <Label htmlFor="location" className="text-foreground">
                 위치
               </Label>
-              <Input
-                id="location"
-                value={localData.location}
-                onChange={e => setLocalData(prev => ({ ...prev, location: e.target.value }))}
-                className="border-input bg-background text-foreground placeholder:text-muted-foreground"
-                placeholder="위치"
-              />
+              <div className="relative">
+                <Input
+                  id="location"
+                  value={localData.location}
+                  onChange={e => setLocalData(prev => ({ ...prev, location: e.target.value }))}
+                  className="border-input bg-background pr-10 text-foreground placeholder:text-muted-foreground"
+                  placeholder="위치"
+                />
+                <button
+                  type="button"
+                  onClick={handleRequestLocationUpdate}
+                  disabled={!onRequestLocationUpdate || isLocationUpdating}
+                  title="현재 위치 가져오기"
+                  className="absolute right-1 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-50">
+                  {isLocationUpdating ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <LocateFixed className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+              {locationUpdateError ? (
+                <p className="text-xs text-red-600">{locationUpdateError}</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  GPS 아이콘을 눌러 현재 위치를 채울 수 있습니다.
+                </p>
+              )}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="github" className="text-foreground">

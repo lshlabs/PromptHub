@@ -412,6 +412,82 @@ export default function ProfilePage() {
     router.push('/profile/settings')
   }
 
+  const handleRequestLocationUpdate = async (): Promise<string | null> => {
+    if (typeof window === 'undefined' || !navigator.geolocation) {
+      throw new Error('이 브라우저에서는 위치 기능을 지원하지 않습니다.')
+    }
+
+    const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 300000,
+      })
+    }).catch((error: GeolocationPositionError) => {
+      if (error.code === error.PERMISSION_DENIED) {
+        throw new Error('위치 권한이 거부되었습니다. 브라우저 권한을 확인해주세요.')
+      }
+      if (error.code === error.TIMEOUT) {
+        throw new Error('위치 확인 시간이 초과되었습니다. 다시 시도해주세요.')
+      }
+      throw new Error('현재 위치를 확인하지 못했습니다.')
+    })
+
+    const { latitude, longitude } = position.coords
+    const controller = new AbortController()
+    const timer = window.setTimeout(() => controller.abort(), 10000)
+
+    try {
+      const url = new URL('https://nominatim.openstreetmap.org/reverse')
+      url.searchParams.set('format', 'jsonv2')
+      url.searchParams.set('lat', String(latitude))
+      url.searchParams.set('lon', String(longitude))
+      url.searchParams.set('accept-language', 'ko,en')
+
+      const res = await fetch(url.toString(), {
+        method: 'GET',
+        signal: controller.signal,
+      })
+
+      if (!res.ok) {
+        throw new Error('위치 정보를 변환하지 못했습니다.')
+      }
+
+      const data = await res.json()
+      const address = data?.address || {}
+      const city =
+        address.city || address.town || address.village || address.county || address.municipality
+      const state = address.state || address.province
+      const country = address.country
+
+      const best =
+        city && country
+          ? `${city}, ${country}`
+          : state && country
+            ? `${state}, ${country}`
+            : typeof data?.display_name === 'string'
+              ? data.display_name
+                  .split(',')
+                  .slice(0, 3)
+                  .map((part: string) => part.trim())
+                  .join(', ')
+              : null
+
+      if (!best) {
+        throw new Error('위치 정보를 읽지 못했습니다. 직접 입력해주세요.')
+      }
+
+      return best
+    } catch (error: any) {
+      if (error?.name === 'AbortError') {
+        throw new Error('위치 변환 요청 시간이 초과되었습니다. 다시 시도해주세요.')
+      }
+      throw error
+    } finally {
+      window.clearTimeout(timer)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-6 text-gray-900 md:p-10">
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 lg:grid-cols-3">
@@ -427,6 +503,7 @@ export default function ProfilePage() {
             onSave={handleSave}
             onCancel={handleCancel}
             onAccountSettings={handleAccountSettingsClick}
+            onRequestLocationUpdate={handleRequestLocationUpdate}
             isLoading={showProfileLoading || isSaving}
           />
         </div>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { useAuthContext } from '@/components/layout/auth-provider'
+import { logger } from '@/lib/logger'
 import { authApi } from '@/lib/api'
 
 /**
@@ -28,13 +29,13 @@ export function useSessionSync() {
     const alreadySynced = sessionStorage.getItem(syncKey)
 
     if (syncAttempted || alreadySynced) {
-      console.log('🔄 세션 동기화 이미 완료됨, 스킵')
+      logger.debug('🔄 세션 동기화 이미 완료됨, 스킵')
       return
     }
 
     // Google OAuth 재로그인 시도 시 이전 동기화 상태 초기화
     if (status === 'unauthenticated' && alreadySynced && userEmail !== 'anonymous') {
-      console.log('🔄 Google OAuth 재로그인 감지, 동기화 상태 초기화')
+      logger.debug('🔄 Google OAuth 재로그인 감지, 동기화 상태 초기화')
       sessionStorage.removeItem(syncKey)
       setSyncAttempted(false)
       setSyncError(null)
@@ -50,7 +51,7 @@ export function useSessionSync() {
     ) {
       const syncSession = async () => {
         try {
-          console.log('🔄 세션 동기화 시작:', session.djangoUser?.email)
+          logger.debug('🔄 세션 동기화 시작:', session.djangoUser?.email)
           setSyncError(null)
 
           // Django 토큰 유효성 검증
@@ -74,7 +75,7 @@ export function useSessionSync() {
             const profileData = await response.json()
             const latestUserData = profileData.user || session.djangoUser
 
-            console.log('✅ Django 토큰 유효성 확인 완료, 최신 프로필로 동기화')
+            logger.debug('✅ Django 토큰 유효성 확인 완료, 최신 프로필로 동기화')
 
             // TypeScript 타입 안전성을 위해 djangoToken 존재 확인
             if (session.djangoToken && latestUserData) {
@@ -86,25 +87,25 @@ export function useSessionSync() {
                 sessionStorage.setItem(syncKey, 'true')
               }
 
-              console.log('🎉 세션 동기화 완료 - 사용자:', latestUserData.email)
+              logger.debug('🎉 세션 동기화 완료 - 사용자:', latestUserData.email)
             } else {
               throw new Error('Django 토큰 또는 사용자 데이터 누락')
             }
           } else {
             // 토큰이 무효하면 NextAuth 세션도 정리
             const errorText = await response.text()
-            console.log(`❌ Django 토큰이 무효함 (상태: ${response.status})`, errorText)
+            logger.debug(`❌ Django 토큰이 무효함 (상태: ${response.status})`, errorText)
             throw new Error('Django 토큰이 무효합니다.')
           }
         } catch (error) {
-          console.error('❌ 세션 동기화 중 오류:', error)
+          logger.error('❌ 세션 동기화 중 오류:', error)
           setSyncError(error instanceof Error ? error.message : '알 수 없는 오류')
 
           // 오류 발생 시 NextAuth 세션 정리
           try {
             await signOut({ redirect: false })
           } catch (signOutError) {
-            console.error('NextAuth 세션 정리 실패:', signOutError)
+            logger.error('NextAuth 세션 정리 실패:', signOutError)
           }
         } finally {
           setSyncAttempted(true)

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { authApi, getAccessToken, clearTokens, setTokens } from '@/lib/api'
+import { logger } from '@/lib/logger'
 import type { UserData as BackendUserData } from '@/types/api'
 
 interface LogoutOptions {
@@ -47,13 +48,13 @@ export function useAuth(): UseAuthReturn {
 
     // NextAuth 세션이 로딩 중이면 대기
     if (sessionStatus === 'loading') {
-      console.log('⏳ NextAuth 세션 로딩 중, initAuth 대기...')
+      logger.debug('⏳ NextAuth 세션 로딩 중, initAuth 대기...')
       return
     }
 
     // 이미 토큰과 사용자 정보가 모두 있으면 스킵 (중복 호출 방지)
     if (token && user) {
-      console.log('🔄 initAuth - 이미 인증 완료됨, 스킵')
+      logger.debug('🔄 initAuth - 이미 인증 완료됨, 스킵')
       setIsLoading(false)
       setInitAttempted(true)
       return
@@ -61,14 +62,14 @@ export function useAuth(): UseAuthReturn {
 
     // NextAuth 세션이 있고 Django 데이터가 있으면 세션 동기화를 우선하되, 사용자 데이터는 여전히 로드
     if (sessionStatus === 'authenticated' && session?.djangoToken && session?.djangoUser) {
-      console.log('🔄 NextAuth 세션 존재, 세션 동기화 우선 - 사용자 데이터 로드 진행')
+      logger.debug('🔄 NextAuth 세션 존재, 세션 동기화 우선 - 사용자 데이터 로드 진행')
       // initAuth는 계속 진행하되, 토큰은 이미 설정된 것으로 간주
     }
 
     // localStorage에 토큰이 있고 아직 상태에 설정되지 않은 경우 우선 설정
     const storedToken = getAccessToken()
     if (storedToken && !token) {
-      console.log('🔄 localStorage 토큰 발견, 상태 복원 시도')
+      logger.debug('🔄 localStorage 토큰 발견, 상태 복원 시도')
       setToken(storedToken)
       // 사용자 정보는 initAuth에서 별도로 로드
     }
@@ -80,46 +81,46 @@ export function useAuth(): UseAuthReturn {
         // NextAuth 세션의 토큰을 우선 사용
         let tokenToUse = getAccessToken()
         if (!tokenToUse && session?.djangoToken) {
-          console.log('🔍 initAuth - NextAuth 세션에서 Django 토큰 사용')
+          logger.debug('🔍 initAuth - NextAuth 세션에서 Django 토큰 사용')
           tokenToUse = session.djangoToken
           setToken(session.djangoToken)
           // localStorage에도 토큰 저장
           setTokens(session.djangoToken)
         }
 
-        console.log('🔍 initAuth - 토큰 확인:', tokenToUse ? '토큰 존재' : '토큰 없음')
+        logger.debug('🔍 initAuth - 토큰 확인:', tokenToUse ? '토큰 존재' : '토큰 없음')
 
         if (tokenToUse) {
           // 이미 사용자 정보가 있으면 getProfile 호출 스킵
           if (user) {
-            console.log('🔄 initAuth - 토큰 설정됨, 사용자 정보는 이미 존재함')
+            logger.debug('🔄 initAuth - 토큰 설정됨, 사용자 정보는 이미 존재함')
           } else {
-            console.log('🔍 initAuth - 프로필 정보 가져오기 시도')
+            logger.debug('🔍 initAuth - 프로필 정보 가져오기 시도')
             const response = await authApi.getProfile()
-            console.log('🔍 initAuth - 프로필 응답:', response)
+            logger.debug('🔍 initAuth - 프로필 응답:', response)
             if (response) {
               // 백엔드 응답이 {user: {...}} 형태이므로 user 객체 추출
               const userData = (response as any).user || response
               setUser(userData)
-              console.log('✅ initAuth - 사용자 정보 설정 완료:', userData)
+              logger.debug('✅ initAuth - 사용자 정보 설정 완료:', userData)
             }
           }
         } else {
-          console.log('❌ initAuth - 토큰이 없어서 인증되지 않음')
+          logger.debug('❌ initAuth - 토큰이 없어서 인증되지 않음')
         }
       } catch (error: any) {
-        console.error('❌ 인증 초기화 오류:', error)
+        logger.error('❌ 인증 초기화 오류:', error)
         setAuthError(error?.message || '인증 초기화 중 오류가 발생했습니다.')
 
         // API 오류가 401 (Unauthorized)인 경우 NextAuth 세션도 정리
         if (error?.response?.status === 401 || error?.status === 401) {
-          console.log('🧹 401 오류로 인한 전체 인증 상태 초기화')
+          logger.debug('🧹 401 오류로 인한 전체 인증 상태 초기화')
           try {
             const { signOut } = await import('next-auth/react')
             await signOut({ redirect: false })
-            console.log('🧹 NextAuth 세션도 정리 완료')
+            logger.debug('🧹 NextAuth 세션도 정리 완료')
           } catch (signOutError) {
-            console.error('NextAuth signOut 오류:', signOutError)
+            logger.error('NextAuth signOut 오류:', signOutError)
           }
         }
 
@@ -138,7 +139,7 @@ export function useAuth(): UseAuthReturn {
   // 인증 만료 이벤트 리스너 추가
   useEffect(() => {
     const handleAuthExpired = () => {
-      console.log('🔓 인증 만료 이벤트 수신, 상태 초기화')
+      logger.debug('🔓 인증 만료 이벤트 수신, 상태 초기화')
       clearTokens()
       setToken(null)
       setUser(null)
@@ -153,14 +154,14 @@ export function useAuth(): UseAuthReturn {
     email: string,
     password: string,
   ): Promise<{ success: boolean; message: string }> => {
-    console.log('🔑 useAuth login 시작:', { email, password: '***' })
+    logger.debug('🔑 useAuth login 시작:', { email, password: '***' })
 
     try {
       const response = await authApi.login({ email, password })
-      console.log('🔑 useAuth authApi.login 응답:', response)
+      logger.debug('🔑 useAuth authApi.login 응답:', response)
 
       if (response.token && response.user) {
-        console.log('🔑 토큰과 사용자 정보 존재:', {
+        logger.debug('🔑 토큰과 사용자 정보 존재:', {
           token: response.token,
           user: response.user,
         })
@@ -172,23 +173,23 @@ export function useAuth(): UseAuthReturn {
         // 상태 업데이트가 완료될 때까지 잠시 대기
         await new Promise(resolve => setTimeout(resolve, 100))
 
-        console.log('✅ useAuth login 성공 - 토큰과 사용자 정보 설정 완료')
-        console.log('🔍 저장된 토큰 확인:', getAccessToken())
-        console.log('🔍 설정된 사용자 정보:', response.user)
-        console.log('🔍 인증 상태 확인:', !!response.token && !!response.user)
+        logger.debug('✅ useAuth login 성공 - 토큰과 사용자 정보 설정 완료')
+        logger.debug('🔍 저장된 토큰 확인:', getAccessToken())
+        logger.debug('🔍 설정된 사용자 정보:', response.user)
+        logger.debug('🔍 인증 상태 확인:', !!response.token && !!response.user)
 
         return { success: true, message: response.message }
       }
 
-      console.log('❌ useAuth 응답에 토큰이나 사용자 정보 없음')
+      logger.debug('❌ useAuth 응답에 토큰이나 사용자 정보 없음')
       return { success: false, message: '로그인에 실패했습니다.' }
     } catch (error: any) {
-      console.error('❌ useAuth login 오류:', error)
-      console.error('❌ 오류 타입:', typeof error)
-      console.error('❌ 오류 메시지:', error?.message)
-      console.error('❌ 오류 응답:', error?.response)
-      console.error('❌ 오류 상태:', error?.response?.status)
-      console.error('❌ 오류 데이터:', error?.response?.data)
+      logger.error('❌ useAuth login 오류:', error)
+      logger.error('❌ 오류 타입:', typeof error)
+      logger.error('❌ 오류 메시지:', error?.message)
+      logger.error('❌ 오류 응답:', error?.response)
+      logger.error('❌ 오류 상태:', error?.response?.status)
+      logger.error('❌ 오류 데이터:', error?.response?.data)
 
       let message = '로그인 중 오류가 발생했습니다.'
 
@@ -229,7 +230,7 @@ export function useAuth(): UseAuthReturn {
     password: string,
     passwordConfirm: string,
   ): Promise<{ success: boolean; message: string }> => {
-    console.log('🔑 useAuth register 시작:', { email, password: '***' })
+    logger.debug('🔑 useAuth register 시작:', { email, password: '***' })
 
     try {
       const response = await authApi.register({
@@ -238,26 +239,26 @@ export function useAuth(): UseAuthReturn {
         password_confirm: passwordConfirm,
       })
 
-      console.log('🔑 useAuth authApi.register 응답:', response)
+      logger.debug('🔑 useAuth authApi.register 응답:', response)
 
       if (response.token && response.user) {
         // 토큰은 authApi.register에서 자동으로 저장됨
         setToken(response.token)
         setUser(response.user)
 
-        console.log('✅ useAuth register 성공 - 반환')
+        logger.debug('✅ useAuth register 성공 - 반환')
         return { success: true, message: response.message }
       }
 
-      console.log('❌ useAuth register 응답에 토큰이나 사용자 정보 없음')
+      logger.debug('❌ useAuth register 응답에 토큰이나 사용자 정보 없음')
       return { success: false, message: '회원가입에 실패했습니다.' }
     } catch (error: any) {
-      console.error('❌ useAuth register 오류:', error)
-      console.error('❌ 오류 타입:', typeof error)
-      console.error('❌ 오류 메시지:', error?.message)
-      console.error('❌ 오류 응답:', error?.response)
-      console.error('❌ 오류 상태:', error?.response?.status)
-      console.error('❌ 오류 데이터:', error?.response?.data)
+      logger.error('❌ useAuth register 오류:', error)
+      logger.error('❌ 오류 타입:', typeof error)
+      logger.error('❌ 오류 메시지:', error?.message)
+      logger.error('❌ 오류 응답:', error?.response)
+      logger.error('❌ 오류 상태:', error?.response?.status)
+      logger.error('❌ 오류 데이터:', error?.response?.data)
 
       let message = '회원가입 중 오류가 발생했습니다.'
 
@@ -279,7 +280,7 @@ export function useAuth(): UseAuthReturn {
         // Django 백엔드 로그아웃 시도 (실패해도 계속 진행)
         await authApi.logout()
       } catch (error) {
-        console.error('Django 로그아웃 요청 오류 (무시하고 계속 진행):', error)
+        logger.error('Django 로그아웃 요청 오류 (무시하고 계속 진행):', error)
       }
     }
 
@@ -287,9 +288,9 @@ export function useAuth(): UseAuthReturn {
       // NextAuth 세션 정리
       const { signOut } = await import('next-auth/react')
       await signOut({ redirect: false })
-      console.log('🧹 NextAuth 세션 정리 완료')
+      logger.debug('🧹 NextAuth 세션 정리 완료')
     } catch (error) {
-      console.error('NextAuth 로그아웃 오류 (무시하고 계속 진행):', error)
+      logger.error('NextAuth 로그아웃 오류 (무시하고 계속 진행):', error)
     }
 
     // 항상 로컬 상태 클리어
@@ -297,7 +298,7 @@ export function useAuth(): UseAuthReturn {
     setToken(null)
     setUser(null)
 
-    console.log('✅ 로그아웃 완료 - 모든 인증 상태 초기화됨')
+    logger.debug('✅ 로그아웃 완료 - 모든 인증 상태 초기화됨')
   }
 
   const refreshUser = async (): Promise<void> => {
@@ -310,7 +311,7 @@ export function useAuth(): UseAuthReturn {
         setUser(userData)
       }
     } catch (error) {
-      console.error('사용자 정보 새로고침 오류:', error)
+      logger.error('사용자 정보 새로고침 오류:', error)
     }
   }
 
@@ -345,11 +346,11 @@ export function useAuth(): UseAuthReturn {
   const setAuthData = (djangoToken: string, userData: BackendUserData): void => {
     // 이미 같은 토큰과 사용자가 설정되어 있으면 중복 설정 방지
     if (token === djangoToken && user?.email === userData?.email) {
-      console.log('🔄 setAuthData - 이미 같은 데이터가 설정되어 있음, 스킵')
+      logger.debug('🔄 setAuthData - 이미 같은 데이터가 설정되어 있음, 스킵')
       return
     }
 
-    console.log('🔑 setAuthData 호출:', {
+    logger.debug('🔑 setAuthData 호출:', {
       token: djangoToken?.substring(0, 10) + '...',
       user: userData?.email,
     })
@@ -364,7 +365,7 @@ export function useAuth(): UseAuthReturn {
     // 저장 확인
     setTimeout(() => {
       const storedToken = getAccessToken()
-      console.log('✅ 인증 데이터 설정 완료 - 저장 확인:', {
+      logger.debug('✅ 인증 데이터 설정 완료 - 저장 확인:', {
         stored: storedToken?.substring(0, 10) + '...',
         state: djangoToken?.substring(0, 10) + '...',
         match: storedToken === djangoToken,

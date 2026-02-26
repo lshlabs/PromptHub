@@ -23,6 +23,10 @@ export const metadata: Metadata = {
     description: 'AI 프롬프트 리뷰 플랫폼',
     type: 'website',
   },
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+  },
 }
 
 export default function RootLayout({

@@ -11,11 +11,15 @@ import { useRouter } from 'next/navigation'
 import { CommunityHeader, CommunityAction } from '@/components/community'
 import { PostList } from '@/components/posts'
 import { SearchBar } from '@/components/common/search-bar'
+import AuthForm from '@/components/auth/auth-form'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 import type { SortOption } from '@/components/common/sort-selector'
 import { CreatePostDialog } from '@/components/common/create-post-dialog'
 import { postsApi, statsApi } from '@/lib/api'
 import type { Platform, Category } from '@/types/api'
 import { useMetadataUtils } from '@/lib/utils'
+import { useAuthContext } from '@/components/layout/auth-provider'
+import { logger } from '@/lib/logger'
 
 // 백엔드 API에서 받아올 통계 데이터 타입
 interface CommunityStats {
@@ -29,6 +33,7 @@ interface CommunityStats {
 
 export default function CommunityPage() {
   const router = useRouter()
+  const { isAuthenticated } = useAuthContext()
   const actionSectionRef = useRef<HTMLDivElement>(null)
   const { setMetadata } = useMetadataUtils()
 
@@ -41,6 +46,7 @@ export default function CommunityPage() {
   const [selectedPlatforms] = useState<string[]>([])
   const [selectedModels, setSelectedModels] = useState<string[]>([])
   const [showCreateDialog, setShowCreateDialog] = useState(false)
+  const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   // 필터 데이터 상태
@@ -81,7 +87,7 @@ export default function CommunityPage() {
         })
         statsLoadedRef.current = true // ref로 로드 완료 표시 (리렌더링 방지)
       } catch (err) {
-        console.error('통계 데이터 로드 실패:', err)
+        logger.error('통계 데이터 로드 실패:', err)
         statsLoadedRef.current = true // 에러 발생해도 로드 완료로 표시
       } finally {
         setStatsLoading(false)
@@ -107,10 +113,14 @@ export default function CommunityPage() {
     setSearchQuery(query)
     setSearchType(searchTypeValue)
     setCurrentPage(1) // 검색 시 1페이지로 리셋
-    console.log('검색:', query, '타입:', searchTypeValue)
+    logger.debug('검색:', query, '타입:', searchTypeValue)
   }
 
   const handleCreatePost = () => {
+    if (!isAuthenticated) {
+      setIsAuthDialogOpen(true)
+      return
+    }
     setShowCreateDialog(true)
   }
 
@@ -136,14 +146,14 @@ export default function CommunityPage() {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
-    console.log('페이지 변경:', page)
+    logger.debug('페이지 변경:', page)
     scrollToActionSection()
   }
 
   const handleSortChange = (value: SortOption) => {
     setSortBy(value)
     setCurrentPage(1) // 정렬 변경 시 1페이지로 리셋
-    console.log('정렬 변경:', value)
+    logger.debug('정렬 변경:', value)
     scrollToActionSection()
   }
 
@@ -173,7 +183,7 @@ export default function CommunityPage() {
         setMetadata(platformsResponse.data, modelsResponse.data, categoriesResponse.data)
         metadataLoadedRef.current = true // ref로 로드 완료 표시 (리렌더링 방지)
       } catch (error) {
-        console.error('필터 데이터 로드 실패:', error)
+        logger.error('필터 데이터 로드 실패:', error)
         metadataLoadedRef.current = true // 에러 발생해도 로드 완료로 표시
       } finally {
         setLoadingFilters(false)
@@ -194,7 +204,7 @@ export default function CommunityPage() {
     // selectedPlatforms는 더 이상 업데이트하지 않음 (모델 선택의 관문 역할만)
     setSelectedModels(filters.models)
     setCurrentPage(1) // 필터 변경 시 1페이지로 리셋
-    console.log('필터 변경:', filters)
+    logger.debug('필터 변경:', filters)
     scrollToActionSection()
   }
 
@@ -244,6 +254,21 @@ export default function CommunityPage() {
       </div>
 
       {/* 게시글 작성 다이얼로그 */}
+      <Dialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen}>
+        <DialogContent className="max-w-md p-0 [&>button]:hidden">
+          <DialogTitle className="sr-only">로그인 또는 회원가입</DialogTitle>
+          <DialogDescription className="sr-only">
+            리뷰를 공유하려면 로그인 또는 회원가입이 필요합니다.
+          </DialogDescription>
+          <AuthForm
+            defaultTab="login"
+            onSuccess={() => {
+              setIsAuthDialogOpen(false)
+              setShowCreateDialog(true)
+            }}
+          />
+        </DialogContent>
+      </Dialog>
       <CreatePostDialog
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
