@@ -19,6 +19,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Heart, Star, Eye, Clock, BookmarkCheck, X, TrendingUp } from 'lucide-react'
+import { UserSummaryPopover } from '@/components/common/user-summary-popover'
 import type { PostCardData, PostCardFrontend } from '@/types/api'
 import type { CardVariant } from '@/types/components'
 import {
@@ -261,31 +262,37 @@ export function PostCard({
           <div className="mb-2 flex items-center justify-between sm:mb-3">
             {/* 작성자 정보 - 480px 이하에서 아바타 숨김 */}
             <div className="flex min-w-0 items-center gap-2 text-xs text-gray-500 sm:gap-2.5 sm:text-sm">
-              {/* 아바타 - 480px 이하에서 숨김 */}
-              <Avatar className={`h-6 w-6 sm:h-7 sm:w-7 ${styles.avatarRing} hidden xs:block`}>
-                {'avatarSrc' in data && typeof data.avatarSrc === 'string' && data.avatarSrc ? (
-                  <AvatarImage src={data.avatarSrc} alt={data.author} />
-                ) : null}
-                <AvatarFallback
-                  className={`${styles.avatarBg} text-xs font-medium`}
-                  style={{
-                    color: '#fff',
-                    ...('authorAvatarColor1' in data &&
-                    data.authorAvatarColor1 &&
-                    'authorAvatarColor2' in data &&
-                    data.authorAvatarColor2
-                      ? {
-                          background: generateAvatarGradient(
-                            data.authorAvatarColor1,
-                            data.authorAvatarColor2,
-                          ),
-                        }
-                      : {}),
-                  }}>
-                  {data.authorInitial}
-                </AvatarFallback>
-              </Avatar>
-              <span className={`font-medium ${styles.authorColor} truncate`}>{data.author}</span>
+              <UserSummaryPopover username={data.author} align="start">
+                <div className="flex min-w-0 items-center gap-2 sm:gap-2.5">
+                  {/* 아바타 - 480px 이하에서 숨김 */}
+                  <Avatar className={`hidden h-6 w-6 xs:block sm:h-7 sm:w-7 ${styles.avatarRing}`}>
+                    {'avatarSrc' in data && typeof data.avatarSrc === 'string' && data.avatarSrc ? (
+                      <AvatarImage src={data.avatarSrc} alt={data.author} />
+                    ) : null}
+                    <AvatarFallback
+                      className={`${styles.avatarBg} text-xs font-medium`}
+                      style={{
+                        color: '#fff',
+                        ...('authorAvatarColor1' in data &&
+                        data.authorAvatarColor1 &&
+                        'authorAvatarColor2' in data &&
+                        data.authorAvatarColor2
+                          ? {
+                              background: generateAvatarGradient(
+                                data.authorAvatarColor1,
+                                data.authorAvatarColor2,
+                              ),
+                            }
+                          : {}),
+                      }}>
+                      {data.authorInitial}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className={`font-medium ${styles.authorColor} truncate hover:underline`}>
+                    {data.author}
+                  </span>
+                </div>
+              </UserSummaryPopover>
               <span className="shrink-0 text-gray-300">•</span>
               <div className="flex shrink-0 items-center gap-1">
                 <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />

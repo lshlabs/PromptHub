@@ -7,6 +7,7 @@
 
 'use client'
 
+import { UserSummaryPopover } from '@/components/common/user-summary-popover'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Star, Clock, Eye } from 'lucide-react'
 import CustomBadge from '@/components/common/custom-badge'
@@ -88,26 +89,28 @@ export function PostHeader({
         </div>
       </div>
       <div className="mb-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-8 w-8 ring-1 ring-gray-100 lg:h-10 lg:w-10">
-            {typeof avatarSrc === 'string' && avatarSrc ? (
-              <AvatarImage src={avatarSrc} alt={author} />
-            ) : null}
-            <AvatarFallback
-              className="font-semibold text-white"
-              style={
-                authorAvatarColor1 && authorAvatarColor2
-                  ? { background: generateAvatarGradient(authorAvatarColor1, authorAvatarColor2) }
-                  : undefined
-              }>
-              {authorInitial}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="font-semibold text-gray-900">{author}</p>
-            <p className="text-gray-500">작성자</p>
+        <UserSummaryPopover username={author} align="start">
+          <div className="flex items-center gap-3">
+            <Avatar className="h-8 w-8 ring-1 ring-gray-100 lg:h-10 lg:w-10">
+              {typeof avatarSrc === 'string' && avatarSrc ? (
+                <AvatarImage src={avatarSrc} alt={author} />
+              ) : null}
+              <AvatarFallback
+                className="font-semibold text-white"
+                style={
+                  authorAvatarColor1 && authorAvatarColor2
+                    ? { background: generateAvatarGradient(authorAvatarColor1, authorAvatarColor2) }
+                    : undefined
+                }>
+                {authorInitial}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-semibold text-gray-900 hover:underline">{author}</p>
+              <p className="text-gray-500">작성자</p>
+            </div>
           </div>
-        </div>
+        </UserSummaryPopover>
       </div>
 
       <div className="mb-4 flex items-center gap-4">

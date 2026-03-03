@@ -79,6 +79,33 @@ export function PostList({
   const [internalCurrentPage, setInternalCurrentPage] = useState(1)
   const showLoading = useDelayedLoading(loading, { delayMs: 180, minVisibleMs: 320 })
 
+  const renderPostCardSkeletons = (count = 3) => (
+    <div className={`space-y-3 ${className}`} aria-hidden="true">
+      {Array.from({ length: count }).map((_, idx) => (
+        <div key={idx} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="space-y-3">
+            <div className="h-5 w-2/3 animate-pulse rounded bg-gray-200" />
+            <div className="flex gap-2">
+              <div className="h-5 w-20 animate-pulse rounded bg-blue-100" />
+              <div className="h-5 w-24 animate-pulse rounded bg-gray-100" />
+            </div>
+            <div className="flex items-center justify-between pt-1">
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-7 animate-pulse rounded-full bg-gray-200" />
+                <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
+                <div className="h-4 w-16 animate-pulse rounded bg-gray-100" />
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="h-4 w-8 animate-pulse rounded bg-gray-100" />
+                <div className="h-4 w-8 animate-pulse rounded bg-gray-100" />
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+
   // 메타데이터는 상위 컴포넌트에서 전달받은 것만 사용 (중복 로드 방지)
   useEffect(() => {
     if (externalPlatformsData) setPlatformsData(externalPlatformsData)
@@ -141,10 +168,18 @@ export function PostList({
 
     if (searchParams?.search) {
       const query = searchParams.search.toLowerCase()
-      filtered = filtered.filter(
-        post =>
-          post.title.toLowerCase().includes(query) || post.author.toLowerCase().includes(query),
-      )
+      const normalizedSearchType = (searchParams.search_type || 'all').toLowerCase()
+      filtered = filtered.filter(post => {
+        const matchesTitle = post.title.toLowerCase().includes(query)
+        const matchesAuthor = post.author.toLowerCase().includes(query)
+        const matchesContent = false // 로컬 데이터에는 상세 본문이 없어 내용 검색 불가
+
+        if (normalizedSearchType === 'author') return matchesAuthor
+        if (normalizedSearchType === 'title') return matchesTitle
+        if (normalizedSearchType === 'content') return matchesContent
+        if (normalizedSearchType === 'title_content') return matchesTitle || matchesContent
+        return matchesTitle || matchesAuthor || matchesContent
+      })
     }
 
     if (searchParams?.categories) {
@@ -210,29 +245,11 @@ export function PostList({
   }
 
   if (useApi && !hasFetchedOnce) {
-    if (!showLoading) {
-      return (
-        <div className={`space-y-3 ${className}`}>
-          {Array.from({ length: 3 }).map((_, idx) => (
-            <div key={idx} className="h-28 animate-pulse rounded-xl border bg-gray-100/70" />
-          ))}
-        </div>
-      )
-    }
-
-    return (
-      <div className={`flex items-center justify-center py-8 ${className}`}>
-        <div className="text-gray-500">게시글을 불러오는 중...</div>
-      </div>
-    )
+    return renderPostCardSkeletons(3)
   }
 
   if (useApi && showLoading && posts.length === 0) {
-    return (
-      <div className={`flex items-center justify-center py-8 ${className}`}>
-        <div className="text-gray-500">게시글을 불러오는 중...</div>
-      </div>
-    )
+    return renderPostCardSkeletons(3)
   }
 
   if (useApi && error) {

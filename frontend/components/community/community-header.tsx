@@ -18,9 +18,53 @@ interface CommunityStats {
 
 interface CommunityHeaderProps {
   stats: CommunityStats
+  loading?: boolean
 }
 
-export function CommunityHeader({ stats }: CommunityHeaderProps) {
+export function CommunityHeader({ stats, loading = false }: CommunityHeaderProps) {
+  const statCards = [
+    {
+      key: 'activeUsers',
+      value: stats.activeUsers,
+      label: '이용자 수',
+      icon: Users,
+      cardClass: 'border-blue-100 bg-blue-50',
+      iconClass: 'text-blue-600',
+      valueClass: 'text-blue-700',
+      labelClass: 'text-blue-600',
+    },
+    {
+      key: 'sharedPrompts',
+      value: stats.sharedPrompts,
+      label: '공유된 프롬프트',
+      icon: FileText,
+      cardClass: 'border-green-100 bg-green-50',
+      iconClass: 'text-green-600',
+      valueClass: 'text-green-700',
+      labelClass: 'text-green-600',
+    },
+    {
+      key: 'averageSatisfaction',
+      value: stats.averageSatisfaction,
+      label: '평균 만족도',
+      icon: Star,
+      cardClass: 'border-yellow-100 bg-yellow-50',
+      iconClass: 'text-yellow-600',
+      valueClass: 'text-yellow-700',
+      labelClass: 'text-yellow-600',
+    },
+    {
+      key: 'weeklyAdded',
+      value: stats.weeklyAdded,
+      label: '이번 주 추가',
+      icon: Clock,
+      cardClass: 'border-purple-100 bg-purple-50',
+      iconClass: 'text-purple-600',
+      valueClass: 'text-purple-700',
+      labelClass: 'text-purple-600',
+    },
+  ] as const
+
   return (
     <div className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">
       <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
@@ -38,34 +82,30 @@ export function CommunityHeader({ stats }: CommunityHeaderProps) {
 
         {/* 통계 카드들 */}
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
-            <div className="mb-2 flex items-center justify-center gap-2">
-              <Users className="h-4 w-4 text-blue-600" />
-              <h1 className="text-blue-700">{stats.activeUsers}</h1>
-            </div>
-            <p className="text-xs text-blue-600 sm:text-sm">이용자 수</p>
-          </div>
-          <div className="rounded-xl border border-green-100 bg-green-50 p-4">
-            <div className="mb-2 flex items-center justify-center gap-2">
-              <FileText className="h-4 w-4 text-green-600" />
-              <h1 className="text-green-700">{stats.sharedPrompts}</h1>
-            </div>
-            <p className="text-xs text-green-600 sm:text-sm">공유된 프롬프트</p>
-          </div>
-          <div className="rounded-xl border border-yellow-100 bg-yellow-50 p-4">
-            <div className="mb-2 flex items-center justify-center gap-2">
-              <Star className="h-4 w-4 text-yellow-600" />
-              <h1 className="text-yellow-700">{stats.averageSatisfaction}</h1>
-            </div>
-            <p className="text-xs text-yellow-600 sm:text-sm">평균 만족도</p>
-          </div>
-          <div className="rounded-xl border border-purple-100 bg-purple-50 p-4">
-            <div className="mb-2 flex items-center justify-center gap-2">
-              <Clock className="h-4 w-4 text-purple-600" />
-              <h1 className="text-purple-700">{stats.weeklyAdded}</h1>
-            </div>
-            <p className="text-xs text-purple-600 sm:text-sm">이번 주 추가</p>
-          </div>
+          {statCards.map(card => {
+            const Icon = card.icon
+            return (
+              <div key={card.key} className={`rounded-xl border p-4 ${card.cardClass}`}>
+                {loading ? (
+                  <div className="space-y-2" aria-hidden="true">
+                    <div className="mx-auto flex items-center justify-center gap-2">
+                      <div className="h-4 w-4 animate-pulse rounded bg-white/70" />
+                      <div className="h-6 w-12 animate-pulse rounded bg-white/80" />
+                    </div>
+                    <div className="mx-auto h-4 w-20 animate-pulse rounded bg-white/70" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="mb-2 flex items-center justify-center gap-2">
+                      <Icon className={`h-4 w-4 ${card.iconClass}`} />
+                      <h1 className={card.valueClass}>{card.value}</h1>
+                    </div>
+                    <p className={`text-xs sm:text-sm ${card.labelClass}`}>{card.label}</p>
+                  </>
+                )}
+              </div>
+            )
+          })}
         </div>
       </div>
     </div>

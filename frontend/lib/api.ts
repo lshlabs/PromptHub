@@ -17,6 +17,7 @@ import {
   UserLoginRequest,
   UserLoginResponse,
   UserData,
+  UserSummaryDTO,
   UserProfileResponse,
   UserProfileEnvelope,
   UserProfileUpdateResponse,
@@ -354,6 +355,11 @@ export const authApi = {
     return (await apiClient.get<UserData>(API_ENDPOINTS.auth.userInfo)).data
   },
 
+  /** 공개 사용자 요약 정보 (팝오버용) */
+  getUserSummary: async (username: string): Promise<UserSummaryDTO> => {
+    return (await apiClient.get<UserSummaryDTO>(API_ENDPOINTS.auth.userSummary(username))).data
+  },
+
   /** 사용자 설정 조회 */
   getSettings: async (): Promise<UserSettingsDTO> => {
     return (await apiClient.get<UserSettingsDTO>(API_ENDPOINTS.auth.settings)).data
@@ -681,6 +687,7 @@ export type {
   UserLoginRequest,
   UserLoginResponse,
   UserData,
+  UserSummaryDTO,
   UserProfileResponse,
   UserProfileEnvelope,
   UserProfileUpdateResponse,

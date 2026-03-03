@@ -8,7 +8,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Filter, Plus } from 'lucide-react'
+import { Filter, Plus, X } from 'lucide-react'
 import CustomButton from '@/components/common/custom-button'
 import { SortSelector, type SortOption } from '@/components/common/sort-selector'
 import { FilterPanel } from '@/components/community/community-filter'
@@ -31,6 +31,11 @@ interface CommunityActionProps {
   categories?: Category[]
   models?: any[]
   loadingFilters?: boolean
+  activeSearchBadge?: {
+    label: string
+    query: string
+  } | null
+  onClearSearch?: () => void
   className?: string
 }
 
@@ -46,6 +51,8 @@ export function CommunityAction({
   categories = [],
   models = [],
   loadingFilters = false,
+  activeSearchBadge = null,
+  onClearSearch,
   className = '',
 }: CommunityActionProps) {
   const [showFilters, setShowFilters] = useState(false)
@@ -183,31 +190,58 @@ export function CommunityAction({
 
   return (
     <div className={`space-y-6 ${className}`}>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <SortSelector value={sortBy} onValueChange={handleSortChange} />
+      {loadingFilters ? (
+        <div className="flex items-center justify-between gap-3" aria-hidden="true">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="h-10 w-28 animate-pulse rounded-xl bg-gray-200" />
+            <div className="h-10 w-28 animate-pulse rounded-xl bg-gray-200" />
+            {activeSearchBadge?.query ? (
+              <div className="h-10 w-40 animate-pulse rounded-xl bg-blue-100" />
+            ) : null}
+          </div>
+          <div className="h-10 w-32 animate-pulse rounded-xl bg-gray-200" />
+        </div>
+      ) : (
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <SortSelector value={sortBy} onValueChange={handleSortChange} />
+            <CustomButton
+              color="flat"
+              border="gray"
+              shape="square"
+              size="responsive"
+              icon={<Filter className="h-4 w-4" />}
+              className={`h-10 rounded-xl ${showFilters ? 'border-blue-300 bg-blue-50 text-blue-700' : ''}`}
+              onClick={() => setShowFilters(!showFilters)}>
+              <span className="ml-2 hidden sm:inline">필터 보기</span>
+            </CustomButton>
+            {activeSearchBadge?.query ? (
+              <div className="flex h-10 min-w-0 items-center rounded-xl border border-blue-200 bg-blue-50 px-3 text-sm text-blue-800">
+                <span className="truncate">
+                  {activeSearchBadge.label}: {activeSearchBadge.query}
+                </span>
+                <button
+                  type="button"
+                  aria-label="검색 해제"
+                  onClick={onClearSearch}
+                  className="ml-2 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-blue-600 transition-colors hover:bg-blue-100 hover:text-blue-800">
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ) : null}
+          </div>
           <CustomButton
-            color="flat"
-            border="gray"
+            color="gradient"
+            border="none"
             shape="square"
             size="responsive"
-            icon={<Filter className="h-4 w-4" />}
-            className={`h-10 rounded-xl ${showFilters ? 'border-blue-300 bg-blue-50 text-blue-700' : ''}`}
-            onClick={() => setShowFilters(!showFilters)}>
-            <span className="ml-2 hidden sm:inline">필터 보기</span>
+            icon={<Plus className="h-4 w-4" />}
+            className="h-10 rounded-xl"
+            onClick={onCreatePost}>
+            <span className="ml-2">리뷰 공유하기</span>
           </CustomButton>
         </div>
-        <CustomButton
-          color="gradient"
-          border="none"
-          shape="square"
-          size="responsive"
-          icon={<Plus className="h-4 w-4" />}
-          className="h-10 rounded-xl"
-          onClick={onCreatePost}>
-          <span className="ml-2">리뷰 공유하기</span>
-        </CustomButton>
-      </div>
+      )}
 
       <FilterPanel
         showFilters={showFilters}

@@ -5,6 +5,7 @@ import { TrendingHero, PostsList, CategoryRankings } from '@/components/trending
 
 export default function TrendingPage() {
   const [selectedModel, setSelectedModel] = useState<string | null>(null)
+  const [isRankingsLoading, setIsRankingsLoading] = useState(true)
   const postsRef = useRef<HTMLDivElement | null>(null)
 
   const smoothScrollToPosts = () => {
@@ -26,10 +27,15 @@ export default function TrendingPage() {
             selectedModel={selectedModel}
             setSelectedModel={setSelectedModel}
             onSelectModel={smoothScrollToPosts}
+            onLoadingChange={setIsRankingsLoading}
           />
 
           <div ref={postsRef} />
-          <PostsList selectedModel={selectedModel} setSelectedModel={setSelectedModel} />
+          <PostsList
+            selectedModel={selectedModel}
+            setSelectedModel={setSelectedModel}
+            hideEmptyPrompt={isRankingsLoading}
+          />
         </div>
       </div>
     </div>

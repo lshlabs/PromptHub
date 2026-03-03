@@ -1,4 +1,6 @@
 from django.contrib.auth import login, authenticate
+from django.db.models import Sum
+from django.shortcuts import get_object_or_404
 from rest_framework import status, permissions
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
@@ -736,3 +738,61 @@ def user_info(request):
         'avatar_color2': user.avatar_color2,
         'created_at': user.created_at,
     }, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def user_summary(request, username: str):
+    """
+    공개 사용자 요약 정보 조회 API
+
+    GET: username 기준으로 팝오버용 요약 정보를 반환합니다.
+
+    Response Fields:
+        - username (str)
+        - bio (str | null)
+        - avatar_url (str | null)
+        - avatar_color1 (str)
+        - avatar_color2 (str)
+        - created_at (datetime ISO8601)
+        - post_count (int)
+        - total_views (int)
+        - total_likes_received (int)
+        - total_bookmarks_received (int)
+    """
+    user = get_object_or_404(
+        CustomUser.objects.select_related('settings'),
+        username=username,
+    )
+
+    is_public_profile = True
+    try:
+        is_public_profile = user.settings.public_profile
+    except UserSettings.DoesNotExist:
+        is_public_profile = True
+
+    aggregate = user.posts.aggregate(
+        total_views=Sum('view_count'),
+        total_likes_received=Sum('like_count'),
+        total_bookmarks_received=Sum('bookmark_count'),
+    )
+
+    avatar_url = user.avatar_url
+    if avatar_url and isinstance(avatar_url, str) and avatar_url.startswith('/'):
+        avatar_url = request.build_absolute_uri(avatar_url)
+
+    return Response(
+        {
+            'username': user.username,
+            'bio': user.bio if is_public_profile else None,
+            'avatar_url': avatar_url,
+            'avatar_color1': user.avatar_color1,
+            'avatar_color2': user.avatar_color2,
+            'created_at': user.created_at,
+            'post_count': user.posts.count(),
+            'total_views': aggregate.get('total_views') or 0,
+            'total_likes_received': aggregate.get('total_likes_received') or 0,
+            'total_bookmarks_received': aggregate.get('total_bookmarks_received') or 0,
+        },
+        status=status.HTTP_200_OK,
+    )

@@ -17,7 +17,6 @@ import {
 } from 'lucide-react'
 import { trendingApi } from '@/lib/api'
 import type { CategoryRankings as CategoryRankingsData, TrendingRanking } from '@/types/api'
-import { useDelayedLoading } from '@/hooks/use-delayed-loading'
 
 let categoryRankingsCache: CategoryRankingsData | null = null
 
@@ -25,6 +24,7 @@ interface CategoryRankingsProps {
   selectedModel: string | null
   setSelectedModel: (model: string | null) => void
   onSelectModel?: () => void
+  onLoadingChange?: (loading: boolean) => void
 }
 
 // Lucide 아이콘 매핑
@@ -93,6 +93,7 @@ export default function CategoryRankings({
   selectedModel,
   setSelectedModel,
   onSelectModel,
+  onLoadingChange,
 }: CategoryRankingsProps) {
   const [categoryRankings, setCategoryRankings] = useState<CategoryRankingsData>(
     categoryRankingsCache ?? {},
@@ -100,7 +101,9 @@ export default function CategoryRankings({
   const [loading, setLoading] = useState(!categoryRankingsCache)
   const [error, setError] = useState<string | null>(null)
   const [dataLoaded, setDataLoaded] = useState(!!categoryRankingsCache) // 중복 API 호출 방지
-  const showLoading = useDelayedLoading(loading, { delayMs: 180, minVisibleMs: 320 })
+  useEffect(() => {
+    onLoadingChange?.(loading)
+  }, [loading, onLoadingChange])
 
   useEffect(() => {
     // 이미 데이터가 로드된 경우 스킵
@@ -126,7 +129,7 @@ export default function CategoryRankings({
     fetchCategoryRankings()
   }, [dataLoaded])
 
-  if (loading && !showLoading) {
+  if (loading) {
     return (
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3" aria-hidden="true">
         {Array.from({ length: 6 }).map((_, idx) => (
@@ -145,17 +148,6 @@ export default function CategoryRankings({
             </div>
           </div>
         ))}
-      </div>
-    )
-  }
-
-  if (showLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-orange-600"></div>
-          <p className="text-gray-600">트렌딩 데이터를 불러오는 중...</p>
-        </div>
       </div>
     )
   }

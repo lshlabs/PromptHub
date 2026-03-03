@@ -10,15 +10,44 @@ import { useDelayedLoading } from '@/hooks/use-delayed-loading'
 interface PostsListProps {
   selectedModel: string | null
   setSelectedModel: (model: string | null) => void
+  hideEmptyPrompt?: boolean
 }
 
-export default function PostsList({ selectedModel, setSelectedModel }: PostsListProps) {
+export default function PostsList({
+  selectedModel,
+  setSelectedModel,
+  hideEmptyPrompt = false,
+}: PostsListProps) {
   const [posts, setPosts] = useState<ApiPostCard[]>([])
   const [modelInfo, setModelInfo] = useState<TrendingModelInfo | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [hasFetchedForSelection, setHasFetchedForSelection] = useState(false)
   const showLoading = useDelayedLoading(loading, { delayMs: 180, minVisibleMs: 320 })
+
+  const renderTrendingPostSkeletons = (count = 2) => (
+    <div className="space-y-3 py-2" aria-hidden="true">
+      {Array.from({ length: count }).map((_, idx) => (
+        <div key={idx} className="rounded-xl border border-gray-100 bg-white p-4">
+          <div className="space-y-3">
+            <div className="h-5 w-1/2 animate-pulse rounded bg-gray-200" />
+            <div className="h-4 w-2/3 animate-pulse rounded bg-gray-100" />
+            <div className="flex gap-2">
+              <div className="h-5 w-16 animate-pulse rounded bg-blue-100" />
+              <div className="h-5 w-20 animate-pulse rounded bg-gray-100" />
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-7 animate-pulse rounded-full bg-gray-200" />
+                <div className="h-4 w-20 animate-pulse rounded bg-gray-200" />
+              </div>
+              <div className="h-4 w-16 animate-pulse rounded bg-gray-100" />
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
 
   // 선택된 모델이 변경될 때마다 관련 게시글 조회
   useEffect(() => {
@@ -90,10 +119,7 @@ export default function PostsList({ selectedModel, setSelectedModel }: PostsList
           </CardHeader>
           <CardContent className="space-y-4">
             {!hasFetchedForSelection && !showLoading ? (
-              <div className="space-y-3 py-2" aria-hidden="true">
-                <div className="h-20 animate-pulse rounded-xl bg-gray-100" />
-                <div className="h-20 animate-pulse rounded-xl bg-gray-100" />
-              </div>
+              renderTrendingPostSkeletons(2)
             ) : null}
 
             {showLoading && posts.length > 0 ? (
@@ -103,10 +129,7 @@ export default function PostsList({ selectedModel, setSelectedModel }: PostsList
             ) : null}
 
             {!hasFetchedForSelection ? null : showLoading && posts.length === 0 ? (
-              <div className="py-8 text-center">
-                <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-orange-600"></div>
-                <div className="text-gray-600">게시글을 불러오는 중...</div>
-              </div>
+              renderTrendingPostSkeletons(2)
             ) : error ? (
               <div className="py-8 text-center">
                 <div className="mb-2 text-red-600">{error}</div>
@@ -149,7 +172,7 @@ export default function PostsList({ selectedModel, setSelectedModel }: PostsList
         </Card>
       )}
 
-      {!selectedModel && (
+      {!selectedModel && !hideEmptyPrompt && (
         <Card className="border-0 bg-white/70 backdrop-blur-sm">
           <CardContent className="py-12 text-center">
             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-red-100 to-orange-100">

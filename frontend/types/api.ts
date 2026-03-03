@@ -81,6 +81,19 @@ export interface UserData {
   created_at: string
 }
 
+export interface UserSummaryDTO {
+  username: string
+  bio?: string | null
+  avatar_url?: string | null
+  avatar_color1: string
+  avatar_color2: string
+  created_at: string
+  post_count: number
+  total_views: number
+  total_likes_received: number
+  total_bookmarks_received: number
+}
+
 export interface UserProfileCompleteness {
   percentage: number
   completed_fields: number
@@ -475,6 +488,7 @@ export interface ApiEndpoints {
     settings: '/api/auth/profile/settings/'
     sessions: '/api/auth/profile/sessions/'
     google: '/api/auth/google/'
+    userSummary: (username: string) => string
   }
 
   // Posts 앱
@@ -674,6 +688,7 @@ export const API_ENDPOINTS: ApiEndpoints = {
     settings: '/api/auth/profile/settings/',
     sessions: '/api/auth/profile/sessions/',
     google: '/api/auth/google/',
+    userSummary: (username: string) => `/api/auth/users/${encodeURIComponent(username)}/summary/`,
   },
   posts: {
     list: '/api/posts/',

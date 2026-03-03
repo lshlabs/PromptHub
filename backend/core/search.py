@@ -18,6 +18,7 @@ class SearchManager:
         normalized_type = (search_type or 'all').strip().lower()
 
         title_query = Q(title__icontains=query)
+        author_query = Q(author__username__icontains=query)
         content_query = (
             Q(prompt__icontains=query)
             | Q(ai_response__icontains=query)
@@ -31,8 +32,13 @@ class SearchManager:
         if normalized_type == 'content':
             return queryset.filter(content_query)
 
+        if normalized_type == 'author':
+            return queryset.filter(author_query)
+
         if normalized_type in {'title_content', 'all'}:
+            if normalized_type == 'all':
+                return queryset.filter(title_query | content_query | author_query)
             return queryset.filter(title_query | content_query)
 
-        # 잘못된 값은 title+content로 안전하게 폴백
-        return queryset.filter(title_query | content_query)
+        # 잘못된 값은 전체 검색으로 안전하게 폴백
+        return queryset.filter(title_query | content_query | author_query)

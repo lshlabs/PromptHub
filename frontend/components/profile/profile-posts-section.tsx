@@ -28,6 +28,33 @@ export function ProfilePostsSection({
   modelsData,
   categoriesData,
 }: ProfilePostsSectionProps) {
+  const renderPostCardSkeletons = (count = 3) => (
+    <div className="space-y-3" aria-hidden="true">
+      {Array.from({ length: count }).map((_, idx) => (
+        <div key={idx} className="rounded-2xl border border-gray-100 bg-white p-4 shadow-sm">
+          <div className="space-y-3">
+            <div className="h-5 w-2/3 animate-pulse rounded bg-gray-200" />
+            <div className="flex gap-2">
+              <div className="h-5 w-20 animate-pulse rounded bg-blue-100" />
+              <div className="h-5 w-24 animate-pulse rounded bg-gray-100" />
+            </div>
+            <div className="flex items-center justify-between pt-1">
+              <div className="flex items-center gap-2">
+                <div className="h-7 w-7 animate-pulse rounded-full bg-gray-200" />
+                <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
+                <div className="h-4 w-16 animate-pulse rounded bg-gray-100" />
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="h-4 w-8 animate-pulse rounded bg-gray-100" />
+                <div className="h-4 w-8 animate-pulse rounded bg-gray-100" />
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+
   const Wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) =>
     contained ? (
       <>{children}</>
@@ -39,11 +66,7 @@ export function ProfilePostsSection({
     <Wrapper>
       {title ? <h2 className="mb-4 text-xl font-bold text-gray-900">{title}</h2> : null}
       {isLoading ? (
-        <div className="space-y-4">
-          <div className="h-24 animate-pulse rounded-lg bg-gray-100" />
-          <div className="h-24 animate-pulse rounded-lg bg-gray-100" />
-          <div className="h-24 animate-pulse rounded-lg bg-gray-100" />
-        </div>
+        renderPostCardSkeletons(3)
       ) : (
         <PostList
           posts={posts}

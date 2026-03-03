@@ -2,7 +2,8 @@ from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from rest_framework.authtoken.models import Token
+from posts.models import Platform, Category, Post
+from users.models import UserSettings
 
 
 User = get_user_model()
@@ -89,3 +90,70 @@ class UserAuthAndProfileTests(APITestCase):
             'password': 'NewStr0ng-Passw0rd!'
         }, format='json')
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class UserSummaryApiTests(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email='summary@example.com',
+            password='Str0ng-Passw0rd!',
+        )
+        self.user.username = 'summary-user'
+        self.user.bio = '요약 팝오버 테스트 계정'
+        self.user.save(update_fields=['username', 'bio'])
+
+        UserSettings.objects.update_or_create(
+            user=self.user,
+            defaults={'public_profile': True},
+        )
+
+        self.platform = Platform.objects.create(name='Test Platform')
+        self.category = Category.objects.create(name='Test Category')
+
+        Post.objects.create(
+            title='테스트 게시글 1',
+            author=self.user,
+            platform=self.platform,
+            category=self.category,
+            prompt='prompt text 12345',
+            ai_response='ai response text 12345',
+            like_count=3,
+            bookmark_count=2,
+            view_count=100,
+        )
+        Post.objects.create(
+            title='테스트 게시글 2',
+            author=self.user,
+            platform=self.platform,
+            category=self.category,
+            prompt='prompt text abcde',
+            ai_response='ai response text abcde',
+            like_count=4,
+            bookmark_count=5,
+            view_count=200,
+        )
+
+    def test_user_summary_returns_public_data(self):
+        url = reverse('users:user_summary', kwargs={'username': self.user.username})
+        res = self.client.get(url, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data['username'], 'summary-user')
+        self.assertEqual(res.data['bio'], '요약 팝오버 테스트 계정')
+        self.assertEqual(res.data['post_count'], 2)
+        self.assertEqual(res.data['total_views'], 300)
+        self.assertEqual(res.data['total_likes_received'], 7)
+        self.assertEqual(res.data['total_bookmarks_received'], 7)
+
+    def test_user_summary_returns_404_for_unknown_username(self):
+        url = reverse('users:user_summary', kwargs={'username': 'not-found-user'})
+        res = self.client.get(url, format='json')
+        self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_user_summary_hides_bio_for_private_profile(self):
+        UserSettings.objects.filter(user=self.user).update(public_profile=False)
+        url = reverse('users:user_summary', kwargs={'username': self.user.username})
+        res = self.client.get(url, format='json')
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIsNone(res.data['bio'])
