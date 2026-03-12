@@ -16,7 +16,6 @@ class CoreSearchTests(APITestCase):
         self.platform = Platform.objects.create(name='OpenAI')
         self.model = AiModel.objects.create(platform=self.platform, name='GPT-4')
         self.category = Category.objects.create(name='개발')
-        # 게시글 시드 데이터
         Post.objects.create(
             title='파이썬 예제',
             author=self.user,
@@ -35,4 +34,3 @@ class CoreSearchTests(APITestCase):
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertIn('results', res.data)
         self.assertGreaterEqual(len(res.data['results']), 1)
-

@@ -1,8 +1,6 @@
-# Use Node LTS
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY frontend/package.json ./
-# lock 파일이 없으므로 ci 대신 install 사용
 RUN npm install --no-audit --no-fund
 
 FROM node:20-alpine AS builder
@@ -26,7 +24,6 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1
-# Keep also for runtime where applicable
 ARG NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
 ARG NEXT_INTERNAL_API_BASE_URL
@@ -39,13 +36,10 @@ ARG NEXTAUTH_SECRET
 ENV NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
 ARG NEXTAUTH_URL
 ENV NEXTAUTH_URL=${NEXTAUTH_URL}
-# Use Next.js standalone output to keep runtime light and robust
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/public ./public
 
-# Port for Next.js
 EXPOSE 3000
 
 CMD ["node", "server.js"]
-

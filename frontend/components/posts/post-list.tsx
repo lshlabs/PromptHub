@@ -8,8 +8,9 @@ import { postsApi } from '@/lib/api'
 import type { PostCard as ApiPostCard } from '@/types/api'
 import type { SortOption } from '@/components/common/sort-selector'
 import { useDelayedLoading } from '@/hooks/use-delayed-loading'
+import { getDomainErrorMessage } from '@/lib/utils'
 
-type PostListVariant = 'default' | 'bookmark' | 'trending' | 'user-posts'
+type PostListVariant = 'default' | 'bookmark' | 'trending' | 'user-posts' | 'liked-posts'
 
 interface PostListProps {
   posts?: ApiPostCard[]
@@ -136,8 +137,15 @@ export function PostList({
         setApiPosts(response.data.results)
         setApiPagination(response.data.pagination)
       } catch (err) {
-        console.error('게시글 로드 실패:', err)
-        setError('게시글을 불러오는데 실패했습니다.')
+        setError(
+          getDomainErrorMessage(
+            err,
+            '게시글 목록을 불러오지 못했습니다. 필터를 줄이거나 잠시 후 다시 시도해주세요.',
+            {
+              unauthorized: '로그인이 만료되었습니다. 다시 로그인 후 목록을 새로고침해주세요.',
+            },
+          ),
+        )
         setApiPosts([])
       } finally {
         setLoading(false)

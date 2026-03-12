@@ -2,8 +2,9 @@
 // API 클라이언트 - Django 백엔드와의 통신을 위한 모든 함수들
 // ===========================================
 
-import axios, { AxiosInstance, AxiosError, AxiosResponse, AxiosRequestConfig } from 'axios'
+import axios, { AxiosInstance, AxiosError, AxiosResponse } from 'axios'
 import { logger } from '@/lib/logger'
+import { resolveApiBaseUrl } from '@/lib/http'
 import {
   // 공통 타입들
   ApiResponse,
@@ -32,13 +33,13 @@ import {
   UserSessionDTO,
   // Posts 관련 타입들
   Platform,
-  Model,
+  AiModel,
   Category,
   Tag,
   PostCard,
   PostCardData,
   PostCardFrontend,
-  PostCard_bookmark,
+  BookmarkedPostCard,
   PostDetail,
   PostCreateRequest,
   PostUpdateRequest,
@@ -59,8 +60,6 @@ import {
   TrendingModelPostsResponse,
   // 상수들
   API_ENDPOINTS,
-  API_BASE_URL,
-  HTTP_STATUS,
 } from '@/types/api'
 
 // ===========================================
@@ -97,7 +96,7 @@ export const setTokens = (token: string): void => {
 // Axios 인스턴스 생성
 const createApiClient = (): AxiosInstance => {
   const client = axios.create({
-    baseURL: API_BASE_URL,
+    baseURL: resolveApiBaseUrl(),
     timeout: 30000,
     headers: {
       'Content-Type': 'application/json',
@@ -177,7 +176,6 @@ const createApiError = (error: AxiosError): ApiRequestError => {
   const data = error.response?.data as any
 
   let message = '알 수 없는 오류가 발생했습니다.'
-  let errors: unknown = null
 
   if (data) {
     if (typeof data === 'string') {
@@ -198,7 +196,6 @@ const createApiError = (error: AxiosError): ApiRequestError => {
 
       if (fieldErrors.length > 0) {
         message = fieldErrors.join('; ')
-        errors = data
       }
     }
   } else if (error.message) {
@@ -453,8 +450,8 @@ export const postsApi = {
   },
 
   /** 모델 목록 */
-  getModels: async (): Promise<ApiResponse<Model[]>> => {
-    return get<ApiResponse<Model[]>>(API_ENDPOINTS.posts.models)
+  getModels: async (): Promise<ApiResponse<AiModel[]>> => {
+    return get<ApiResponse<AiModel[]>>(API_ENDPOINTS.posts.models)
   },
 
   /** 특정 플랫폼의 모델 목록 */
@@ -701,13 +698,13 @@ export type {
   UserSessionDTO,
   // Posts 관련 타입들
   Platform,
-  Model,
+  AiModel,
   Category,
   Tag,
   PostCard,
   PostCardData,
   PostCardFrontend,
-  PostCard_bookmark,
+  BookmarkedPostCard,
   PostDetail,
   PostCreateRequest,
   PostUpdateRequest,

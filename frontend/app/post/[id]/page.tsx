@@ -1,20 +1,14 @@
-/**
- * Post Detail 페이지
- *
- * 개별 게시글의 상세 정보를 표시하는 페이지
- */
-
 'use client'
 
 import { use, useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { GoBackButton } from '@/components/common/go-back-button'
 import { PostHeader, PostContentSections, PostActions, PostList } from '@/components/posts'
-import type { PostDetail, PostCard } from '@/types/api'
+import type { PostDetail } from '@/types/api'
 import { useAuth } from '@/hooks/use-auth'
 import { postsApi } from '@/lib/api'
 import { useToast } from '@/hooks/use-toast'
-import { getPlatformName, getModelName, getCategoryName } from '@/lib/utils'
+import { getDomainErrorMessage } from '@/lib/utils'
 import { useDelayedLoading } from '@/hooks/use-delayed-loading'
 
 export default function PostDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -23,19 +17,17 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   const { isAuthenticated, user, isLoading } = useAuth()
   const { toast } = useToast()
 
-  // Next.js 15: params를 React.use()로 unwrap
   const { id } = use(params)
 
-  // URL에서 from_page 파라미터 읽기
   const [initialPage, setInitialPage] = useState(1)
   const [fromPage, setFromPage] = useState<'community' | 'trending' | 'bookmarks' | 'profile'>(
     'community',
   )
-  const backButtonLabel = fromPage === 'trending' || fromPage === 'profile' ? '뒤로가기' : '목록으로'
+  const backButtonLabel =
+    fromPage === 'trending' || fromPage === 'profile' ? '뒤로가기' : '목록으로'
 
   useEffect(() => {
     let fromValue = searchParams.get('from')
-    // useSearchParams가 준비되지 않았을 경우를 대비해 window.location.search도 확인
     let fromPage = searchParams.get('from_page')
     if (!fromPage || !fromValue) {
       const urlParams = new URLSearchParams(window.location.search)
@@ -60,24 +52,16 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
     }
   }, [searchParams])
 
-  // 디버깅용 로그
-  useEffect(() => {
-    console.log('인증 상태:', { isAuthenticated, user })
-  }, [isAuthenticated, user])
-
-  // 상태 관리
   const [postData, setPostData] = useState<PostDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [hasViewIncremented, setHasViewIncremented] = useState(false)
 
-  // 메타데이터 상태 (표시명 변환용)
   const [platformsData, setPlatformsData] = useState<any[]>([])
   const [modelsData, setModelsData] = useState<any[]>([])
   const [categoriesData, setCategoriesData] = useState<any[]>([])
 
-  // 좋아요/북마크 로컬 상태 관리
   const [localLikeState, setLocalLikeState] = useState<{ isLiked: boolean; count: number } | null>(
     null,
   )
@@ -87,12 +71,10 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
   } | null>(null)
   const showPageLoading = useDelayedLoading(loading, { delayMs: 180, minVisibleMs: 320 })
 
-  // initialPage가 변경될 때 currentPage 업데이트
   useEffect(() => {
     setCurrentPage(initialPage)
   }, [initialPage])
 
-  // 메타데이터 로드
   useEffect(() => {
     const loadMetadata = async () => {
       try {
@@ -106,8 +88,18 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
         setModelsData(modelsRes.data || [])
         setCategoriesData(categoriesRes.data || [])
       } catch (error) {
-        console.error('메타데이터 로드 실패:', error)
-        // 실패 시 기본 메타데이터 사용
+        toast({
+          title: '메타데이터 로드 실패',
+          description: getDomainErrorMessage(
+            error,
+            '플랫폼/모델 표시 정보를 불러오지 못해 기본값으로 표시합니다. 새로고침하면 복구될 수 있습니다.',
+            {
+              unauthorized:
+                '로그인 상태를 확인할 수 없어 기본 메타데이터로 표시합니다. 다시 로그인해 주세요.',
+            },
+          ),
+          variant: 'destructive',
+        })
         setPlatformsData([
           { id: 1, name: 'OpenAI' },
           { id: 2, name: 'Google' },
@@ -132,14 +124,12 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
     loadMetadata()
   }, [])
 
-  // 게시글 ID가 변경될 때 로컬 상태 초기화
   useEffect(() => {
     setLocalLikeState(null)
     setLocalBookmarkState(null)
     setHasViewIncremented(false)
   }, [id])
 
-  // 게시글 상세 데이터 로드
   useEffect(() => {
     if (isLoading) return // 인증정보 로딩 중이면 대기
     if (hasViewIncremented) return // 이미 조회수를 증가시켰으면 재실행 방지
@@ -157,7 +147,6 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
           }
         }
 
-        // 로컬 상태가 있으면 우선 적용
         if (localLikeState) {
           postData = {
             ...postData,
@@ -201,14 +190,12 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
     try {
       const response = await postsApi.toggleLike(postData.id)
 
-      // 백엔드에서 메시지가 있으면 토스트로 표시
       if ((response as any).message) {
         toast({
           title: '알림',
           description: (response as any).message,
         })
       } else {
-        // 로컬 상태 업데이트
         const newLikeState = {
           isLiked: response.data.is_liked ?? false,
           count: response.data.like_count ?? 0,
@@ -225,7 +212,6 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
             : null,
         )
 
-        // 성공 토스트 메시지
         toast({
           title: response.data.is_liked ? '좋아요 완료' : '좋아요 취소',
           description: response.data.is_liked
@@ -235,8 +221,15 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
       }
     } catch (err: any) {
       toast({
-        title: '오류',
-        description: '좋아요 처리에 실패했습니다.',
+        title: '좋아요 실패',
+        description: getDomainErrorMessage(
+          err,
+          '좋아요 요청이 반영되지 않았습니다. 잠시 후 다시 눌러주세요.',
+          {
+            unauthorized: '로그인 세션이 만료되었습니다. 다시 로그인 후 좋아요를 시도해 주세요.',
+            forbidden: '작성자 본인 게시글에는 좋아요를 누를 수 없습니다.',
+          },
+        ),
         variant: 'destructive',
       })
     }
@@ -248,14 +241,12 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
     try {
       const response = await postsApi.toggleBookmark(postData.id)
 
-      // 백엔드에서 메시지가 있으면 토스트로 표시
       if ((response as any).message) {
         toast({
           title: '알림',
           description: (response as any).message,
         })
       } else {
-        // 로컬 상태 업데이트
         const newBookmarkState = {
           isBookmarked: response.data.is_bookmarked ?? false,
           count: response.data.bookmark_count ?? 0,
@@ -272,7 +263,6 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
             : null,
         )
 
-        // 성공 토스트 메시지
         toast({
           title: response.data.is_bookmarked ? '북마크 완료' : '북마크 취소',
           description: response.data.is_bookmarked
@@ -282,8 +272,16 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
       }
     } catch (err: any) {
       toast({
-        title: '오류',
-        description: '북마크 처리에 실패했습니다.',
+        title: '북마크 실패',
+        description: getDomainErrorMessage(
+          err,
+          '북마크 요청이 반영되지 않았습니다. 네트워크 상태를 확인하고 다시 시도해주세요.',
+          {
+            unauthorized: '로그인 세션이 만료되었습니다. 다시 로그인 후 북마크를 시도해 주세요.',
+            forbidden: '작성자 본인 게시글은 북마크할 수 없습니다.',
+            notFound: '이미 삭제된 게시글일 수 있습니다. 목록으로 돌아가 확인해주세요.',
+          },
+        ),
         variant: 'destructive',
       })
     }
@@ -330,13 +328,11 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page)
-    // URL 업데이트 (브라우저 히스토리에 추가하지 않음)
     const url = new URL(window.location.href)
     url.searchParams.set('from_page', page.toString())
     window.history.replaceState({}, '', url.toString())
   }
 
-  // 로딩 상태
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -385,7 +381,6 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
     )
   }
 
-  // 에러 상태
   if (error || !postData) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-50 to-blue-50">
@@ -409,11 +404,7 @@ export default function PostDetailPage({ params }: { params: Promise<{ id: strin
           <div className="px-2 py-2">
             {/* 목록으로 가기 버튼 */}
             <div className="flex justify-start pb-2">
-              <GoBackButton
-                fromPage={fromPage}
-                fallbackPath="/community"
-                label={backButtonLabel}
-              />
+              <GoBackButton fromPage={fromPage} fallbackPath="/community" label={backButtonLabel} />
             </div>
 
             {/* 메인 포스트 카드 */}

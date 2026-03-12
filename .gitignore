@@ -63,3 +63,10 @@ backend/media/
 
 # 개인 포트폴리오 메모 (로컬 유지, Git 추적 제외)
 PORTFOLIO_CORE_FEATURES.md
+refactoring_changelog.md
+.gitignore
+REFACTORING_REVIEW.md
+REFACTORING_PLAN.md
+architecture_smell_report.md
+docs/learning/prompthub-interview-qa.md
+docs/learning/prompthub-study-guide.md

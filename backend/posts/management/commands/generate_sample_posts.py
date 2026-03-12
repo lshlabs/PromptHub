@@ -1,18 +1,3 @@
-"""
-실제 서비스처럼 보이는 샘플 게시글을 생성하는 명령어.
-
-특징:
-- 최신 curated 플랫폼/모델명 기준 사용
-- 10개의 서로 다른 긴 프롬프트/응답/후기 데이터 포함
-- 사용자 없을 때 dummy user 자동 생성 옵션 제공
-
-사용 예시:
-  venv/bin/python manage.py generate_sample_posts
-  venv/bin/python manage.py generate_sample_posts --count 5
-  venv/bin/python manage.py generate_sample_posts --create-dummy-users
-  venv/bin/python manage.py generate_sample_posts --dry-run
-"""
-
 from decimal import Decimal
 import random
 from typing import Any
@@ -57,12 +42,18 @@ class Command(BaseCommand):
             default="SamplePass123!@#",
             help="자동 생성 더미 사용자 비밀번호 (기본값: SamplePass123!@#)",
         )
+        parser.add_argument(
+            "--upsert",
+            action="store_true",
+            help="같은 제목의 게시글이 있으면 건너뛰지 않고 샘플 데이터로 업데이트합니다.",
+        )
 
     def handle(self, *args, **options):
         dry_run = options["dry_run"]
         count = max(1, min(int(options["count"]), 10))
         create_dummy_users = options["create_dummy_users"]
         dummy_password = options["dummy_password"]
+        upsert = options["upsert"]
 
         users = self._get_or_create_users(
             create_dummy_users=create_dummy_users,
@@ -87,7 +78,6 @@ class Command(BaseCommand):
             return
 
         samples = self._build_samples(users=users, categories=categories, models=model_refs)[:count]
-        # 사용 가능한 사용자 수만큼 라운드로빈 할당 (10명 생성 시 10명 모두 활용, 부족하면 중복 허용)
         for idx, sample in enumerate(samples):
             sample["user"] = users[idx % len(users)]
 
@@ -105,9 +95,31 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.WARNING(f"[DRY-RUN] {summary}"))
                     continue
 
-                if Post.objects.filter(title=sample["title"]).exists():
+                existing_post = Post.objects.filter(title=sample["title"]).first()
+                if existing_post and not upsert:
                     skipped += 1
                     self.stdout.write(self.style.WARNING(f"[SKIP] 이미 존재: {sample['title']}"))
+                    continue
+
+                if existing_post and upsert:
+                    existing_post.author = sample["user"]
+                    existing_post.platform = sample["platform"]
+                    existing_post.model = sample["model"]
+                    existing_post.model_etc = sample.get("model_etc", "")
+                    existing_post.model_detail = sample.get("model_detail", "")
+                    existing_post.category = sample["category"]
+                    existing_post.tags = sample.get("tags", "")
+                    existing_post.prompt = sample["prompt"]
+                    existing_post.ai_response = sample["ai_response"]
+                    existing_post.additional_opinion = sample.get("additional_opinion", "")
+                    existing_post.satisfaction = sample["satisfaction"]
+                    existing_post.view_count = sample["views"]
+                    existing_post.like_count = sample["likes"]
+                    existing_post.bookmark_count = sample["bookmarks"]
+                    existing_post.created_at = sample["created_at"]
+                    existing_post.save()
+                    created += 1
+                    self.stdout.write(self.style.SUCCESS(f"[UPDATE] {summary}"))
                     continue
 
                 post = Post.objects.create(
@@ -185,18 +197,15 @@ class Command(BaseCommand):
             return None
 
     def _load_model_refs(self):
-        # 최신 curated.json 기준 모델명으로 구성
         refs = {
             "gpt52": self._get_model("OpenAI", "GPT 5.2"),
-            "o4mini": self._get_model("OpenAI", "o4-mini"),
-            "gpt4o": self._get_model("OpenAI", "GPT-4o"),
-            "gptoss120b": self._get_model("OpenAI", "GPT OSS 120B"),
-            "openai_other": self._get_model("OpenAI", "기타"),
+            "gpt54": self._get_model("OpenAI", "GPT-5.4"),
+            "gpt5mini": self._get_model("OpenAI", "GPT-5 mini"),
             "claude45_sonnet": self._get_model("Anthropic", "Claude Sonnet 4.5"),
             "claude46_sonnet": self._get_model("Anthropic", "Claude Sonnet 4.6"),
             "gemini3pro": self._get_model("Google", "Gemini 3 Pro"),
-            "google_other": self._get_model("Google", "기타"),
-            "grok41": self._get_model("xAI", "Grok-4.1"),
+            "gemini31deep": self._get_model("Google", "Gemini 3.1 Deep Think"),
+            "grok41": self._get_model("xAI", "Grok 4.1"),
             "llama4scout": self._get_model("Meta", "Llama 4 Scout"),
             "mistral_large3": self._get_model("Mistral", "Mistral Large 3"),
             "deepseek_v32": self._get_model("DeepSeek", "DeepSeek V3.2"),
@@ -206,7 +215,7 @@ class Command(BaseCommand):
         if missing:
             self.stdout.write(
                 self.style.ERROR(
-                    "필수 모델이 없습니다. 먼저 `load_ai_models --file posts/fixtures/platform_models.curated.json`를 실행하세요.\n"
+                    "필수 모델이 없습니다. 먼저 `python manage.py update_platform_model_data`를 실행하세요.\n"
                     f"누락 키: {', '.join(missing)}"
                 )
             )
@@ -376,9 +385,9 @@ class Command(BaseCommand):
             },
             {
                 "user": user_a,
-                "platform": models["gpt4o"].platform,
-                "model": models["gpt4o"],
-                "model_detail": "gpt-4o-vision",
+                "platform": models["gpt54"].platform,
+                "model": models["gpt54"],
+                "model_detail": "gpt-5.4-vision",
                 "model_etc": "",
                 "category": self._pick_category(category_map, categories, "기술문서/요약"),
                 "title": "회의실 화이트보드 사진을 작업 항목 목록으로 정리하는 멀티모달 프롬프트",
@@ -638,8 +647,8 @@ class Command(BaseCommand):
             },
             {
                 "user": user_a,
-                "platform": models["gptoss120b"].platform,
-                "model": models["gptoss120b"],
+                "platform": models["gpt5mini"].platform,
+                "model": models["gpt5mini"],
                 "model_detail": "",
                 "model_etc": "",
                 "category": self._pick_category(category_map, categories, "AI/자연어처리"),
@@ -677,10 +686,10 @@ class Command(BaseCommand):
             },
             {
                 "user": user_b,
-                "platform": models["google_other"].platform,
-                "model": models["google_other"],
-                "model_detail": "",
-                "model_etc": "Gemini 3.1 Pro preview routing test",
+                "platform": models["gemini31deep"].platform,
+                "model": models["gemini31deep"],
+                "model_detail": "gemini-3.1-deep-think-preview",
+                "model_etc": "",
                 "category": self._pick_category(category_map, categories, "기타"),
                 "title": "신규 모델 A/B 테스트 결과를 운영팀이 이해하기 쉽게 요약하는 템플릿",
                 "tags": "AB테스트,평가,운영공유,기타모델",

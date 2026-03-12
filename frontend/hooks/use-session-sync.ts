@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import { useAuthContext } from '@/components/layout/auth-provider'
 import { logger } from '@/lib/logger'
-import { authApi } from '@/lib/api'
+import { HttpRequestError, fetchJson, tokenAuthHeaders } from '@/lib/http'
+import type { UserProfileEnvelope } from '@/types/api'
 
 /**
  * NextAuth 세션과 로컬 인증 상태를 동기화하는 훅
@@ -54,32 +55,22 @@ export function useSessionSync() {
           logger.debug('🔄 세션 동기화 시작:', session.djangoUser?.email)
           setSyncError(null)
 
-          // Django 토큰 유효성 검증
-          const tempClient = {
-            headers: { Authorization: `Token ${session.djangoToken}` },
+          const djangoToken = session.djangoToken
+          if (!djangoToken) {
+            throw new Error('Django 토큰 또는 사용자 데이터 누락')
           }
 
-          // 간단한 프로필 요청으로 토큰 유효성 확인
-          const response = await fetch(
-            `${process.env.NEXT_PUBLIC_API_BASE_URL}/api/auth/profile/`,
-            {
-              headers: {
-                Authorization: `Token ${session.djangoToken}`,
-                'Content-Type': 'application/json',
-              },
-            },
-          )
-
-          if (response.ok) {
-            // 프로필 응답을 받아서 최신 사용자 정보로 동기화
-            const profileData = await response.json()
+          try {
+            const profileData = await fetchJson<UserProfileEnvelope>('/api/auth/profile/', {
+              headers: tokenAuthHeaders(djangoToken),
+            })
             const latestUserData = profileData.user || session.djangoUser
 
             logger.debug('✅ Django 토큰 유효성 확인 완료, 최신 프로필로 동기화')
 
             // TypeScript 타입 안전성을 위해 djangoToken 존재 확인
-            if (session.djangoToken && latestUserData) {
-              setAuthData(session.djangoToken, latestUserData)
+            if (latestUserData) {
+              setAuthData(djangoToken, latestUserData)
 
               // 동기화 완료 표시 (sessionStorage에 저장)
               if (latestUserData.email) {
@@ -91,11 +82,12 @@ export function useSessionSync() {
             } else {
               throw new Error('Django 토큰 또는 사용자 데이터 누락')
             }
-          } else {
-            // 토큰이 무효하면 NextAuth 세션도 정리
-            const errorText = await response.text()
-            logger.debug(`❌ Django 토큰이 무효함 (상태: ${response.status})`, errorText)
-            throw new Error('Django 토큰이 무효합니다.')
+          } catch (error) {
+            if (error instanceof HttpRequestError) {
+              logger.debug(`❌ Django 토큰이 무효함 (상태: ${error.status})`, error.payload)
+              throw new Error('Django 토큰이 무효합니다.')
+            }
+            throw error
           }
         } catch (error) {
           logger.error('❌ 세션 동기화 중 오류:', error)

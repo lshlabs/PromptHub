@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   Select,
   SelectContent,
@@ -15,11 +15,10 @@ import { ChevronLeft, ChevronRight, Save, Plus, X } from 'lucide-react'
 import { postsApi } from '@/lib/api'
 import type {
   Platform,
-  Model,
+  AiModel,
   Category,
   ModelSuggestion,
   PostCreateRequest,
-  PlatformModelsResponse,
 } from '@/types/api'
 import CustomButton from './custom-button'
 import CustomBadge from './custom-badge'
@@ -41,7 +40,7 @@ export function CreatePostDialog({
   onSuccess,
   editingReview,
 }: CreatePostDialogProps) {
-  const { getPlatformId, getModelId, getCategoryId, setMetadata } = useMetadataUtils()
+  const { getCategoryId, setMetadata } = useMetadataUtils()
   // 전역 스타일 추가
   useEffect(() => {
     const style = document.createElement('style')
@@ -75,7 +74,7 @@ export function CreatePostDialog({
   const [selectedModel, setSelectedModel] = useState('')
   const [customModel, setCustomModel] = useState('')
   const [showCustomModelInput, setShowCustomModelInput] = useState(false)
-  const [selectedModelData, setSelectedModelData] = useState<Model | null>(null)
+  const [selectedModelData, setSelectedModelData] = useState<AiModel | null>(null)
   const [modelDetail, setModelDetail] = useState('')
   const [customPlatformId, setCustomPlatformId] = useState<number | null>(null)
 
@@ -89,7 +88,7 @@ export function CreatePostDialog({
   // API 데이터 상태
   const [platforms, setPlatforms] = useState<Platform[]>([])
   const [categories, setCategories] = useState<Category[]>([])
-  const [allModels, setAllModels] = useState<Model[]>([])
+  const [allModels, setAllModels] = useState<AiModel[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -189,17 +188,19 @@ export function CreatePostDialog({
   const validateStep = (step: number) => {
     switch (step) {
       case 1:
-        return title.trim() !== '' && prompt.trim() !== ''
+        // 백엔드/모델 검증과 동일: 제목 최소 5자, 프롬프트 최소 10자
+        return title.trim().length >= 5 && prompt.trim().length >= 10
       case 2:
-        return aiResponse.trim() !== ''
+        // 백엔드 검증과 동일: AI 응답 최소 10자
+        return aiResponse.trim().length >= 10
       case 3:
         return rating > 0
       case 4:
         return showCustomModelInput
           ? customModel.trim() !== '' && customPlatformId !== null
-          : selectedModel.trim() !== ''
+          : selectedModelData !== null
       case 5:
-        return selectedCategory !== '' || (showCustomCategoryInput && customCategory.trim() !== '')
+        return showCustomCategoryInput ? customCategory.trim() !== '' : selectedCategory !== ''
       default:
         return true
     }
@@ -307,14 +308,24 @@ export function CreatePostDialog({
       if (onSuccess) onSuccess()
     } catch (err) {
       logger.error('게시글 저장 실패:', err)
-      setError(err instanceof Error ? err.message : '게시글 저장에 실패했습니다.')
+      const errorData = (err as any)?.response?.data
+      const fieldErrors = errorData?.errors
+      if (fieldErrors && typeof fieldErrors === 'object') {
+        const firstFieldError = Object.values(fieldErrors)[0]
+        const firstMessage = Array.isArray(firstFieldError)
+          ? firstFieldError[0]
+          : typeof firstFieldError === 'string'
+            ? firstFieldError
+            : null
+        setError(firstMessage || errorData?.message || '입력값을 다시 확인해주세요.')
+      } else {
+        setError(
+          errorData?.message || (err instanceof Error ? err.message : '게시글 저장에 실패했습니다.'),
+        )
+      }
     } finally {
       setLoading(false)
     }
-  }
-
-  const handleCancel = () => {
-    onOpenChange(false)
   }
 
   const renderStep = () => {
@@ -698,6 +709,11 @@ export function CreatePostDialog({
           <DialogTitle className="font-bold text-gray-900">
             {editingReview ? '리뷰 수정' : '새 리뷰 작성'}
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            {editingReview
+              ? '리뷰 수정 다이얼로그입니다. 단계별 입력값을 수정한 뒤 저장할 수 있습니다.'
+              : '새 리뷰 작성 다이얼로그입니다. 단계별 입력값을 작성한 뒤 저장할 수 있습니다.'}
+          </DialogDescription>
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm text-gray-600">
               <span>

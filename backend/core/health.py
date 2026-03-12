@@ -1,12 +1,10 @@
-"""
-헬스체크 API 뷰
-Docker 컨테이너/배포 환경 상태 확인용
-"""
-from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import csrf_exempt
-from django.db import connection
 from django.core.cache import cache
+from django.db import connection
+from django.db.utils import DatabaseError
+from django.http import JsonResponse
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
 import logging
 
 logger = logging.getLogger(__name__)
@@ -15,33 +13,31 @@ logger = logging.getLogger(__name__)
 @csrf_exempt
 @require_http_methods(["GET"])
 def health_check(request):
-    """
-    애플리케이션 상태 확인
-    - 데이터베이스 연결 상태
-    - 기본 애플리케이션 로직
-    """
     try:
-        # 데이터베이스 연결 확인
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
-            
-        # 캐시 시스템 확인 (있는 경우)
+
+        cache_status = "available"
         try:
-            cache.set('health_check', 'ok', 10)
-            cache.get('health_check')
-        except Exception:
-            pass  # 캐시가 없어도 괜찮음
-            
+            cache.set("health_check", "ok", 10)
+            cache.get("health_check")
+        except (ValueError, TypeError, RuntimeError) as cache_error:
+            logger.warning("Cache health probe failed: %s", cache_error)
+            cache_status = "unavailable"
+
+        return JsonResponse(
+            {
+                "status": "healthy",
+                "database": "connected",
+                "cache": cache_status,
+                "timestamp": timezone.now().isoformat(),
+            },
+            status=200,
+        )
+    except DatabaseError as db_error:
+        logger.exception("Health check failed due to database error.")
         return JsonResponse({
-            'status': 'healthy',
-            'database': 'connected',
-            'timestamp': '2024-01-01T00:00:00Z'
-        }, status=200)
-        
-    except Exception as e:
-        logger.error(f"Health check failed: {str(e)}")
-        return JsonResponse({
-            'status': 'unhealthy',
-            'error': str(e),
-            'timestamp': '2024-01-01T00:00:00Z'
+            "status": "unhealthy",
+            "error": str(db_error),
+            "timestamp": timezone.now().isoformat(),
         }, status=503)

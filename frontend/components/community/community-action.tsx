@@ -69,10 +69,6 @@ export function CommunityAction({
     }
   }, [showFilters])
 
-  const handleCreatePost = () => {
-    onCreatePost()
-  }
-
   const handleSortChange = (value: SortOption) => {
     onSortChange?.(value)
     logger.debug('정렬 변경:', value)

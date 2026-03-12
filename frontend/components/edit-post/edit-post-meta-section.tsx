@@ -29,7 +29,7 @@ interface Platform {
   name: string
 }
 
-interface Model {
+interface AiModelOption {
   id: number
   name: string
   platform: number
@@ -46,11 +46,11 @@ interface EditPostMetaSectionProps {
   satisfaction: number
   platform: string
   model: string
-  model_etc: string
+  modelEtc: string
   // 기본 모델의 상세 변형명 (예: GPT-5-high-fast)
-  model_detail?: string
+  modelDetail?: string
   category: string
-  category_etc: string
+  categoryEtc: string
   tags: string[]
   tagInput: string
   activeSection: string | null
@@ -59,7 +59,7 @@ interface EditPostMetaSectionProps {
 
   // API 데이터
   platformsData: Platform[]
-  modelsData: Model[]
+  modelsData: AiModelOption[]
   categoriesData: Category[]
 
   // 이벤트 핸들러들
@@ -80,10 +80,10 @@ export default function EditPostMetaSection({
   satisfaction,
   platform,
   model,
-  model_etc,
-  model_detail,
+  modelEtc,
+  modelDetail,
   category,
-  category_etc,
+  categoryEtc,
   tags,
   tagInput,
   activeSection,
@@ -105,56 +105,22 @@ export default function EditPostMetaSection({
   onUserInteraction,
 }: EditPostMetaSectionProps) {
   const {
-    getPlatformId,
     getModelId,
     getCategoryId,
     getModelDisplayNameFromBackend,
     getCategoryDisplayNameFromBackend,
   } = useMetadataUtils()
-  // 디버깅용 콘솔 출력
-  console.log('EditPostMetaSection Debug:', {
-    model,
-    model_etc,
-    showModelEtcInput,
-    platform,
-    category,
-    category_etc,
-    showCategoryEtcInput,
-  })
 
   // API 데이터에서 플랫폼과 카테고리 목록 가져오기
   const platforms = platformsData || []
   const categories = categoriesData || []
-
-  // 현재 플랫폼에 맞는 모델 목록 가져오기 (타입 안전성 보장)
-  const currentPlatformData = platforms.find(p => p.name === platform)
-  const platformModels = currentPlatformData
-    ? modelsData.filter(m => {
-        // 숫자 타입 비교를 위한 명시적 변환
-        const modelPlatformId = typeof m.platform === 'number' ? m.platform : Number(m.platform)
-        const currentPlatformId =
-          typeof currentPlatformData.id === 'number'
-            ? currentPlatformData.id
-            : Number(currentPlatformData.id)
-        return modelPlatformId === currentPlatformId
-      })
-    : []
-
-  // "기타" 옵션이 이미 있는지 확인 후 추가
-  const hasEtcOption = platformModels.some(m => m.name === '기타')
-  const availableModels = hasEtcOption
-    ? platformModels
-    : [
-        ...platformModels,
-        { id: -1, name: '기타', platform: currentPlatformData?.id || -1, platform_name: platform },
-      ]
 
   // 섹션 토글 함수 - 한 번에 하나만 펼칠 수 있도록
   const toggleSection = (section: string) => {
     onActiveSectionChange(activeSection === section ? null : section)
   }
 
-  // 모델 선택 UI - 플랫폼, 모델 드롭다운 + model_detail, model_etc 입력 사용
+  // 모델 선택 UI - 플랫폼, 모델 드롭다운 + 상세/기타 입력 사용
   const renderPlatformSection = () => {
     const sortedPlatforms = platforms.slice().sort((a, b) => a.id - b.id)
     const currentPlatform = platforms.find(p => p.name === platform) || sortedPlatforms[0]
@@ -243,7 +209,7 @@ export default function EditPostMetaSection({
           <div>
             <p className="mb-2 block text-sm font-bold text-gray-700">상세 모델명</p>
             <Input
-              value={model_detail || ''}
+              value={modelDetail || ''}
               onChange={e => onModelDetailValueChange && onModelDetailValueChange(e.target.value)}
               className="w-full rounded-xl border-gray-200 bg-gray-50 text-xs sm:text-sm"
               placeholder={'상세 모델 변형명을 입력하세요 (예: high, mini, heavy, v2, 20B)'}
@@ -258,7 +224,7 @@ export default function EditPostMetaSection({
               기타 모델명 <span className="text-red-500">*</span>
             </p>
             <Input
-              value={model_etc}
+              value={modelEtc}
               onChange={e => onModelEtcValueChange(e.target.value)}
               className="w-full rounded-xl border-gray-200 bg-gray-50 text-xs sm:text-sm"
               placeholder="사용한 모델명을 정확히 입력하세요"
@@ -298,7 +264,7 @@ export default function EditPostMetaSection({
         {showCategoryEtcInput && (
           <div className="animate-fadeIn">
             <Input
-              value={category_etc}
+              value={categoryEtc}
               onChange={e => onCategoryEtcValueChange(e.target.value)}
               className="w-full rounded-xl border-gray-200 bg-gray-50 text-xs sm:text-sm"
               placeholder="카테고리를 입력하세요 (선택사항)"
@@ -518,15 +484,14 @@ export default function EditPostMetaSection({
       <div className="flex flex-wrap gap-2">
         <CustomBadge variant="blue" size="responsive">
           {(() => {
-            // model_detail이 있으면 우선 표시, 없으면 기존 로직
-            if (model_detail && model_detail.trim()) {
-              return model_detail
+            if (modelDetail && modelDetail.trim()) {
+              return modelDetail
             }
             // Name → ID 변환 후 다시 표시명 결정
             const modelId = getModelId(model)
             return getModelDisplayNameFromBackend({
               modelId: modelId,
-              modelEtc: model_etc,
+              modelEtc: modelEtc,
             })
           })()}
         </CustomBadge>
@@ -537,7 +502,7 @@ export default function EditPostMetaSection({
             return categoryId
               ? getCategoryDisplayNameFromBackend({
                   categoryId: categoryId,
-                  categoryEtc: category_etc,
+                  categoryEtc: categoryEtc,
                 })
               : category
           })()}

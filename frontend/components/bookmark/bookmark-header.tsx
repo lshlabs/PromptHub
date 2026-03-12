@@ -11,7 +11,7 @@ export function BookmarkHeader() {
           </div>
           <h1 className="text-gray-900">내 북마크</h1>
         </div>
-        <p className="text-sm text-gray-600">북마크한 프롬프트를 관리하고 다시 찾아보세요</p>
+        <p className="text-sm text-gray-600">북마크한 리뷰를 관리하고 다시 찾아보세요</p>
       </div>
     </div>
   )

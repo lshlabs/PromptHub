@@ -1,5 +1,5 @@
 /**
- * Post Card Unified - 4가지 바리에이션 통합 컴포넌트
+ * Post Card - 4가지 바리에이션 통합 컴포넌트
  * 반응형으로 작은 화면에서 아바타 생략
  */
 'use client'
@@ -21,7 +21,6 @@ import {
 import { Heart, Star, Eye, Clock, BookmarkCheck, X, TrendingUp } from 'lucide-react'
 import { UserSummaryPopover } from '@/components/common/user-summary-popover'
 import type { PostCardData, PostCardFrontend } from '@/types/api'
-import type { CardVariant } from '@/types/components'
 import {
   formatRelativeTime,
   isBackendPostCard,
@@ -32,6 +31,8 @@ import {
 } from '@/lib/utils'
 import { generateAvatarGradient } from '@/lib/utils'
 import { useMetadataUtils } from '@/lib/utils'
+
+type CardVariant = 'normal' | 'current' | 'bookmark' | 'popular'
 
 interface PostCardProps {
   data: PostCardData
@@ -56,7 +57,6 @@ export function PostCard({
   modelsData,
   categoriesData,
 }: PostCardProps) {
-  const [isHovered, setIsHovered] = useState(false)
   const [showRemoveDialog, setShowRemoveDialog] = useState(false)
   const { getModelDisplayNameFromBackend, getCategoryDisplayNameFromBackend, setMetadata } =
     useMetadataUtils()

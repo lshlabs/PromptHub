@@ -6,13 +6,13 @@ import { type ClassValue, clsx } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 import {
   Platform,
-  Model,
+  AiModel,
   Category,
   PostCard,
   PostDetail,
   PostCardData,
   PostCardFrontend,
-  PostCard_bookmark,
+  BookmarkedPostCard,
   ApiRequestError,
   ValidationError,
   UserData,
@@ -90,7 +90,7 @@ export function generateRandomAvatarColors(): { color1: string; color2: string }
 // 메타데이터 매니저 클래스
 export class MetadataManager {
   private platforms: Platform[] = []
-  private models: Model[] = []
+  private models: AiModel[] = []
   private categories: Category[] = []
 
   // 데이터 설정
@@ -98,7 +98,7 @@ export class MetadataManager {
     this.platforms = platforms
   }
 
-  setModels(models: Model[]) {
+  setModels(models: AiModel[]) {
     this.models = models
   }
 
@@ -107,7 +107,7 @@ export class MetadataManager {
   }
 
   // 모든 데이터 한번에 설정
-  setAllMetadata(platforms: Platform[], models: Model[], categories: Category[]) {
+  setAllMetadata(platforms: Platform[], models: AiModel[], categories: Category[]) {
     this.setPlatforms(platforms)
     this.setModels(models)
     this.setCategories(categories)
@@ -187,11 +187,11 @@ export class MetadataManager {
   }
 
   // 관련 데이터 가져오기
-  getModelsByPlatformId(platformId: number): Model[] {
+  getModelsByPlatformId(platformId: number): AiModel[] {
     return this.models.filter(m => m.platform === platformId)
   }
 
-  getModelsByPlatformName(platformName: string): Model[] {
+  getModelsByPlatformName(platformName: string): AiModel[] {
     const platform = this.platforms.find(p => p.name === platformName)
     if (!platform) return []
     return this.getModelsByPlatformId(platform.id)
@@ -233,7 +233,7 @@ export const useMetadataUtils = () => {
     }) => metadataManager.getCategoryDisplayNameFromBackend(post),
 
     // 데이터 설정
-    setMetadata: (platforms: Platform[], models: Model[], categories: Category[]) =>
+    setMetadata: (platforms: Platform[], models: AiModel[], categories: Category[]) =>
       metadataManager.setAllMetadata(platforms, models, categories),
 
     // 관련 데이터 가져오기
@@ -256,7 +256,7 @@ export function getPlatformName(platformId: number, platforms: Platform[]): stri
 export function getModelName(
   modelId: number | null | undefined,
   modelEtc: string | null | undefined,
-  models: Model[],
+  models: AiModel[],
 ): string {
   // model_etc가 있으면 우선 사용
   if (modelEtc && modelEtc.trim()) {
@@ -287,7 +287,7 @@ export function getCategoryName(
   return category?.name || '알 수 없는 카테고리'
 }
 
-export function getModelsByPlatform(platformId: number, models: Model[]): Model[] {
+export function getModelsByPlatform(platformId: number, models: AiModel[]): AiModel[] {
   return models.filter(m => m.platform === platformId)
 }
 
@@ -299,7 +299,7 @@ export function getModelsByPlatform(platformId: number, models: Model[]): Model[
 export function enrichPostCard(
   post: PostCardData,
   platforms: Platform[],
-  models: Model[],
+  models: AiModel[],
   categories: Category[],
 ): PostCardData & {
   platformName: string
@@ -319,11 +319,10 @@ export function enrichPostCard(
     return {
       ...post,
       platformName: post.platform,
-      modelName: post.model_etc || post.model,
-      categoryName: post.category_etc || post.category,
+      modelName: post.modelEtc || post.model_etc || post.model,
+      categoryName: post.categoryEtc || post.category_etc || post.category,
     }
   } else if (isBookmarkPostCard(post)) {
-    // PostCard_bookmark 타입
     return {
       ...post,
       platformName: getPlatformName(post.platformId, platforms),
@@ -346,7 +345,7 @@ export function enrichPostCard(
 export function enrichPostDetail(
   post: PostDetail,
   platforms: Platform[],
-  models: Model[],
+  models: AiModel[],
   categories: Category[],
 ): PostDetail & {
   platformName: string
@@ -481,6 +480,68 @@ export function getErrorMessage(error: ApiRequestError | Error | unknown): strin
   return '알 수 없는 오류가 발생했습니다.'
 }
 
+const getHttpStatus = (error: unknown): number | null => {
+  if (!error || typeof error !== 'object') return null
+  if ('status' in error && typeof (error as { status?: unknown }).status === 'number') {
+    return (error as { status: number }).status
+  }
+  if (
+    'response' in error &&
+    error.response &&
+    typeof (error as { response?: { status?: unknown } }).response?.status === 'number'
+  ) {
+    return (error as { response: { status: number } }).response.status
+  }
+  return null
+}
+
+export function getDomainErrorMessage(
+  error: unknown,
+  fallback: string,
+  overrides?: Partial<{
+    unauthorized: string
+    forbidden: string
+    notFound: string
+    conflict: string
+    rateLimited: string
+    serverError: string
+    networkError: string
+  }>,
+): string {
+  const status = getHttpStatus(error)
+  const message = getErrorMessage(error)
+  const normalized = message.toLowerCase()
+
+  const merged = {
+    unauthorized: '로그인 세션이 만료되었습니다. 다시 로그인한 뒤 같은 작업을 다시 시도해주세요.',
+    forbidden: '이 작업을 수행할 권한이 없습니다. 권한이 있는 계정으로 다시 시도해주세요.',
+    notFound: '요청한 항목을 찾지 못했습니다. 목록을 새로고침하고 항목 존재 여부를 확인해주세요.',
+    conflict: '다른 변경과 충돌했습니다. 화면을 새로고침한 뒤 다시 시도해주세요.',
+    rateLimited: '요청이 잠시 제한되었습니다. 잠시 기다린 뒤 다시 시도해주세요.',
+    serverError: '서버 처리 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.',
+    networkError: '네트워크 연결이 불안정합니다. 연결 상태를 확인한 뒤 다시 시도해주세요.',
+    ...overrides,
+  }
+
+  if (status === 401) return merged.unauthorized
+  if (status === 403) return merged.forbidden
+  if (status === 404) return merged.notFound
+  if (status === 409) return merged.conflict
+  if (status === 429) return merged.rateLimited
+  if (status !== null && status >= 500) return merged.serverError
+
+  if (
+    normalized.includes('network') ||
+    normalized.includes('fetch') ||
+    normalized.includes('timeout') ||
+    normalized.includes('aborted')
+  ) {
+    return merged.networkError
+  }
+
+  return message || fallback
+}
+
 // ValidationError에서 필드별 에러 메시지 추출
 export function getFieldErrors(error: ValidationError): Record<string, string> {
   const fieldErrors: Record<string, string> = {}
@@ -578,15 +639,16 @@ export function getFromLocalStorage<T>(key: string, defaultValue: T): T {
 }
 
 // 안전한 로컬 스토리지 쓰기
-export function setToLocalStorage<T>(key: string, value: T): void {
+export function setToLocalStorage<T>(key: string, value: T): boolean {
   if (typeof window === 'undefined') {
-    return
+    return false
   }
 
   try {
     localStorage.setItem(key, JSON.stringify(value))
-  } catch (error) {
-    console.error('로컬 스토리지 저장 실패:', error)
+    return true
+  } catch {
+    return false
   }
 }
 
@@ -602,7 +664,7 @@ export const isFrontendPostCard = (data: PostCardData): data is PostCardFrontend
   return 'platform' in data && 'model' in data && 'category' in data
 }
 
-export const isBookmarkPostCard = (data: PostCardData): data is PostCard_bookmark => {
+export const isBookmarkPostCard = (data: PostCardData): data is BookmarkedPostCard => {
   return 'isBookmarked' in data && 'relativeTime' in data && 'bookmarks' in data
 }
 
@@ -630,10 +692,10 @@ export function normalizePostCard(data: PostCardData): PostCard {
       platformId: 1, // 기본값, 또는 platform 문자열에서 ID로 변환 필요
       modelId: 1, // 기본값, 또는 model 문자열에서 ID로 변환 필요
       categoryId: 1, // 기본값, 또는 category 문자열에서 ID로 변환 필요
-      modelEtc: data.model_etc,
-      categoryEtc: data.category_etc,
+      modelEtc: data.modelEtc || data.model_etc,
+      categoryEtc: data.categoryEtc || data.category_etc,
       likes: data.likes,
-      isLiked: data.isliked,
+      isLiked: data.isLiked ?? data.isliked ?? false,
       bookmarks: 0, // PostCardFrontend에는 bookmarks 정보가 없음
       isBookmarked: false, // PostCardFrontend에는 bookmark 정보가 없음
       satisfaction: data.satisfaction,
@@ -683,7 +745,7 @@ export function getIsLiked(post: PostCardData): boolean {
     return post.isLiked
   }
   if (isFrontendPostCard(post)) {
-    return post.isliked
+    return post.isLiked ?? post.isliked ?? false
   }
   return false
 }

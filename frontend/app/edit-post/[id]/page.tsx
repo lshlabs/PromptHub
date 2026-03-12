@@ -1,9 +1,3 @@
-/**
- * Edit Post 페이지
- *
- * 게시글 수정 페이지
- */
-
 'use client'
 
 import { useState, useEffect } from 'react'
@@ -14,23 +8,23 @@ import EditPostContentSection from '@/components/edit-post/edit-post-content-sec
 import { GoBackButton } from '@/components/common/go-back-button'
 import CustomButton from '@/components/common/custom-button'
 import { postsApi } from '@/lib/api'
-import type { PostCreateRequest, PostUpdateRequest, PostEditData } from '@/types/api'
+import type { PostUpdateRequest, PostEditData } from '@/types/api'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/hooks/use-auth'
 import { useRouter } from 'next/navigation'
-import { getPlatformName, getModelName, getCategoryName, getModelsByPlatform } from '@/lib/utils'
-
-// 백엔드 API 응답과 일치하는 타입 정의
-// PostEditData 인터페이스는 @/lib/api에서 import됨
+import {
+  getPlatformName,
+  getModelName,
+  getCategoryName,
+  getDomainErrorMessage,
+} from '@/lib/utils'
 
 export default function EditPost({ params }: { params: Promise<{ id: string }> }) {
-  // Next.js 15: params를 React.use()로 unwrap
   const { id } = use(params)
   const { toast } = useToast()
-  const { user, isAuthenticated } = useAuth()
+  const { isAuthenticated } = useAuth()
   const router = useRouter()
 
-  // 전역 스타일 추가
   useEffect(() => {
     const style = document.createElement('style')
     style.innerHTML = `
@@ -46,71 +40,38 @@ export default function EditPost({ params }: { params: Promise<{ id: string }> }
     }
   }, [])
 
-  // 기본 포스트 데이터
-  const defaultPost: PostEditData = {
-    id: 1,
-    title: '새 포스트',
-    satisfaction: 0,
-    platformId: 1,
-    modelId: 1,
-    modelEtc: '',
-    categoryId: 1,
-    categoryEtc: '',
-    tags: [],
-    prompt: '',
-    aiResponse: '',
-    additionalOpinion: '',
-  }
-
-  // 상태 관리
   const [title, setTitle] = useState('')
   const [satisfaction, setSatisfaction] = useState(0)
   const [prompt, setPrompt] = useState('')
   const [aiResponse, setAiResponse] = useState('')
   const [additionalOpinion, setAdditionalOpinion] = useState('')
 
-  // 접기/펼치기 상태
   const [expandedSection, setExpandedSection] = useState<string | null>(null)
 
-  // 플랫폼 및 모델 관련 상태 (백엔드와 동일한 이름 사용)
   const [platform, setPlatform] = useState('OpenAI')
   const [model, setModel] = useState('GPT-5')
-  const [model_etc, setModelEtc] = useState('')
-  const [model_detail, setModelDetail] = useState('')
+  const [modelEtc, setModelEtc] = useState('')
+  const [modelDetail, setModelDetail] = useState('')
   const [showModelEtcInput, setShowModelEtcInput] = useState(false)
 
-  // 카테고리 관련 상태
   const [category, setCategory] = useState('기타')
-  const [category_etc, setCategoryEtc] = useState('')
+  const [categoryEtc, setCategoryEtc] = useState('')
   const [showCategoryEtcInput, setShowCategoryEtcInput] = useState(false)
 
-  // 태그 관련 상태
   const [tags, setTags] = useState<string[]>([])
   const [newTag, setNewTag] = useState('')
 
-  // 사용자 변경 감지 플래그
-  const [isUserChange, setIsUserChange] = useState(false)
-
-  // 저장 중 상태
   const [isSaving, setIsSaving] = useState(false)
 
-  // 메타데이터 상태 - 독립적인 로딩 상태 관리
   const [platformsData, setPlatformsData] = useState<any[]>([])
   const [modelsData, setModelsData] = useState<any[]>([])
   const [categoriesData, setCategoriesData] = useState<any[]>([])
   const [isLoadingMetadata, setIsLoadingMetadata] = useState(true)
   const [metadataError, setMetadataError] = useState<string | null>(null)
 
-  // 게시글 데이터 로딩 상태
   const [isLoadingPost, setIsLoadingPost] = useState(true)
   const [postError, setPostError] = useState<string | null>(null)
 
-  // 현재 게시글의 원본 ID 정보 저장
-  const [originalPlatformId, setOriginalPlatformId] = useState<number | null>(null)
-  const [originalModelId, setOriginalModelId] = useState<number | null | undefined>(null)
-  const [originalCategoryId, setOriginalCategoryId] = useState<number | null>(null)
-
-  // 독립적인 메타데이터 로드
   useEffect(() => {
     const loadMetadata = async () => {
       try {
@@ -125,10 +86,13 @@ export default function EditPost({ params }: { params: Promise<{ id: string }> }
         setModelsData(modelsRes.data || [])
         setCategoriesData(categoriesRes.data || [])
       } catch (error) {
-        console.error('메타데이터 로드 실패:', error)
-        setMetadataError('메타데이터를 불러오는데 실패했습니다. 기본값으로 진행합니다.')
+        setMetadataError(
+          getDomainErrorMessage(
+            error,
+            '플랫폼/모델 목록을 최신값으로 받지 못해 임시 선택지로 편집 화면을 열었습니다. 저장 전 모델과 카테고리를 한 번 더 확인해 주세요.',
+          ),
+        )
 
-        // 실패 시 기본 메타데이터 사용 (최소한의 기능 제공)
         setPlatformsData([
           { id: 1, name: 'OpenAI' },
           { id: 2, name: 'Google' },
@@ -155,11 +119,9 @@ export default function EditPost({ params }: { params: Promise<{ id: string }> }
     loadMetadata()
   }, [])
 
-  // 독립적인 게시글 데이터 로드 - 메타데이터와 분리
   useEffect(() => {
     const loadPostData = async () => {
       if (!id) return
-      // 메타데이터가 준비되기 전에는 표시명 계산을 보류
       if (
         isLoadingMetadata ||
         platformsData.length === 0 ||
@@ -173,11 +135,9 @@ export default function EditPost({ params }: { params: Promise<{ id: string }> }
         setPostError(null)
         setIsLoadingPost(true)
 
-        // 실제 API에서 게시글 데이터 가져오기
         const response = await postsApi.getPost(Number(id))
         const postDetail = response.data
 
-        // PostDetail을 PostEditData로 변환
         const post: PostEditData = {
           id: postDetail.id,
           title: postDetail.title,
@@ -193,16 +153,12 @@ export default function EditPost({ params }: { params: Promise<{ id: string }> }
           tags: postDetail.tags,
         }
 
-        console.log('EditPost API Data Load Debug:', post)
-
-        // 백엔드에서 ID 기반으로 반환하므로 표시명으로 변환
         setTitle(post.title || '')
         setSatisfaction(Number(post.satisfaction) || 0)
         setPrompt(post.prompt || '')
         setAiResponse(post.aiResponse || '')
         setAdditionalOpinion(post.additionalOpinion || '')
 
-        // ID를 기반으로 표시명 설정
         const platformName = getPlatformName(post.platformId, platformsData)
         const modelName = getModelName(post.modelId, post.modelEtc || null, modelsData)
         const categoryName = getCategoryName(
@@ -218,7 +174,6 @@ export default function EditPost({ params }: { params: Promise<{ id: string }> }
 
         setPlatform(platformName)
 
-        // model_etc가 있거나 모델이 '기타'이면 model_etc 필드 표시
         if (post.modelEtc && post.modelEtc.trim()) {
           setModel('기타')
           setModelEtc(post.modelEtc)
@@ -230,10 +185,8 @@ export default function EditPost({ params }: { params: Promise<{ id: string }> }
           setShowModelEtcInput(true)
           setModelDetail('')
         } else {
-          // 기본 모델 선택 상태: 상세모델 입력을 열고 기존 상세모델이 있으면 반영
           setModel(modelName)
           setModelEtc('')
-          // model_detail이 기본 모델명과 다를 때만 설정, 같으면 빈 문자열
           setModelDetail(
             modelDetailFromApi && modelDetailFromApi !== modelName ? modelDetailFromApi : '',
           )
@@ -242,7 +195,6 @@ export default function EditPost({ params }: { params: Promise<{ id: string }> }
 
         setCategory(categoryName)
 
-        // category_etc가 있거나 카테고리가 '기타'이면 category_etc 필드 표시
         if (post.categoryEtc && post.categoryEtc.trim()) {
           setCategory('기타')
           setCategoryEtc(post.categoryEtc)
@@ -259,13 +211,21 @@ export default function EditPost({ params }: { params: Promise<{ id: string }> }
 
         setTags(post.tags || [])
 
-        // 원본 ID 정보 저장 (수정 시 사용)
-        setOriginalPlatformId(post.platformId)
-        setOriginalModelId(post.modelId)
-        setOriginalCategoryId(post.categoryId)
       } catch (error) {
-        console.error('게시글 데이터 로딩 실패:', error)
-        setPostError('게시글을 불러오는데 실패했습니다.')
+        setPostError(
+          getDomainErrorMessage(
+            error,
+            '수정 대상 게시글을 읽어오지 못했습니다. 삭제되었거나 접근 권한이 바뀌었을 수 있으니 목록에서 다시 선택해 주세요.',
+            {
+              unauthorized:
+                '로그인 세션이 만료되어 수정 화면 접근이 중단되었습니다. 다시 로그인한 뒤 수정 페이지를 다시 열어주세요.',
+              forbidden:
+                '이 게시글은 현재 계정으로 수정할 수 없습니다. 작성자 계정인지 확인한 뒤 다시 접근해 주세요.',
+              notFound:
+                '요청한 게시글이 더 이상 존재하지 않습니다. 목록 화면으로 돌아가 다른 게시글을 선택해 주세요.',
+            },
+          ),
+        )
       } finally {
         setIsLoadingPost(false)
       }
@@ -274,14 +234,10 @@ export default function EditPost({ params }: { params: Promise<{ id: string }> }
     loadPostData()
   }, [id, platformsData, modelsData, categoriesData, isLoadingMetadata])
 
-  // 단순화된 플랫폼 변경 핸들러 - 백엔드에서 기본값 처리
   const handlePlatformChange = async (newPlatform: string) => {
-    setIsUserChange(true)
     setPlatform(newPlatform)
 
     if (newPlatform === '기타') {
-      // 플랫폼이 '기타'인 경우 "기타" 모델로 설정 (ID: 43)
-      // 기타 플랫폼의 기타 모델을 찾아서 설정
       const 기타_플랫폼 = platformsData.find(p => p.name === '기타')
       if (기타_플랫폼) {
         const 기타_모델 = modelsData.find(m => m.platform === 기타_플랫폼.id && m.name === '기타')
@@ -292,7 +248,6 @@ export default function EditPost({ params }: { params: Promise<{ id: string }> }
         }
       }
     } else {
-      // 일반 플랫폼인 경우 백엔드에서 기본값 가져오기
       try {
         const platformData = platformsData.find(p => p.name === newPlatform)
         if (platformData) {
@@ -301,30 +256,31 @@ export default function EditPost({ params }: { params: Promise<{ id: string }> }
 
           if (default_model) {
             setModel(default_model.name)
-            // 상세모델 입력은 자동 채우지 않음 (사용자 직접 입력)
             setShowModelEtcInput(true)
             setModelEtc('')
             setModelDetail('')
           }
         }
       } catch (error) {
-        console.error('플랫폼 모델 로딩 실패:', error)
-        // 에러 시 기본값 설정
+        toast({
+          title: '플랫폼 모델 로드 실패',
+          description: getDomainErrorMessage(
+            error,
+            '선택한 플랫폼의 기본 모델 조회가 실패해 임시 모델로 대체했습니다. 저장 전 모델명이 맞는지 직접 확인해 주세요.',
+          ),
+          variant: 'destructive',
+        })
         setModel('GPT-5')
         setShowModelEtcInput(true)
         setModelEtc('')
-        // 상세모델 자동 채우지 않음
         setModelDetail('')
       }
     }
   }
 
-  // 단순화된 모델 변경 핸들러
   const handleModelChange = (newModel: string) => {
-    setIsUserChange(true)
     setModel(newModel)
 
-    // 어떤 기본 모델을 선택해도 상세 모델 입력을 열지만 기존 model_detail 유지
     if (newModel === '기타') {
       setShowModelEtcInput(true)
       setModelEtc('')
@@ -332,15 +288,12 @@ export default function EditPost({ params }: { params: Promise<{ id: string }> }
     } else {
       setShowModelEtcInput(true)
       setModelEtc('')
-      // 새로운 모델 선택 시에만 model_detail을 빈 문자열로 초기화
-      // 기존 값이 있다면 유지하되, 사용자가 직접 변경할 수 있도록 함
-      if (!model_detail || model_detail === model) {
+      if (!modelDetail || modelDetail === model) {
         setModelDetail('')
       }
     }
   }
 
-  // 단순화된 카테고리 변경 핸들러
   const handleCategoryChange = (newCategory: string) => {
     setCategory(newCategory)
 
@@ -352,12 +305,11 @@ export default function EditPost({ params }: { params: Promise<{ id: string }> }
     }
   }
 
-  // 카테고리 직접 입력 필드 초기화
   useEffect(() => {
-    if (!showCategoryEtcInput && category_etc) {
+    if (!showCategoryEtcInput && categoryEtc) {
       setCategoryEtc('')
     }
-  }, [showCategoryEtcInput, category_etc])
+  }, [showCategoryEtcInput, categoryEtc])
 
   const handleSave = async () => {
     if (!isAuthenticated) {
@@ -369,7 +321,6 @@ export default function EditPost({ params }: { params: Promise<{ id: string }> }
       return
     }
 
-    // 기본적인 필수 필드 검증만 수행 (나머지는 백엔드에서 처리)
     if (!title.trim()) {
       toast({
         title: '입력 오류',
@@ -400,7 +351,6 @@ export default function EditPost({ params }: { params: Promise<{ id: string }> }
     try {
       setIsSaving(true)
 
-      // 플랫폼/모델/카테고리 이름을 ID로 변환
       const platformData = platformsData.find(p => p.name === platform)
       const modelData = modelsData.find(m => m.name === model && m.platform === platformData?.id)
       const categoryData = categoriesData.find(c => c.name === category)
@@ -423,10 +373,8 @@ export default function EditPost({ params }: { params: Promise<{ id: string }> }
         return
       }
 
-      // 백엔드로 전송할 데이터 구성
-      // 상세모델 저장 규칙 (생성 다이얼로그와 동일)
-      const trimmedEtc = (model_etc || '').trim()
-      const trimmedDetail = (model_detail || '').trim()
+      const trimmedEtc = (modelEtc || '').trim()
+      const trimmedDetail = (modelDetail || '').trim()
       const baseName = model
       const detailForSave =
         baseName !== '기타' && trimmedDetail && trimmedDetail !== baseName ? trimmedDetail : ''
@@ -438,24 +386,15 @@ export default function EditPost({ params }: { params: Promise<{ id: string }> }
         platform: platformData.id,
         model: modelData?.id || null, // 기본 모델 ID 저장
         model_etc: baseName === '기타' ? trimmedEtc : '',
-        // @ts-ignore: 백엔드에서 수용
         model_detail: baseName !== '기타' ? detailForSave : '',
         category: categoryData.id,
-        category_etc: category === '기타' ? category_etc.trim() : '',
+        category_etc: category === '기타' ? categoryEtc.trim() : '',
         tags: tags,
         prompt: prompt.trim(),
         ai_response: aiResponse.trim(),
         additional_opinion: additionalOpinion.trim(),
       }
 
-      console.log('EditPost Save Debug:', {
-        updateData,
-        platformsData: platformsData.length,
-        modelsData: modelsData.length,
-        categoriesData: categoriesData.length,
-      })
-
-      // 백엔드에서 모든 유효성 검사와 비즈니스 로직을 처리
       await postsApi.updatePost(Number(id), updateData)
 
       toast({
@@ -463,13 +402,20 @@ export default function EditPost({ params }: { params: Promise<{ id: string }> }
         description: '게시글이 성공적으로 수정되었습니다.',
       })
 
-      // 게시글 상세 페이지로 이동
       router.push(`/post/${id}`)
     } catch (error) {
-      console.error('게시글 수정 실패:', error)
-
-      // 백엔드에서 반환한 에러 메시지를 그대로 표시
-      const errorMessage = error instanceof Error ? error.message : '게시글 수정에 실패했습니다.'
+      const errorMessage = getDomainErrorMessage(
+        error,
+        '게시글 저장이 완료되지 않았습니다. 제목/본문 변경사항을 확인하고 저장 버튼을 다시 눌러주세요.',
+        {
+          unauthorized:
+            '로그인 세션이 만료되어 저장 요청이 거절되었습니다. 다시 로그인한 뒤 같은 내용을 다시 저장해 주세요.',
+          forbidden:
+            '현재 계정에는 이 게시글 수정 권한이 없습니다. 작성자 계정으로 로그인했는지 확인해 주세요.',
+          conflict:
+            '다른 탭 또는 사용자에 의해 게시글이 먼저 수정되었습니다. 페이지를 새로고침해 최신 내용과 병합 후 다시 저장해 주세요.',
+        },
+      )
       toast({
         title: '저장 실패',
         description: errorMessage,
@@ -484,7 +430,6 @@ export default function EditPost({ params }: { params: Promise<{ id: string }> }
     window.history.back()
   }
 
-  // 로딩 상태 UI
   if (isLoadingPost || isLoadingMetadata) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -500,7 +445,6 @@ export default function EditPost({ params }: { params: Promise<{ id: string }> }
     )
   }
 
-  // 에러 상태 UI
   if (postError && !title) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -616,10 +560,10 @@ export default function EditPost({ params }: { params: Promise<{ id: string }> }
                     satisfaction={satisfaction}
                     platform={platform}
                     model={model}
-                    model_etc={model_etc}
-                    model_detail={model_detail}
+                    modelEtc={modelEtc}
+                    modelDetail={modelDetail}
                     category={category}
-                    category_etc={category_etc}
+                    categoryEtc={categoryEtc}
                     tags={tags}
                     tagInput={newTag}
                     activeSection={expandedSection}
@@ -636,7 +580,7 @@ export default function EditPost({ params }: { params: Promise<{ id: string }> }
                     onTagsChange={setTags}
                     onTagInputChange={setNewTag}
                     onActiveSectionChange={setExpandedSection}
-                    onUserInteraction={setIsUserChange}
+                    onUserInteraction={() => {}}
                     showModelEtcInput={showModelEtcInput}
                     showCategoryEtcInput={showCategoryEtcInput}
                   />

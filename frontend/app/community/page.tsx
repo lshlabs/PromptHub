@@ -6,7 +6,7 @@
 
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { Suspense, useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { ChevronUp } from 'lucide-react'
 import { CommunityHeader, CommunityAction } from '@/components/community'
@@ -32,7 +32,7 @@ interface CommunityStats {
   weeklyAdded: number
 }
 
-export default function CommunityPage() {
+function CommunityPageContent() {
   const router = useRouter()
   const urlSearchParams = useSearchParams()
   const { isAuthenticated } = useAuthContext()
@@ -375,5 +375,13 @@ export default function CommunityPage() {
         <ChevronUp className="h-5 w-5" />
       </button>
     </div>
+  )
+}
+
+export default function CommunityPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50" />}>
+      <CommunityPageContent />
+    </Suspense>
   )
 }

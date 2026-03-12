@@ -1,358 +1,175 @@
-from django.http import JsonResponse
-from django.db.models import Count, Sum, Avg, Q
-from django.utils import timezone
+from collections import Counter
 from datetime import timedelta
+
 from django.contrib.auth import get_user_model
-from rest_framework.authtoken.models import Token
+from django.db import DatabaseError
+from django.db.models import Avg, Count, Sum
+from django.http import JsonResponse
+from django.utils import timezone
+
 from core.utils.auth import token_required
-from posts.models import Post, PostInteraction, Platform, Category
 from core.utils.cache import cache_value_or_set
-from users.models import CustomUser
+from posts.models import Category, Platform, Post, PostInteraction
 
 User = get_user_model()
 
 
+def _serialize_recent_posts(limit: int = 5) -> list[dict]:
+    recent_posts = (
+        Post.objects.select_related("author", "platform", "category")
+        .order_by("-created_at")[:limit]
+    )
+    return [
+        {
+            "id": post.id,
+            "title": post.title,
+            "author": post.author.username,
+            "created_at": post.created_at.isoformat(),
+            "views": post.view_count,
+            "likes": post.like_count,
+            "platform": post.platform.name,
+            "category": post.category.name,
+        }
+        for post in recent_posts
+    ]
+
+
+def _popular_tags(limit: int = 10) -> list[dict]:
+    tags_series = Post.objects.exclude(tags="").values_list("tags", flat=True)
+    tags = [tag.strip() for tag_group in tags_series for tag in tag_group.split(",") if tag.strip()]
+    return [{"name": name, "count": count} for name, count in Counter(tags).most_common(limit)]
+
+
+def _platform_distribution() -> list[dict]:
+    distribution = (
+        Platform.objects.annotate(post_count=Count("posts"))
+        .filter(post_count__gt=0)
+        .order_by("-post_count")
+    )
+    return [{"platform": platform.name, "count": platform.post_count} for platform in distribution]
+
+
+def _category_distribution() -> list[dict]:
+    distribution = (
+        Category.objects.annotate(post_count=Count("posts"))
+        .filter(post_count__gt=0)
+        .order_by("-post_count")
+    )
+    return [{"category": category.name, "count": category.post_count} for category in distribution]
+
+
+def _dashboard_payload() -> dict:
+    aggregate = Post.objects.aggregate(
+        total_views=Sum("view_count"),
+        total_likes=Sum("like_count"),
+        total_bookmarks=Sum("bookmark_count"),
+        avg_satisfaction=Avg("satisfaction"),
+    )
+    seven_days_ago = timezone.now() - timedelta(days=7)
+    thirty_days_ago = timezone.now() - timedelta(days=30)
+
+    return {
+        "total_posts": Post.objects.count(),
+        "total_users": User.objects.count(),
+        "total_views": aggregate["total_views"] or 0,
+        "total_likes": aggregate["total_likes"] or 0,
+        "total_bookmarks": aggregate["total_bookmarks"] or 0,
+        "avg_satisfaction": round(float(aggregate["avg_satisfaction"] or 0), 1),
+        "weekly_added_posts": Post.objects.filter(created_at__gte=seven_days_ago).count(),
+        "active_users": User.objects.filter(posts__created_at__gte=thirty_days_ago).distinct().count(),
+        "recent_posts": _serialize_recent_posts(),
+        "popular_tags": _popular_tags(),
+        "platform_distribution": _platform_distribution(),
+        "category_distribution": _category_distribution(),
+    }
+
+
 def dashboard_stats(request):
-    """
-    대시보드 통계를 조회합니다.
-    
-    전체 플랫폼의 기본 통계 정보를 제공합니다.
-    비인증 사용자도 접근 가능합니다.
-    
-    제공되는 통계:
-    - 총 게시글 수
-    - 총 사용자 수  
-    - 총 조회수
-    - 총 좋아요 수
-    - 총 북마크 수
-    - 평균 만족도 (avg_satisfaction)
-    - 최근 7일 신규 게시글 수 (weekly_added_posts)
-    - 활성 사용자 수 (active_users: 최근 30일 내 게시글 작성 사용자)
-    - 최근 게시글 (최대 5개)
-    - 인기 태그 (사용 횟수 상위 10개)
-    - 플랫폼별 게시글 분포
-    
-    Args:
-        request: HTTP 요청 객체
-        
-    Returns:
-        JsonResponse: 대시보드 통계 데이터
-    """
     try:
-        def compute():
-            # 기본 통계 계산
-            total_posts = Post.objects.count()
-            total_users = User.objects.count()
-            total_views = Post.objects.aggregate(
-                total=Sum('view_count')
-            )['total'] or 0
-            total_likes = Post.objects.aggregate(
-                total=Sum('like_count')
-            )['total'] or 0
-            total_bookmarks = Post.objects.aggregate(
-                total=Sum('bookmark_count')
-            )['total'] or 0
-
-            # 평균 만족도 (전체 기준, 소수점 1자리 반올림)
-            avg_satisfaction = Post.objects.exclude(
-                satisfaction__isnull=True
-            ).aggregate(avg=Avg('satisfaction'))['avg']
-            if avg_satisfaction is not None:
-                avg_satisfaction_val = round(float(avg_satisfaction), 1)
-            else:
-                avg_satisfaction_val = 0
-
-            # 최근 7일 신규 게시글 수
-            seven_days_ago = timezone.now() - timedelta(days=7)
-            weekly_added_posts = Post.objects.filter(created_at__gte=seven_days_ago).count()
-
-            # 활성 사용자 수 (최근 30일 내 게시글 작성 사용자 수)
-            thirty_days_ago = timezone.now() - timedelta(days=30)
-            active_users = User.objects.filter(posts__created_at__gte=thirty_days_ago).distinct().count()
-
-            # 최근 게시글 (최대 5개)
-            recent_posts = Post.objects.select_related(
-                'author', 'platform', 'category'
-            ).order_by('-created_at')[:5]
-
-            recent_posts_data = [
-                {
-                    'id': post.id,
-                    'title': post.title,
-                    'author': post.author.username,
-                    'created_at': post.created_at.isoformat(),
-                    'views': post.view_count,
-                    'likes': post.like_count,
-                    'platform': post.platform.name,
-                    'category': post.category.name,
-                }
-                for post in recent_posts
-            ]
-
-            # 인기 태그 (상위 10개)
-            posts_with_tags = Post.objects.exclude(tags='').values_list('tags', flat=True)
-            tag_counts = {}
-            for tags_str in posts_with_tags:
-                if tags_str:
-                    tags = [tag.strip() for tag in tags_str.split(',') if tag.strip()]
-                    for tag in tags:
-                        tag_counts[tag] = tag_counts.get(tag, 0) + 1
-
-            popular_tags = sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)[:10]
-            popular_tags_data = [{'name': tag, 'count': count} for tag, count in popular_tags]
-
-            # 플랫폼별 게시글 분포
-            platform_distribution = Platform.objects.annotate(post_count=Count('posts')).filter(post_count__gt=0).order_by('-post_count')
-            platform_distribution_data = [
-                {'platform': platform.name, 'count': platform.post_count}
-                for platform in platform_distribution
-            ]
-
-            return {
-                'total_posts': total_posts,
-                'total_users': total_users,
-                'total_views': total_views,
-                'total_likes': total_likes,
-                'total_bookmarks': total_bookmarks,
-                'avg_satisfaction': avg_satisfaction_val,
-                'weekly_added_posts': weekly_added_posts,
-                'active_users': active_users,
-                'recent_posts': recent_posts_data,
-                'popular_tags': popular_tags_data,
-                'platform_distribution': platform_distribution_data,
-            }
-
-        data = cache_value_or_set('stats:dashboard', 60, compute)
-        total_posts = Post.objects.count()
-        total_users = User.objects.count()
-        total_views = Post.objects.aggregate(
-            total=Sum('view_count')
-        )['total'] or 0
-        total_likes = Post.objects.aggregate(
-            total=Sum('like_count')
-        )['total'] or 0
-        total_bookmarks = Post.objects.aggregate(
-            total=Sum('bookmark_count')
-        )['total'] or 0
-
-        # 평균 만족도 (전체 기준, 소수점 1자리 반올림)
-        avg_satisfaction = Post.objects.exclude(
-            satisfaction__isnull=True
-        ).aggregate(avg=Avg('satisfaction'))['avg']
-        if avg_satisfaction is not None:
-            avg_satisfaction = round(float(avg_satisfaction), 1)
-        else:
-            avg_satisfaction = 0
-
-        # 최근 7일 신규 게시글 수
-        seven_days_ago = timezone.now() - timedelta(days=7)
-        weekly_added_posts = Post.objects.filter(created_at__gte=seven_days_ago).count()
-
-        # 활성 사용자 수 (최근 30일 내 게시글 작성 사용자 수)
-        thirty_days_ago = timezone.now() - timedelta(days=30)
-        active_users = User.objects.filter(posts__created_at__gte=thirty_days_ago).distinct().count()
-        
-        # 최근 게시글 (최대 5개)
-        recent_posts = Post.objects.select_related(
-            'author', 'platform', 'category'
-        ).order_by('-created_at')[:5]
-        
-        recent_posts_data = []
-        for post in recent_posts:
-            recent_posts_data.append({
-                'id': post.id,
-                'title': post.title,
-                'author': post.author.username,
-                'created_at': post.created_at.isoformat(),
-                'views': post.view_count,
-                'likes': post.like_count,
-                'platform': post.platform.name,
-                'category': post.category.name
-            })
-        
-        # 인기 태그 (상위 10개)
-        posts_with_tags = Post.objects.exclude(tags='').values_list('tags', flat=True)
-        tag_counts = {}
-        
-        for tags_str in posts_with_tags:
-            if tags_str:
-                tags = [tag.strip() for tag in tags_str.split(',') if tag.strip()]
-                for tag in tags:
-                    tag_counts[tag] = tag_counts.get(tag, 0) + 1
-        
-        # 사용 횟수 순으로 정렬하여 상위 10개
-        popular_tags = sorted(
-            tag_counts.items(), 
-            key=lambda x: x[1], 
-            reverse=True
-        )[:10]
-        
-        popular_tags_data = [
-            {'name': tag, 'count': count} 
-            for tag, count in popular_tags
-        ]
-        
-        # 플랫폼별 게시글 분포
-        platform_distribution = Platform.objects.annotate(
-            post_count=Count('posts')
-        ).filter(post_count__gt=0).order_by('-post_count')
-        
-        platform_distribution_data = [
+        data = cache_value_or_set("stats:dashboard", 60, _dashboard_payload)
+        return JsonResponse({"status": "success", "data": data})
+    except DatabaseError as db_error:
+        return JsonResponse(
             {
-                'platform': platform.name,
-                'count': platform.post_count
-            }
-            for platform in platform_distribution
-        ]
-        
-        return JsonResponse({'status': 'success', 'data': data})
-        
-    except Exception as e:
-        return JsonResponse({
-            'status': 'error',
-            'message': f'통계 조회 중 오류가 발생했습니다: {str(e)}'
-        }, status=500)
+                "status": "error",
+                "message": f"통계 조회 중 데이터베이스 오류가 발생했습니다: {db_error}",
+            },
+            status=500,
+        )
 
 
 @token_required
 def user_stats(request):
-    """
-    사용자별 통계를 조회합니다.
-    
-    인증된 사용자의 개인 활동 통계를 제공합니다.
-    
-    제공되는 통계:
-    - 작성한 게시글 수
-    - 총 조회수 (본인 게시글)
-    - 총 좋아요 수 (본인 게시글)
-    - 총 북마크 수 (본인 게시글)
-    - 평균 만족도
-    - 가장 많이 사용한 플랫폼
-    - 가장 많이 사용한 카테고리
-    - 최근 활동 정보
-    
-    Args:
-        request: HTTP 요청 객체 (인증 필요)
-        
-    Returns:
-        JsonResponse: 사용자별 통계 데이터
-    """
     try:
-        user = request.user
-        
-        # 사용자가 작성한 게시글 통계
-        user_posts = Post.objects.filter(author=user)
+        user_posts = Post.objects.filter(author=request.user)
         posts_count = user_posts.count()
-        
         if posts_count == 0:
-            # 게시글이 없는 경우 기본값 반환
-            return JsonResponse({
-                'status': 'success',
-                'data': {
-                    'posts_count': 0,
-                    'total_views': 0,
-                    'total_likes': 0,
-                    'total_bookmarks': 0,
-                    'avg_satisfaction': 0,
-                    'most_used_platform': None,
-                    'most_used_category': None,
-                    'recent_activity': {
-                        'last_post_date': None,
-                        'last_like_date': None,
-                        'last_bookmark_date': None
-                    }
+            return JsonResponse(
+                {
+                    "status": "success",
+                    "data": {
+                        "posts_count": 0,
+                        "total_views": 0,
+                        "total_likes": 0,
+                        "total_bookmarks": 0,
+                        "avg_satisfaction": 0,
+                        "most_used_platform": None,
+                        "most_used_category": None,
+                        "recent_activity": {
+                            "last_post_date": None,
+                            "last_like_date": None,
+                            "last_bookmark_date": None,
+                        },
+                    },
                 }
-            })
-        
-        # 기본 통계 계산
-        total_views = user_posts.aggregate(
-            total=Sum('view_count')
-        )['total'] or 0
-        
-        total_likes = user_posts.aggregate(
-            total=Sum('like_count')
-        )['total'] or 0
-        
-        total_bookmarks = user_posts.aggregate(
-            total=Sum('bookmark_count')
-        )['total'] or 0
-        
-        # 평균 만족도 계산 (null 값 제외)
-        avg_satisfaction = user_posts.exclude(
-            satisfaction__isnull=True
-        ).aggregate(
-            avg=Avg('satisfaction')
-        )['avg']
-        
-        if avg_satisfaction:
-            avg_satisfaction = round(float(avg_satisfaction), 1)
-        else:
-            avg_satisfaction = 0
-        
-        # 가장 많이 사용한 플랫폼
-        most_used_platform = user_posts.values(
-            'platform__name'
-        ).annotate(
-            count=Count('platform')
-        ).order_by('-count').first()
-        
-        most_used_platform_name = None
-        if most_used_platform:
-            most_used_platform_name = most_used_platform['platform__name']
-        
-        # 가장 많이 사용한 카테고리
-        most_used_category = user_posts.values(
-            'category__name'
-        ).annotate(
-            count=Count('category')
-        ).order_by('-count').first()
-        
-        most_used_category_name = None
-        if most_used_category:
-            most_used_category_name = most_used_category['category__name']
-        
-        # 최근 활동 정보
-        last_post = user_posts.order_by('-created_at').first()
-        last_post_date = last_post.created_at.isoformat() if last_post else None
-        
-        # 최근 좋아요 활동
-        last_like_interaction = PostInteraction.objects.filter(
-            user=user, 
-            is_liked=True
-        ).order_by('-updated_at').first()
-        last_like_date = None
-        if last_like_interaction:
-            last_like_date = last_like_interaction.updated_at.isoformat()
-        
-        # 최근 북마크 활동
-        last_bookmark_interaction = PostInteraction.objects.filter(
-            user=user, 
-            is_bookmarked=True
-        ).order_by('-updated_at').first()
-        last_bookmark_date = None
-        if last_bookmark_interaction:
-            last_bookmark_date = last_bookmark_interaction.updated_at.isoformat()
-        
-        return JsonResponse({
-            'status': 'success',
-            'data': {
-                'posts_count': posts_count,
-                'total_views': total_views,
-                'total_likes': total_likes,
-                'total_bookmarks': total_bookmarks,
-                'avg_satisfaction': avg_satisfaction,
-                'most_used_platform': most_used_platform_name,
-                'most_used_category': most_used_category_name,
-                'recent_activity': {
-                    'last_post_date': last_post_date,
-                    'last_like_date': last_like_date,
-                    'last_bookmark_date': last_bookmark_date
-                }
+            )
+
+        aggregate = user_posts.aggregate(
+            total_views=Sum("view_count"),
+            total_likes=Sum("like_count"),
+            total_bookmarks=Sum("bookmark_count"),
+            avg_satisfaction=Avg("satisfaction"),
+        )
+        most_used_platform = (
+            user_posts.values("platform__name").annotate(count=Count("platform")).order_by("-count").first()
+        )
+        most_used_category = (
+            user_posts.values("category__name").annotate(count=Count("category")).order_by("-count").first()
+        )
+        last_post = user_posts.order_by("-created_at").first()
+        last_like = (
+            PostInteraction.objects.filter(user=request.user, is_liked=True).order_by("-updated_at").first()
+        )
+        last_bookmark = (
+            PostInteraction.objects.filter(user=request.user, is_bookmarked=True)
+            .order_by("-updated_at")
+            .first()
+        )
+
+        return JsonResponse(
+            {
+                "status": "success",
+                "data": {
+                    "posts_count": posts_count,
+                    "total_views": aggregate["total_views"] or 0,
+                    "total_likes": aggregate["total_likes"] or 0,
+                    "total_bookmarks": aggregate["total_bookmarks"] or 0,
+                    "avg_satisfaction": round(float(aggregate["avg_satisfaction"] or 0), 1),
+                    "most_used_platform": (most_used_platform or {}).get("platform__name"),
+                    "most_used_category": (most_used_category or {}).get("category__name"),
+                    "recent_activity": {
+                        "last_post_date": last_post.created_at.isoformat() if last_post else None,
+                        "last_like_date": last_like.updated_at.isoformat() if last_like else None,
+                        "last_bookmark_date": last_bookmark.updated_at.isoformat() if last_bookmark else None,
+                    },
+                },
             }
-        })
-        
-    except Exception as e:
-        return JsonResponse({
-            'status': 'error',
-            'message': f'사용자 통계 조회 중 오류가 발생했습니다: {str(e)}'
-        }, status=500)
+        )
+    except DatabaseError as db_error:
+        return JsonResponse(
+            {
+                "status": "error",
+                "message": f"사용자 통계 조회 중 데이터베이스 오류가 발생했습니다: {db_error}",
+            },
+            status=500,
+        )

@@ -1,17 +1,9 @@
 from django.db.models import Q
-from posts.models import Post
 
 
 class SearchManager:
-    """
-    검색 매니저 (통합 검색 기능)
-    """
-    
     @staticmethod
     def search_posts(queryset, query, search_type='all'):
-        """
-        포스트 검색 (queryset을 받아서 검색만 수행)
-        """
         if not query:
             return queryset
 
@@ -40,5 +32,4 @@ class SearchManager:
                 return queryset.filter(title_query | content_query | author_query)
             return queryset.filter(title_query | content_query)
 
-        # 잘못된 값은 전체 검색으로 안전하게 폴백
         return queryset.filter(title_query | content_query | author_query)

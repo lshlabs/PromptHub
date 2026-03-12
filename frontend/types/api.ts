@@ -179,7 +179,7 @@ export interface Platform {
   name: string
 }
 
-export interface Model {
+export interface AiModel {
   id: number
   name: string
   platform: number
@@ -234,16 +234,18 @@ export interface PostCardFrontend {
   createdAt: string
   views: number
   likes: number
-  isliked: boolean // 백엔드는 isLiked, 프론트엔드는 isliked
+  isLiked: boolean
+  isliked?: boolean
   platform: string
   model: string
+  modelEtc?: string
   model_etc?: string
   category: string
+  categoryEtc?: string
   category_etc?: string
 }
 
-// 북마크용 타입
-export interface PostCard_bookmark {
+export interface BookmarkedPostCard {
   id: number
   title: string
   author: string
@@ -268,7 +270,7 @@ export interface PostCard_bookmark {
 }
 
 // 통합 타입 (기존 컴포넌트와 호환)
-export type PostCardData = PostCard | PostCardFrontend | PostCard_bookmark
+export type PostCardData = PostCard | PostCardFrontend | BookmarkedPostCard
 
 export interface PostDetail extends PostCard {
   prompt: string
@@ -337,8 +339,8 @@ export interface PostListParams {
 }
 
 export interface PlatformModelsResponse {
-  models: Model[]
-  default_model?: Model
+  models: AiModel[]
+  default_model?: AiModel
 }
 
 // 모델 자동완성 관련 타입
@@ -598,7 +600,7 @@ export type ApiRequestError = ApiError | NetworkError
 export interface MetadataResponse {
   platforms: Platform[]
   categories: Category[]
-  models: Model[]
+  models: AiModel[]
   tags: Tag[]
 }
 
@@ -669,10 +671,7 @@ export const isValidationError = (error: any): error is ValidationError => {
 
 // 클라이언트(브라우저)에서는 공개 변수(NEXT_PUBLIC_API_BASE_URL) 사용
 // 서버(SSR)에서는 컨테이너 내부 네트워크 접근을 위해 NEXT_INTERNAL_API_BASE_URL 우선 사용
-export const API_BASE_URL =
-  (typeof window === 'undefined'
-    ? process.env.NEXT_INTERNAL_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL
-    : process.env.NEXT_PUBLIC_API_BASE_URL) || 'http://localhost:8000'
+export const API_BASE_URL = resolveApiBaseUrl()
 
 export const API_ENDPOINTS: ApiEndpoints = {
   auth: {
@@ -740,3 +739,4 @@ export const HTTP_STATUS = {
 
 export const DEFAULT_PAGE_SIZE = 20
 export const MAX_PAGE_SIZE = 100
+import { resolveApiBaseUrl } from '@/lib/http'

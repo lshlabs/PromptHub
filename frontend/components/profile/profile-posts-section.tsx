@@ -8,7 +8,7 @@ interface ProfilePostsSectionProps {
   onPostClick: (postId: number) => void
   onRemoveBookmark?: (bookmarkId: number) => void
   isLoading?: boolean
-  variant?: 'default' | 'bookmark' | 'trending' | 'user-posts'
+  variant?: 'default' | 'bookmark' | 'trending' | 'user-posts' | 'liked-posts'
   title?: string
   contained?: boolean
   platformsData?: any[]

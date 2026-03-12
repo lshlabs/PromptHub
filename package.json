@@ -29,6 +29,7 @@
     "clean": "npm run clean:frontend && npm run clean:backend",
     "test:frontend": "cd frontend && npm run test",
     "test:backend": "cd backend && python manage.py test",
+    "test:backend:pytest": "cd backend && ./venv/bin/pytest",
     "shell": "cd backend && python manage.py shell",
     "dbshell": "cd backend && python manage.py dbshell",
     "check": "cd backend && python manage.py check"

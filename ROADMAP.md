@@ -342,3 +342,4 @@
 - Google OAuth Client Secret rotate (노출 이력 있음)
 - 메일 발송용 SMTP 계정/도메인 정책 정리
 - 로그 정책 정리 (PII/민감정보 비출력)
+

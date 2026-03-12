@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { FolderOpen, Search, FileText, Users, Bookmark, TrendingUp } from 'lucide-react';
 
 interface EmptyStateProps {
-  type?: 'posts' | 'search' | 'reviews' | 'users' | 'bookmark' | 'trending' | 'user-posts';
+  type?: 'posts' | 'search' | 'reviews' | 'users' | 'bookmark' | 'trending' | 'user-posts' | 'liked-posts';
   title?: string;
   description?: string;
   actionText?: string;
@@ -53,9 +53,9 @@ export function EmptyState({
     },
     bookmark: {
       icon: Bookmark,
-      defaultTitle: '아직 북마크한 프롬프트가 없습니다',
-      defaultDescription: '마음에 드는 프롬프트를 북마크해서 나중에 쉽게 찾아보세요',
-      defaultActionText: '프롬프트 둘러보기',
+      defaultTitle: '아직 북마크한 리뷰가 없습니다',
+      defaultDescription: '마음에 드는 리뷰를 북마크해서 나중에 쉽게 찾아보세요',
+      defaultActionText: '리뷰 둘러보기',
     },
     trending: {
       icon: TrendingUp,
@@ -68,6 +68,12 @@ export function EmptyState({
       defaultTitle: '아직 작성한 리뷰가 없습니다',
       defaultDescription: '첫 번째 리뷰를 작성해보세요!',
       defaultActionText: '리뷰 작성하기',
+    },
+    'liked-posts': {
+      icon: FileText,
+      defaultTitle: '아직 좋아요한 리뷰가 없습니다',
+      defaultDescription: '도움이 된 리뷰에 좋아요를 눌러 나중에 다시 찾아보세요!',
+      defaultActionText: '',
     },
   };
 

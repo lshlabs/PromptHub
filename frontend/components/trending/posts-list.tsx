@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'
 import { trendingApi } from '@/lib/api'
 import type { PostCard as ApiPostCard, TrendingModelInfo } from '@/types/api'
 import { useDelayedLoading } from '@/hooks/use-delayed-loading'
+import { getDomainErrorMessage } from '@/lib/utils'
 
 interface PostsListProps {
   selectedModel: string | null
@@ -73,8 +74,15 @@ export default function PostsList({
         setPosts(response.results)
         setModelInfo(response.trending_model)
       } catch (err) {
-        console.error('트렌딩 모델 게시글 조회 실패:', err)
-        setError('게시글을 불러오는데 실패했습니다.')
+        setError(
+          getDomainErrorMessage(
+            err,
+            '선택한 트렌딩 모델의 리뷰를 불러오지 못했습니다. 모델을 다시 선택하거나 잠시 후 재시도해주세요.',
+            {
+              notFound: '해당 모델과 연결된 리뷰가 아직 없습니다. 다른 모델을 선택해보세요.',
+            },
+          ),
+        )
         setPosts([])
         setModelInfo(null)
       } finally {

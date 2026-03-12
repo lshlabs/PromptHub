@@ -8,11 +8,18 @@ import { PostList } from '@/components/posts'
 import { SearchBar } from '@/components/common/search-bar'
 import AuthForm from '@/components/auth/auth-form'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 import { postsApi, userDataApi } from '@/lib/api'
 import { useAuthContext } from '@/components/layout/auth-provider'
 import { useDelayedLoading } from '@/hooks/use-delayed-loading'
-import type { PostCard, Platform, Model, Category } from '@/types/api'
+import { getDomainErrorMessage } from '@/lib/utils'
+import type { PostCard, Platform, AiModel, Category } from '@/types/api'
 
 export default function MyBookmarksPage() {
   const router = useRouter()
@@ -23,7 +30,7 @@ export default function MyBookmarksPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [platformsData, setPlatformsData] = useState<Platform[]>([])
-  const [modelsData, setModelsData] = useState<Model[]>([])
+  const [modelsData, setModelsData] = useState<AiModel[]>([])
   const [categoriesData, setCategoriesData] = useState<Category[]>([])
   const [metadataLoading, setMetadataLoading] = useState(true)
   const [isAuthDialogOpen, setIsAuthDialogOpen] = useState(false)
@@ -47,7 +54,16 @@ export default function MyBookmarksPage() {
         setModelsData(modelsResponse.data)
         setCategoriesData(categoriesResponse.data)
       } catch (err) {
-        console.error('메타데이터 로드 실패:', err)
+        setError(
+          getDomainErrorMessage(
+            err,
+            '북마크 필터 기준을 가져오지 못해 일부 플랫폼/모델명이 정확하지 않을 수 있습니다. 목록 확인 후 필요하면 새로고침해 주세요.',
+            {
+              unauthorized:
+                '로그인 세션이 만료되어 북마크 필터를 불러오지 못했습니다. 다시 로그인 후 같은 페이지를 다시 열어주세요.',
+            },
+          ),
+        )
       } finally {
         setMetadataLoading(false)
       }
@@ -82,8 +98,18 @@ export default function MyBookmarksPage() {
         })
         setBookmarks(response.data.results)
       } catch (err) {
-        console.error('북마크 로드 실패:', err)
-        setError('북마크를 불러오는데 실패했습니다.')
+        setError(
+          getDomainErrorMessage(
+            err,
+            '북마크 목록 동기화가 실패했습니다. 네트워크를 확인한 뒤 검색어를 초기화하거나 페이지를 새로고침해 주세요.',
+            {
+              unauthorized:
+                '로그인 세션이 만료되어 북마크 조회가 중단되었습니다. 다시 로그인 후 북마크 페이지를 다시 열어주세요.',
+              notFound:
+                '북마크 데이터가 없거나 접근 가능한 항목이 없습니다. 필터를 해제하거나 새로고침 후 다시 확인해 주세요.',
+            },
+          ),
+        )
         setBookmarks([])
       } finally {
         setLoading(false)
@@ -104,8 +130,20 @@ export default function MyBookmarksPage() {
       // 북마크 목록에서 제거
       setBookmarks(prev => prev.filter(bookmark => bookmark.id !== bookmarkId))
     } catch (err) {
-      console.error('북마크 제거 실패:', err)
-      setError('북마크 제거에 실패했습니다.')
+      setError(
+        getDomainErrorMessage(
+          err,
+          '북마크 해제 요청이 서버에 반영되지 않았습니다. 목록을 새로고침한 뒤 동일 항목을 다시 해제해 주세요.',
+          {
+            unauthorized:
+              '로그인 세션이 만료되어 북마크 해제가 차단되었습니다. 다시 로그인 후 같은 항목을 다시 시도해 주세요.',
+            forbidden:
+              '현재 계정으로는 이 북마크 상태를 변경할 수 없습니다. 계정 전환 여부를 확인해 주세요.',
+            notFound:
+              '이미 삭제되었거나 권한에서 제외된 게시글입니다. 목록을 새로고침해 정리된 상태를 확인해 주세요.',
+          },
+        ),
+      )
     }
   }
 
@@ -125,13 +163,15 @@ export default function MyBookmarksPage() {
           {/* 헤더 섹션 */}
           <BookmarkHeader />
 
-          {/* 북마크한 프롬프트 헤더 */}
+          {/* 북마크한 리뷰 헤더 */}
           <div className="space-y-4">
-            <h2 className="text-xl font-bold text-gray-900">북마크한 프롬프트</h2>
+            <h2 className="text-xl font-bold text-gray-900">북마크한 리뷰</h2>
           </div>
 
           {/* 북마크 목록 */}
-          {!authLoading && error && <div className="rounded-lg bg-red-50 p-4 text-red-700">{error}</div>}
+          {!authLoading && error && (
+            <div className="rounded-lg bg-red-50 p-4 text-red-700">{error}</div>
+          )}
           {!authLoading && !isAuthenticated ? (
             <div className="rounded-2xl border border-gray-100 bg-white p-8 text-center shadow-sm">
               <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-green-100 to-emerald-100">
@@ -141,7 +181,8 @@ export default function MyBookmarksPage() {
                 북마크를 보려면 로그인이 필요해요
               </h3>
               <p className="mx-auto mb-6 max-w-md text-sm text-gray-600">
-                마음에 드는 리뷰를 저장하고 나중에 다시 보려면 먼저 로그인하거나 회원가입을 진행해주세요.
+                마음에 드는 리뷰를 저장하고 나중에 다시 보려면 먼저 로그인하거나 회원가입을
+                진행해주세요.
               </p>
               <div className="flex flex-col justify-center gap-3 sm:flex-row">
                 <Dialog open={isAuthDialogOpen} onOpenChange={setIsAuthDialogOpen}>

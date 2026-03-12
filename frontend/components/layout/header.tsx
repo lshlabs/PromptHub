@@ -32,6 +32,7 @@ import {
 } from 'lucide-react'
 import { default as AuthForm } from '@/components/auth/auth-form'
 import { useAuthContext } from '@/components/layout/auth-provider'
+import { useToast } from '@/hooks/use-toast'
 import { getAvatarGradientStyle, getAvatarInitialFromUsername } from '@/lib/utils'
 import { API_BASE_URL } from '@/types/api'
 import {
@@ -43,73 +44,20 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 
-// ============================================================================
-// 타입 정의
-// ============================================================================
-
-/**
- * 사용자 프로필 정보 인터페이스
- */
-interface UserProfile {
-  /** 아바타 색상 번호 */
-  avatar_color?: number
-  /** 아바타 색상 CSS 클래스 */
-  avatar_color_class?: string
-  /** 사용자 위치 */
-  location?: string
-  /** 사용자 웹사이트 */
-  website?: string
-}
-
-/**
- * 사용자 데이터 인터페이스
- */
-interface UserData {
-  /** 사용자 이메일 */
-  email: string
-  /** 사용자명 */
-  username: string
-  /** 사용자 프로필 정보 */
-  profile?: UserProfile
-}
-
-/**
- * 네비게이션 아이템 인터페이스
- */
 interface NavigationItem {
-  /** 링크 경로 */
   href: string
-  /** 전체 라벨 */
   label: string
-  /** 축약 라벨 */
   shortLabel: string
-  /** 아이콘 컴포넌트 */
   icon: React.ComponentType<{ className?: string }>
-  /** 설명 텍스트 */
   description: string
-  /** 뱃지 텍스트 (옵션) */
   badge?: string
-  /** 인증 필요 여부 (옵션) */
   requiresAuth?: boolean
 }
 
-/**
- * 테마 타입
- */
 type Theme = 'light' | 'dark' | 'system'
 
-/**
- * 언어 타입
- */
 type Language = '한국어' | 'English' | '日本語' | '中文'
 
-// ============================================================================
-// 상수 정의
-// ============================================================================
-
-/**
- * 네비게이션 메뉴 아이템 목록
- */
 const NAVIGATION_ITEMS: NavigationItem[] = [
   {
     href: '/community',
@@ -135,65 +83,25 @@ const NAVIGATION_ITEMS: NavigationItem[] = [
   },
 ] as const
 
-/**
- * 지원 언어 목록
- */
 const SUPPORTED_LANGUAGES: Language[] = ['한국어', 'English', '日本語', '中文'] as const
 
-/**
- * 테마 옵션 목록
- */
 const THEME_OPTIONS: { value: Theme; icon: React.ComponentType<{ className?: string }> }[] = [
   { value: 'light', icon: Sun },
   { value: 'dark', icon: Moon },
   { value: 'system', icon: Monitor },
 ] as const
 
-// ============================================================================
-// 메인 컴포넌트
-// ============================================================================
-
-/**
- * 메인 헤더 컴포넌트
- *
- * @description
- * - 로고, 네비게이션, 인증 상태 관리를 담당하는 상단 헤더
- * - 반응형 디자인으로 데스크톱, 태블릿, 모바일 화면에 대응
- * - 테마 및 언어 설정 기능 제공
- * - 인증된 사용자를 위한 드롭다운 메뉴 제공
- *
- * @features
- * - 반응형 네비게이션 (데스크톱/태블릿/모바일)
- * - 사용자 인증 상태 관리
- * - 테마 전환 (라이트/다크/시스템)
- * - 다국어 지원
- * - 키보드 접근성
- * - 로딩 상태 처리
- */
 export default function Header(): JSX.Element {
-  // ========================================================================
-  // 상태 관리
-  // ========================================================================
-
-  // 인증 상태 관리
   const { user, isAuthenticated, logout, isLoading } = useAuthContext()
+  const { toast } = useToast()
 
   const [isAuthOpen, setIsAuthOpen] = React.useState<boolean>(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = React.useState<boolean>(false)
-  // 로컬 테마 상태 (원복)
   const [theme, setTheme] = React.useState<Theme>('system')
   const [language, setLanguage] = React.useState<Language>('한국어')
 
-  // ========================================================================
-  // Next.js 훅
-  // ========================================================================
-
   const pathname = usePathname()
   const router = useRouter()
-
-  // ========================================================================
-  // 메모화된 값들
-  // ========================================================================
 
   const navigationItems = NAVIGATION_ITEMS.filter(item => !item.requiresAuth || isAuthenticated)
   const authPending = isLoading && !isAuthenticated && !user
@@ -212,16 +120,6 @@ export default function Header(): JSX.Element {
   }
   const ThemeIcon = getThemeIcon()
 
-  // ========================================================================
-  // 유틸리티 함수들
-  // ========================================================================
-
-  /**
-   * 현재 경로가 활성 상태인지 확인
-   *
-   * @param href - 확인할 경로
-   * @returns 활성 상태 여부
-   */
   const isActive = React.useCallback(
     (href: string): boolean => {
       if (!pathname) return false
@@ -233,79 +131,42 @@ export default function Header(): JSX.Element {
     [pathname],
   )
 
-  // ========================================================================
-  // 이벤트 핸들러들
-  // ========================================================================
-
-  /**
-   * 로그아웃 처리
-   * - 백엔드 로그아웃 API 호출
-   * - 로컬 스토리지 정리
-   * - 상태 초기화
-   * - 필요시 홈으로 리다이렉트
-   */
   const handleLogout = React.useCallback(async (): Promise<void> => {
     try {
-      console.log('🚪 Header: 로그아웃 시작')
       await logout()
 
-      // 홈으로 리다이렉트 (필요시)
       if (pathname !== '/' && pathname !== '/home') {
-        console.log('🏠 홈페이지로 리다이렉트')
         router.push('/')
       }
-
-      console.log('✅ Header: 로그아웃 완료')
     } catch (error) {
-      console.error('❌ Header: 로그아웃 처리 중 오류:', error)
+      const message =
+        error instanceof Error ? error.message : '로그아웃 처리 중 오류가 발생했습니다.'
+      toast({
+        title: '로그아웃 실패',
+        description: message,
+        variant: 'destructive',
+      })
     }
-  }, [logout, pathname, router])
+  }, [logout, pathname, router, toast])
 
-  /**
-   * 로그인 성공 후 처리
-   * - 로컬 스토리지에서 사용자 데이터 가져와서 상태 업데이트
-   */
   const handleLoginSuccess = React.useCallback((): void => {
-    console.log('🎉 Header: 로그인 성공 콜백 실행')
-
-    // 모달 닫기
     setIsAuthOpen(false)
 
-    // 현재 페이지가 특별한 페이지가 아니라면 홈으로 리다이렉트
     if (pathname && (pathname === '/test' || pathname.includes('/auth'))) {
-      console.log('🏠 홈페이지로 리다이렉트')
       router.push('/')
     }
-
-    console.log('✅ Header: 로그인 후속 처리 완료')
   }, [pathname, router])
 
-  /**
-   * 테마 변경 핸들러
-   *
-   * @param newTheme - 새로운 테마
-   */
   const handleThemeChange = React.useCallback((newTheme: Theme): void => {
     setTheme(newTheme)
     localStorage.setItem('theme', newTheme)
   }, [])
 
-  /**
-   * 언어 변경 핸들러
-   *
-   * @param newLanguage - 새로운 언어
-   */
   const handleLanguageChange = React.useCallback((newLanguage: Language): void => {
     setLanguage(newLanguage)
-    // 실제 구현에서는 여기서 i18n 라이브러리를 통해 언어 변경
     localStorage.setItem('language', newLanguage)
   }, [])
 
-  // ========================================================================
-  // 생명주기 및 부수효과
-  // ========================================================================
-
-  // 테마 및 언어 설정 초기화 (클라이언트에서만 실행)
   React.useEffect(() => {
     if (typeof window === 'undefined') return
 
@@ -319,16 +180,6 @@ export default function Header(): JSX.Element {
     }
   }, []) // 빈 의존성 배열로 마운트 시에만 실행
 
-  // ========================================================================
-  // 렌더링 헬퍼 함수들
-  // ========================================================================
-
-  /**
-   * 사용자 아바타 렌더링
-   *
-   * @param size - 아바타 크기 클래스
-   * @returns 아바타 JSX
-   */
   const renderUserAvatar = React.useCallback(
     (size: string = 'w-8 h-8'): JSX.Element => {
       const profileImage =
@@ -340,7 +191,9 @@ export default function Header(): JSX.Element {
 
       return (
         <Avatar className={size}>
-          {profileImage ? <AvatarImage src={profileImage} alt={`${user?.username || '사용자'} 아바타`} /> : null}
+          {profileImage ? (
+            <AvatarImage src={profileImage} alt={`${user?.username || '사용자'} 아바타`} />
+          ) : null}
           <AvatarFallback
             className="border-2 border-white text-sm font-semibold text-white shadow-sm"
             style={{ background: getAvatarColors().gradient }}
@@ -352,10 +205,6 @@ export default function Header(): JSX.Element {
     },
     [user?.avatar_color1, user?.avatar_color2, user?.email, user?.username],
   )
-
-  // ========================================================================
-  // 메인 렌더링
-  // ========================================================================
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
@@ -398,7 +247,7 @@ export default function Header(): JSX.Element {
               ================================================================ */}
           <div
             className={`flex items-center space-x-4 transition-opacity duration-150 ${
-              authPending ? 'invisible pointer-events-none opacity-0' : 'visible opacity-100'
+              authPending ? 'pointer-events-none invisible opacity-0' : 'visible opacity-100'
             }`}>
             {/* 데스크톱 네비게이션 (md 이상) */}
             <nav
@@ -491,7 +340,7 @@ export default function Header(): JSX.Element {
             {/* 데스크톱 인증 버튼 (md 이상) */}
             <div className="hidden items-center space-x-2 md:flex lg:space-x-3">
               {authPending ? (
-                <div className="h-10 w-10 invisible" aria-hidden="true" />
+                <div className="invisible h-10 w-10" aria-hidden="true" />
               ) : isAuthenticated ? (
                 /* 로그인된 상태: 사용자 드롭다운 메뉴 */
                 <DropdownMenu>

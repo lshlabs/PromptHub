@@ -1,16 +1,27 @@
 from pathlib import Path
 from corsheaders.defaults import default_headers
 import os
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-change-me')
+def require_env(name: str) -> str:
+    value = os.getenv(name, '').strip()
+    if not value:
+        raise ImproperlyConfigured(f"Missing required environment variable: {name}")
+    return value
+
+
+def env_csv(name: str) -> list[str]:
+    value = require_env(name)
+    return [item.strip() for item in value.split(',') if item.strip()]
+
+
+SECRET_KEY = require_env('DJANGO_SECRET_KEY')
 
 DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = [
-    host for host in os.getenv('DJANGO_ALLOWED_HOSTS', 'backend,frontend,localhost,127.0.0.1').split(',') if host
-]
+ALLOWED_HOSTS = env_csv('DJANGO_ALLOWED_HOSTS')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -19,14 +30,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
-    # 서드파티 앱
     'rest_framework',
     'rest_framework.authtoken',
     'corsheaders',
     'django_filters',
-
-    # 로컬 앱
     'core',
     'users',
     'posts',
@@ -105,26 +112,14 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 20,
 }
 
-CSRF_TRUSTED_ORIGINS = [
-    origin.strip() for origin in os.getenv(
-        'CSRF_TRUSTED_ORIGINS',
-        'http://localhost:3000,http://127.0.0.1:3000,http://frontend:3000'
-    ).split(',') if origin.strip()
-]
+CSRF_TRUSTED_ORIGINS = env_csv('CSRF_TRUSTED_ORIGINS')
 
-CORS_ALLOWED_ORIGINS = [
-    origin.strip() for origin in os.getenv(
-        'CORS_ALLOWED_ORIGINS',
-        'http://localhost:3000,http://127.0.0.1:3000,http://frontend:3000'
-    ).split(',') if origin.strip()
-]
+CORS_ALLOWED_ORIGINS = env_csv('CORS_ALLOWED_ORIGINS')
 
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = list(default_headers) + ['x-session-key']
 
-
-# 기본 로깅 설정 (환경변수 DJANGO_LOG_LEVEL로 오버라이드 가능)
 LOG_LEVEL = os.getenv('DJANGO_LOG_LEVEL', 'INFO')
 LOGGING = {
     'version': 1,
@@ -139,4 +134,3 @@ LOGGING = {
         'level': LOG_LEVEL,
     },
 }
-

@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { ChevronDown, Search, X } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { postsApi } from '@/lib/api'
+import { useToast } from '@/hooks/use-toast'
+import { getDomainErrorMessage } from '@/lib/utils'
 import type { ModelSuggestion } from '@/types/api'
 
 interface ModelAutocompleteProps {
@@ -34,6 +36,7 @@ export default function ModelAutocomplete({
   disabled = false,
   showCustomOption = false,
 }: ModelAutocompleteProps) {
+  const { toast } = useToast()
   const [isOpen, setIsOpen] = useState(false)
   const [inputValue, setInputValue] = useState(value)
   const [suggestions, setSuggestions] = useState<ModelSuggestion[]>([])
@@ -43,7 +46,6 @@ export default function ModelAutocomplete({
 
   const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
   const debounceRef = useRef<NodeJS.Timeout>()
   const suppressDropdownRef = useRef<boolean>(false)
   const cacheRef = useRef<Map<string, ModelSuggestion[]>>(new Map())
@@ -149,7 +151,19 @@ export default function ModelAutocomplete({
       setIsOpen(hasResults || canShowCustom)
       setSelectedIndex(-1)
     } catch (error) {
-      console.error('모델 자동완성 검색 실패:', error)
+      toast({
+        title: '모델 검색 실패',
+        description: getDomainErrorMessage(
+          error,
+          '모델 자동완성 검색에 실패했습니다. 모델명을 2글자 이상 입력해 다시 시도해주세요.',
+          {
+            unauthorized:
+              '로그인이 만료되어 모델 제안을 불러오지 못했습니다. 다시 로그인 후 시도해주세요.',
+            rateLimited: '검색 요청이 잠시 제한되었습니다. 1~2초 후 다시 입력해주세요.',
+          },
+        ),
+        variant: 'destructive',
+      })
       setSuggestions([])
       setIsOpen(false)
     } finally {
@@ -159,9 +173,8 @@ export default function ModelAutocomplete({
 
   // 드롭다운 위치 계산
   const updateDropdownPosition = () => {
-    if (inputRef.current && containerRef.current) {
+    if (inputRef.current) {
       const inputRect = inputRef.current.getBoundingClientRect()
-      const containerRect = containerRef.current.getBoundingClientRect()
 
       setDropdownPosition({
         top: inputRect.bottom + window.scrollY,
@@ -205,11 +218,6 @@ export default function ModelAutocomplete({
   // 제안 항목 선택
   const selectSuggestion = (suggestion: ModelSuggestion) => {
     const selectedName = suggestion.name
-    console.log('ModelAutocomplete - selectSuggestion:', {
-      selectedName,
-      suggestionId: suggestion.id,
-      platform: suggestion.platform.name,
-    })
 
     // 기본 모델 이름을 입력창에 채우되, 이후 사용자가 상세명을 자유롭게 수정할 수 있게 둠
     setInputValue(selectedName)
@@ -302,7 +310,6 @@ export default function ModelAutocomplete({
 
   // 입력 필드 클리어
   const clearInput = () => {
-    console.log('ModelAutocomplete - clearInput called')
     // X 클릭 시 드롭다운 표시 억제 플래그 활성화
     suppressDropdownRef.current = true
     setInputValue('')
@@ -459,7 +466,7 @@ export default function ModelAutocomplete({
 
   return (
     <>
-      <div ref={containerRef} className={`relative ${className}`}>
+      <div className={`relative ${className}`}>
         {/* 입력 필드 */}
         <div className="relative">
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">

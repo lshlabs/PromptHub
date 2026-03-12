@@ -130,7 +130,6 @@ export function PostContentSections({
         description: `${sectionName}이(가) 클립보드에 복사되었습니다.`,
       })
     } catch (error) {
-      console.error('클립보드 복사 실패:', error)
       toast({
         title: '복사 실패',
         description: '클립보드 복사에 실패했습니다.',

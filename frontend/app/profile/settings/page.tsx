@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Card, CardHeader, CardContent } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import AvatarWithColors from '@/components/common/avatar-with-colors'
 import { AccountInfoSection } from '@/components/profile/settings/account-info-section'
@@ -25,6 +25,7 @@ export default function SettingsPage() {
   const [accountPublicProfile, setAccountPublicProfile] = useState(true)
   const [accountDataSharing, setAccountDataSharing] = useState(false)
   const [securityTwoFactorAuth, setSecurityTwoFactorAuth] = useState(false)
+  const [settingsLoadError, setSettingsLoadError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<
     'account' | 'notification' | 'privacy' | 'security' | 'manage'
   >('account')
@@ -39,8 +40,10 @@ export default function SettingsPage() {
         setAccountPublicProfile(!!s.public_profile)
         setAccountDataSharing(!!s.data_sharing)
         setSecurityTwoFactorAuth(!!s.two_factor_auth_enabled)
+        setSettingsLoadError(null)
       } catch (e) {
-        console.error('설정 로드 실패:', e)
+        const message = e instanceof Error ? e.message : '설정을 불러오지 못했습니다.'
+        setSettingsLoadError(message)
       }
     }
     initSettings()
@@ -122,7 +125,6 @@ export default function SettingsPage() {
   }
 
   const handleTerminateSession = (sessionId: number) => {
-    console.log('세션 종료:', sessionId)
     alert('세션이 종료되었습니다.')
   }
 
@@ -154,6 +156,12 @@ export default function SettingsPage() {
             </div>
             <div className="h-1 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500" />
           </div>
+
+          {settingsLoadError ? (
+            <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+              설정 로드 실패: {settingsLoadError}
+            </div>
+          ) : null}
 
           {/* Settings Tabs */}
           <Card className="overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm">

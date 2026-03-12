@@ -1,7 +1,3 @@
-"""
-Core services package
-비즈니스 로직을 담당하는 서비스 모듈들
-"""
-from .trending_service import TrendingService
+from .trending_service import TrendingService, TrendingServiceError
 
-__all__ = ['TrendingService']
+__all__ = ["TrendingService", "TrendingServiceError"]

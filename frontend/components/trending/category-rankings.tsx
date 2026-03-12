@@ -16,6 +16,7 @@ import {
   Lightbulb,
 } from 'lucide-react'
 import { trendingApi } from '@/lib/api'
+import { getDomainErrorMessage } from '@/lib/utils'
 import type { CategoryRankings as CategoryRankingsData, TrendingRanking } from '@/types/api'
 
 let categoryRankingsCache: CategoryRankingsData | null = null
@@ -118,8 +119,15 @@ export default function CategoryRankings({
         categoryRankingsCache = response.data
         setDataLoaded(true) // 데이터 로드 완료 표시
       } catch (err) {
-        console.error('트렌딩 데이터 로드 실패:', err)
-        setError('트렌딩 데이터를 불러오는데 실패했습니다.')
+        setError(
+          getDomainErrorMessage(
+            err,
+            '트렌딩 카테고리 데이터를 불러오지 못했습니다. 새로고침 후 다시 확인해주세요.',
+            {
+              serverError: '트렌딩 집계 서버가 일시적으로 불안정합니다. 잠시 후 다시 시도해주세요.',
+            },
+          ),
+        )
         setDataLoaded(true) // 에러 발생해도 로드 완료로 표시
       } finally {
         setLoading(false)

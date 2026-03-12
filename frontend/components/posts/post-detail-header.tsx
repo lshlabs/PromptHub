@@ -11,7 +11,7 @@ import { UserSummaryPopover } from '@/components/common/user-summary-popover'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Star, Clock, Eye } from 'lucide-react'
 import CustomBadge from '@/components/common/custom-badge'
-import { getPlatformName, getModelName, getCategoryName, generateAvatarGradient } from '@/lib/utils'
+import { getModelName, getCategoryName, generateAvatarGradient } from '@/lib/utils'
 
 interface PostHeaderProps {
   title: string
@@ -49,7 +49,6 @@ const formatDateTime = (dateString: string): string => {
     const minutes = String(date.getMinutes()).padStart(2, '0')
     return `${year}-${month}-${day} ${hours}:${minutes}`
   } catch (error) {
-    console.error('날짜 변환 오류:', error)
     return '날짜 변환 오류'
   }
 }

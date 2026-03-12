@@ -2,7 +2,7 @@ const isDevelopment = process.env.NODE_ENV === 'development'
 
 export const logger = {
   debug: (...args: unknown[]) => {
-    if (isDevelopment) console.log(...args)
+    if (isDevelopment) console.debug(...args)
   },
   info: (...args: unknown[]) => {
     if (isDevelopment) console.info(...args)
@@ -16,4 +16,3 @@ export const logger = {
 }
 
 export const logDebug = logger.debug
-

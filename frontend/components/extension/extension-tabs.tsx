@@ -18,10 +18,6 @@ export default function ExtensionTabs({ activeTab = 'features', onTabChange }: E
   const currentTab = activeTab || internalActiveTab
   const handleTabChange = onTabChange || setInternalActiveTab
 
-  const handleInstallClick = () => {
-    console.log('Chrome 웹스토어로 이동')
-  }
-
   return (
     <Tabs value={currentTab} onValueChange={handleTabChange} className="mb-12">
       <TabsList className="mb-8 grid w-full grid-cols-3 rounded-lg bg-gray-200">
@@ -157,7 +153,7 @@ export default function ExtensionTabs({ activeTab = 'features', onTabChange }: E
 // CTA 섹션 컴포넌트
 export function ExtensionCTA({ onDemoClick }: { onDemoClick: () => void }) {
   const handleInstallClick = () => {
-    console.log('Chrome 웹스토어로 이동')
+    window.open('https://chromewebstore.google.com/', '_blank', 'noopener,noreferrer')
   }
 
   return (

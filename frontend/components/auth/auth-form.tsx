@@ -1,7 +1,7 @@
 'use client'
 
 import type { FormEvent } from 'react'
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { signIn } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import {
@@ -17,6 +17,7 @@ import { Label } from '@/components/ui/label'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Eye, EyeOff, Mail, Lock } from 'lucide-react'
 import { useAuthContext } from '@/components/layout/auth-provider'
+import { getDomainErrorMessage } from '@/lib/utils'
 
 interface AuthFormProps {
   defaultTab?: 'login' | 'signup'
@@ -47,7 +48,7 @@ function GoogleBrandIcon({ className = 'h-4 w-4' }: { className?: string }) {
 }
 
 export default function AuthForm({ defaultTab = 'login', onSuccess }: AuthFormProps) {
-  const { login, register, loginWithGoogle, setAuthData } = useAuthContext()
+  const { login, register } = useAuthContext()
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -65,17 +66,11 @@ export default function AuthForm({ defaultTab = 'login', onSuccess }: AuthFormPr
     const email = formData.get('email') as string
     const password = formData.get('password') as string
 
-    console.log('🔐 auth-form.tsx handleLogin 시작:', { email, password: '***' })
-
     const result = await login(email, password)
 
-    console.log('🔐 auth-form.tsx login 결과:', result)
-
     if (result.success) {
-      console.log('✅ 로그인 성공, onSuccess 호출')
       onSuccess?.()
     } else {
-      console.log('❌ 로그인 실패:', result.message)
       setError(result.message)
     }
 
@@ -109,40 +104,39 @@ export default function AuthForm({ defaultTab = 'login', onSuccess }: AuthFormPr
     setIsLoading(false)
   }
 
-  /**
-   * Google 로그인 처리
-   * next-auth로 Google 인증 후 Django 백엔드와 연동
-   */
-  const handleGoogleLogin = async () => {
+    const handleGoogleLogin = async () => {
     try {
       setIsLoading(true)
       setError(null)
 
-      console.log('🔍 Google 로그인 시작')
-
-      // next-auth의 signIn 함수로 Google 인증
-      // NextAuth가 자동으로 적절한 리다이렉트를 처리
       const result = await signIn('google', {
         redirect: false, // 수동으로 리다이렉트 처리
       })
 
-      console.log('🔍 Google 로그인 결과:', result)
-
       if (result?.error) {
-        console.error('❌ Google 인증 실패:', result.error)
-        setError('Google 로그인에 실패했습니다.')
+        setError(
+          getDomainErrorMessage(result.error, 'Google 인증이 중단되었습니다. 팝업 설정을 확인하고 다시 시도해주세요.', {
+            unauthorized: 'Google 계정 인증이 만료되었습니다. Google 계정 선택부터 다시 진행해주세요.',
+            forbidden: 'Google 계정 접근 권한이 거부되었습니다. 권한 허용 후 다시 시도해주세요.',
+          }),
+        )
         setIsLoading(false)
         return
       }
 
       if (result?.ok) {
-        console.log('✅ Google 인증 성공, 홈페이지로 이동')
-        // 로그인 성공 시 홈페이지로 이동
         window.location.href = '/home'
       }
     } catch (error) {
-      console.error('❌ Google 로그인 오류:', error)
-      setError('Google 로그인 중 오류가 발생했습니다.')
+      setError(
+        getDomainErrorMessage(
+          error,
+          'Google 로그인 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+          {
+            serverError: '로그인 서버에 일시적인 문제가 있습니다. 잠시 후 다시 시도해주세요.',
+          },
+        ),
+      )
       setIsLoading(false)
     }
   }

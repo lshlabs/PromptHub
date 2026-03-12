@@ -7,10 +7,8 @@ import { signOut } from 'next-auth/react'
 /**
  * NextAuth 세션과 모든 로컬 스토리지 데이터를 완전히 삭제
  */
-export async function clearAllAuthData() {
+export async function clearAllAuthData(): Promise<{ ok: true } | { ok: false; message: string }> {
   try {
-    console.log('🧹 모든 인증 데이터 삭제 시작')
-
     // 1. NextAuth 세션 삭제
     await signOut({
       redirect: false,
@@ -51,14 +49,18 @@ export async function clearAllAuthData() {
       })
     }
 
-    console.log('✅ 모든 인증 데이터 삭제 완료')
-
     // 4. 페이지 새로고침으로 상태 완전 초기화
     if (typeof window !== 'undefined') {
       window.location.href = '/'
     }
+
+    return { ok: true }
   } catch (error) {
-    console.error('❌ 인증 데이터 삭제 중 오류:', error)
+    const message =
+      error instanceof Error
+        ? error.message
+        : '인증 데이터 정리 중 알 수 없는 오류가 발생했습니다.'
+    return { ok: false, message }
   }
 }
 

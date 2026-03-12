@@ -3,6 +3,12 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { authApi, getAccessToken, clearTokens, setTokens } from '@/lib/api'
+import {
+  extractProfileUser,
+  isUnauthorizedAuthError,
+  resolveAuthErrorMessage,
+  resolveBootstrapToken,
+} from '@/lib/auth-orchestrator'
 import { logger } from '@/lib/logger'
 import type { UserData as BackendUserData } from '@/types/api'
 
@@ -78,14 +84,10 @@ export function useAuth(): UseAuthReturn {
       try {
         setAuthError(null)
 
-        // NextAuth 세션의 토큰을 우선 사용
-        let tokenToUse = getAccessToken()
-        if (!tokenToUse && session?.djangoToken) {
+        let tokenToUse = resolveBootstrapToken(session as any)
+        if (tokenToUse && !getAccessToken() && session?.djangoToken) {
           logger.debug('🔍 initAuth - NextAuth 세션에서 Django 토큰 사용')
-          tokenToUse = session.djangoToken
-          setToken(session.djangoToken)
-          // localStorage에도 토큰 저장
-          setTokens(session.djangoToken)
+          setToken(tokenToUse)
         }
 
         logger.debug('🔍 initAuth - 토큰 확인:', tokenToUse ? '토큰 존재' : '토큰 없음')
@@ -98,9 +100,8 @@ export function useAuth(): UseAuthReturn {
             logger.debug('🔍 initAuth - 프로필 정보 가져오기 시도')
             const response = await authApi.getProfile()
             logger.debug('🔍 initAuth - 프로필 응답:', response)
-            if (response) {
-              // 백엔드 응답이 {user: {...}} 형태이므로 user 객체 추출
-              const userData = (response as any).user || response
+            const userData = extractProfileUser<BackendUserData>(response, session?.djangoUser as any)
+            if (userData) {
               setUser(userData)
               logger.debug('✅ initAuth - 사용자 정보 설정 완료:', userData)
             }
@@ -113,7 +114,7 @@ export function useAuth(): UseAuthReturn {
         setAuthError(error?.message || '인증 초기화 중 오류가 발생했습니다.')
 
         // API 오류가 401 (Unauthorized)인 경우 NextAuth 세션도 정리
-        if (error?.response?.status === 401 || error?.status === 401) {
+        if (isUnauthorizedAuthError(error)) {
           logger.debug('🧹 401 오류로 인한 전체 인증 상태 초기화')
           try {
             const { signOut } = await import('next-auth/react')
@@ -191,15 +192,7 @@ export function useAuth(): UseAuthReturn {
       logger.error('❌ 오류 상태:', error?.response?.status)
       logger.error('❌ 오류 데이터:', error?.response?.data)
 
-      let message = '로그인 중 오류가 발생했습니다.'
-
-      if (error?.response?.data?.message) {
-        message = error.response.data.message
-      } else if (error?.response?.data?.detail) {
-        message = error.response.data.detail
-      } else if (error?.message) {
-        message = error.message
-      }
+      const message = resolveAuthErrorMessage(error, '로그인 중 오류가 발생했습니다.')
 
       return { success: false, message }
     }
@@ -218,9 +211,7 @@ export function useAuth(): UseAuthReturn {
       }
       return { success: false, message: 'Google 로그인에 실패했습니다.' }
     } catch (error: any) {
-      let message = 'Google 로그인 중 오류가 발생했습니다.'
-      if (error?.response?.data?.message) message = error.response.data.message
-      else if (error?.message) message = error.message
+      const message = resolveAuthErrorMessage(error, 'Google 로그인 중 오류가 발생했습니다.')
       return { success: false, message }
     }
   }
@@ -260,15 +251,7 @@ export function useAuth(): UseAuthReturn {
       logger.error('❌ 오류 상태:', error?.response?.status)
       logger.error('❌ 오류 데이터:', error?.response?.data)
 
-      let message = '회원가입 중 오류가 발생했습니다.'
-
-      if (error?.response?.data?.message) {
-        message = error.response.data.message
-      } else if (error?.response?.data?.detail) {
-        message = error.response.data.detail
-      } else if (error?.message) {
-        message = error.message
-      }
+      const message = resolveAuthErrorMessage(error, '회원가입 중 오류가 발생했습니다.')
 
       return { success: false, message }
     }
@@ -306,8 +289,8 @@ export function useAuth(): UseAuthReturn {
       if (!token) return
 
       const response = await authApi.getProfile()
-      if (response) {
-        const userData = (response as any).user || response
+      const userData = extractProfileUser<BackendUserData>(response)
+      if (userData) {
         setUser(userData)
       }
     } catch (error) {

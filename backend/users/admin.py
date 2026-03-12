@@ -6,17 +6,11 @@ from .utils import generate_random_username, generate_avatar_colors
 
 @admin.register(CustomUser)
 class CustomUserAdmin(UserAdmin):
-    """
-    커스텀 사용자 관리자 페이지
-    
-    Django 관리자 페이지에서 사용자 관리를 위한 설정입니다.
-    """
     list_display = ('email', 'username', 'bio', 'location', 'github_handle', 'is_staff', 'is_active', 'created_at')
     list_filter = ('is_staff', 'is_superuser', 'is_active', 'created_at')
     search_fields = ('email', 'username', 'bio', 'location', 'github_handle')
     ordering = ('-created_at',)
     
-    # 기본 UserAdmin fieldsets에서 first_name, last_name 제거하고 프로필 필드들 추가
     fieldsets = (
         (None, {'fields': ('email', 'password')}),
         ('개인 정보', {'fields': ('username', 'bio', 'location', 'github_handle')}),
@@ -46,8 +40,7 @@ class CustomUserAdmin(UserAdmin):
     )
     
     def save_model(self, request, obj, form, change):
-        """모델 저장 시 자동 생성 필드 처리"""
-        if not change:  # 새로 생성되는 경우만
+        if not change:
             if not obj.username:
                 obj.username = generate_random_username()
             if not obj.avatar_color1 or not obj.avatar_color2:

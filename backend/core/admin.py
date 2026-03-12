@@ -8,7 +8,6 @@ from .models.trending import TrendingCategory, TrendingRanking
 
 
 class TrendingRankingInline(admin.TabularInline):
-    """카테고리 편집 시 랭킹들을 함께 편집할 수 있는 인라인"""
     model = TrendingRanking
     extra = 0
     ordering = ['rank']
@@ -16,7 +15,6 @@ class TrendingRankingInline(admin.TabularInline):
 
 @admin.register(TrendingCategory)
 class TrendingCategoryAdmin(admin.ModelAdmin):
-    """트렌딩 카테고리 관리"""
     list_display = ['title', 'name', 'subtitle', 'icon_name', 'order', 'is_active', 'updated_at']
     list_filter = ['is_active', 'created_at']
     search_fields = ['name', 'title', 'subtitle']
@@ -25,14 +23,12 @@ class TrendingCategoryAdmin(admin.ModelAdmin):
     inlines = [TrendingRankingInline]
     
     def save_model(self, request, obj, form, change):
-        """저장 시 캐시 삭제"""
         super().save_model(request, obj, form, change)
         cache.delete('trending_category_rankings')
         self.message_user(request, '트렌딩 캐시가 삭제되었습니다.', messages.INFO)
 
 
 class TrendingRankingAdminForm(forms.ModelForm):
-    """트렌딩 랭킹 Admin 전용 폼: 두 키워드를 하나로 통합 입력"""
     matching_keyword = forms.CharField(
         required=False,
         label='모델명 포함 조건 (단일 키워드)',
@@ -47,14 +43,12 @@ class TrendingRankingAdminForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         instance = kwargs.get('instance')
         if instance:
-            # 두 필드 중 값이 있는 것을 우선 표시. 둘 다 있으면 동일값일 가능성이 높음
             initial_kw = instance.model_detail_contains or instance.model_etc_contains
             self.fields['matching_keyword'].initial = initial_kw
 
     def save(self, commit=True):
         obj = super().save(commit=False)
         kw = self.cleaned_data.get('matching_keyword', '') or ''
-        # 단일 입력을 두 필드에 동일하게 기록하여 OR 매칭 유지
         obj.model_detail_contains = kw
         obj.model_etc_contains = kw
         if commit:
@@ -64,7 +58,6 @@ class TrendingRankingAdminForm(forms.ModelForm):
 
 @admin.register(TrendingRanking)
 class TrendingRankingAdmin(admin.ModelAdmin):
-    """트렌딩 랭킹 관리"""
     form = TrendingRankingAdminForm
     list_display = [
         'category', 'rank', 'name', 'score', 'provider', 
@@ -107,16 +100,13 @@ class TrendingRankingAdmin(admin.ModelAdmin):
     )
     
     def get_queryset(self, request):
-        """쿼리셋에 관련 게시글 수 어노테이션 추가"""
         queryset = super().get_queryset(request)
         return queryset.select_related('category', 'related_model').annotate(
             posts_count=Count('related_model__posts', distinct=True)
         )
     
     def get_exact_matching_status(self, obj):
-        """정확한 매칭 상태 표시"""
         if obj.use_exact_matching:
-            # 단일 키워드 표기(두 필드가 동일하도록 저장되므로 하나만 보여줌)
             kw_detail = (obj.model_detail_contains or '').strip()
             kw_etc = (obj.model_etc_contains or '').strip()
             unique_kws = [kw for kw in {kw_detail, kw_etc} if kw]
@@ -124,7 +114,6 @@ class TrendingRankingAdmin(admin.ModelAdmin):
             if len(unique_kws) == 1:
                 condition_text = f"키워드: '{unique_kws[0]}'"
             elif len(unique_kws) > 1:
-                # 드물게 두 값이 다르면 OR로 병행 표기
                 condition_text = " OR ".join([f"'{kw}'" for kw in unique_kws])
             else:
                 condition_text = "조건 없음"
@@ -138,35 +127,29 @@ class TrendingRankingAdmin(admin.ModelAdmin):
     get_exact_matching_status.short_description = '매칭 방식'
     
     def get_related_posts_count(self, obj):
-        """관련 게시글 수 표시 (정확한 매칭 조건 적용)"""
         if obj.related_model:
             try:
-                # 정확한 매칭 조건을 적용한 게시글 수 계산
                 count = obj.get_filtered_posts().count()
                 
                 if obj.use_exact_matching and count > 0:
-                    # 정확한 매칭인 경우 파란색으로 표시
                     return format_html(
                         '<span style="color: #007cba; font-weight: bold;">{} 개</span>',
                         count
                     )
                 elif count > 0:
-                    # 기본 매칭인 경우 녹색으로 표시
                     return format_html(
                         '<span style="color: #28a745; font-weight: bold;">{} 개</span>',
                         count
                     )
                 else:
                     return format_html('<span style="color: #6c757d;">0 개</span>')
-            except Exception:
+            except (AttributeError, TypeError):
                 return format_html('<span style="color: #dc3545;">오류</span>')
         return format_html('<span style="color: #6c757d;">-</span>')
     
     get_related_posts_count.short_description = '관련 게시글 수'
 
-    # 안내/미리보기 필드
     def matching_rule_note(self, obj):
-        """정확 매칭 규칙 안내 텍스트 (읽기전용)"""
         return format_html(
             '<div style="color:#495057;">'
             '<div>대소문자 무시, 공백/하이픈/언더스코어 제거 후 비교합니다.</div>'
@@ -177,7 +160,6 @@ class TrendingRankingAdmin(admin.ModelAdmin):
     matching_rule_note.short_description = '매칭 규칙 안내'
 
     def normalized_keyword_preview(self, obj):
-        """입력한 키워드의 정규화 결과 미리보기 (읽기전용)"""
         def _normalize(value: str) -> str:
             return (value or '').lower().replace(' ', '').replace('-', '').replace('_', '')
 
@@ -198,7 +180,6 @@ class TrendingRankingAdmin(admin.ModelAdmin):
         
     
     def save_model(self, request, obj, form, change):
-        """저장 시 캐시 삭제"""
         super().save_model(request, obj, form, change)
         cache.delete('trending_category_rankings')
         self.message_user(request, '트렌딩 캐시가 삭제되었습니다.', messages.INFO)

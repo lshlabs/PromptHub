@@ -7,8 +7,6 @@
  */
 
 'use client'
-
-import { useState } from 'react'
 import type { Platform, Category } from '@/types/api'
 import CustomButton from '@/components/common/custom-button'
 import { useDelayedLoading } from '@/hooks/use-delayed-loading'

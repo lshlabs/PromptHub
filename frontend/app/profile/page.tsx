@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast'
 import { ProfileInfoCard, ProfileStatsSection, ProfilePostsSection } from '@/components/profile'
 import { ProfileCompleteness } from '@/components/profile/profile-completeness'
 import { authApi, userDataApi, statsApi, postsApi } from '@/lib/api'
-import { getErrorMessage } from '@/lib/utils'
+import { getDomainErrorMessage } from '@/lib/utils'
 import { useAuthContext } from '@/components/layout/auth-provider'
 import { useDelayedLoading } from '@/hooks/use-delayed-loading'
 
@@ -147,7 +147,6 @@ export default function ProfilePage() {
   const loadProfileData = async () => {
     // 중복 실행 방지
     if (isLoadingDataRef.current) {
-      console.log('⚠️ 이미 데이터 로딩 중 - 중복 실행 방지')
       return
     }
 
@@ -157,7 +156,6 @@ export default function ProfilePage() {
 
       // 인증 상태 확인
       if (!isAuthenticated) {
-        console.log('⚠️ 인증되지 않은 사용자 - 프로필 페이지 접근 불가')
         router.push('/')
         return
       }
@@ -179,7 +177,18 @@ export default function ProfilePage() {
           page_size: 50,
         })
       } catch (postsError) {
-        console.warn('⚠️ 사용자 게시글 로드 실패 (무시하고 계속):', postsError)
+        toast({
+          title: '일부 데이터 로드 실패',
+          description: getDomainErrorMessage(
+            postsError,
+            '내 리뷰 목록 연결이 지연되어 프로필만 먼저 표시합니다. 내 리뷰 탭이 비어 보이면 잠시 후 탭을 다시 눌러주세요.',
+            {
+              unauthorized:
+                '로그인 세션이 끊겨 내 리뷰를 가져오지 못했습니다. 다시 로그인한 뒤 프로필 페이지를 새로 열어주세요.',
+            },
+          ),
+          variant: 'destructive',
+        })
       }
 
       // 통계 API는 별도로 호출 (인증 오류 시 무시)
@@ -187,7 +196,14 @@ export default function ProfilePage() {
       try {
         statsRes = await statsApi.getUserStats()
       } catch (statsError) {
-        console.warn('⚠️ 사용자 통계 로드 실패 (무시하고 계속):', statsError)
+        toast({
+          title: '통계 데이터 로드 실패',
+          description: getDomainErrorMessage(
+            statsError,
+            '조회수·좋아요 집계 서버 응답이 없어 통계를 0으로 임시 표시했습니다. 내용 확인 후 페이지를 한 번 새로고침해 주세요.',
+          ),
+          variant: 'destructive',
+        })
       }
 
       if (!profileRes) {
@@ -233,7 +249,18 @@ export default function ProfilePage() {
       if (modelsRes?.data) setModelsData(modelsRes.data)
       if (categoriesRes?.data) setCategoriesData(categoriesRes.data)
     } catch (error) {
-      console.error('프로필 로드 실패:', error)
+      toast({
+        title: '프로필 로드 실패',
+        description: getDomainErrorMessage(
+          error,
+          '프로필 기본 정보를 가져오지 못해 페이지를 열 수 없습니다. 네트워크를 확인한 뒤 홈에서 프로필로 다시 진입해 주세요.',
+          {
+            unauthorized:
+              '로그인 세션이 만료되어 프로필 접근이 차단되었습니다. 다시 로그인한 뒤 프로필 메뉴를 다시 눌러주세요.',
+          },
+        ),
+        variant: 'destructive',
+      })
       router.push('/')
     } finally {
       setIsLoading(false)
@@ -247,7 +274,6 @@ export default function ProfilePage() {
       loadProfileData()
     } else if (!authLoading && !isAuthenticated) {
       // 인증되지 않은 사용자는 홈으로 리다이렉트
-      console.log('⚠️ 인증되지 않은 사용자 - 홈으로 리다이렉트')
       router.push('/')
     }
   }, [user, authLoading, isAuthenticated])
@@ -267,7 +293,14 @@ export default function ProfilePage() {
         }
         setLikedLoaded(true) // 로드 완료 표시
       } catch (e) {
-        console.warn('좋아요한 게시글 로드 실패', e)
+        toast({
+          title: '좋아요 목록 로드 실패',
+          description: getDomainErrorMessage(
+            e,
+            '좋아요 탭 데이터 동기화가 지연되고 있습니다. 현재 화면은 유지되며, 좋아요 탭을 다시 눌러 재시도해 주세요.',
+          ),
+          variant: 'destructive',
+        })
         setLikedPosts([])
         setLikedLoaded(true) // 에러 발생해도 로드 완료로 표시
       } finally {
@@ -287,7 +320,14 @@ export default function ProfilePage() {
         }
         setBookmarkedLoaded(true) // 로드 완료 표시
       } catch (e) {
-        console.warn('북마크한 게시글 로드 실패', e)
+        toast({
+          title: '북마크 목록 로드 실패',
+          description: getDomainErrorMessage(
+            e,
+            '북마크 탭 목록을 최신 상태로 가져오지 못했습니다. 탭 재진입 후에도 같으면 페이지를 새로고침해 주세요.',
+          ),
+          variant: 'destructive',
+        })
         setBookmarkedPosts([])
         setBookmarkedLoaded(true) // 에러 발생해도 로드 완료로 표시
       } finally {
@@ -369,11 +409,19 @@ export default function ProfilePage() {
       // 전역 상태 업데이트하여 Header 등 모든 컴포넌트 새로고침
       await refreshUser()
     } catch (error) {
-      const errorMessage = getErrorMessage(error)
-      console.warn(`[프로필 저장 실패] ${errorMessage}`)
+      const errorMessage = getDomainErrorMessage(
+        error,
+        '프로필 변경사항 저장이 완료되지 않았습니다. 입력값을 확인한 뒤 저장 버튼을 다시 눌러주세요.',
+        {
+          unauthorized:
+            '로그인 상태가 만료되어 저장 요청이 거절되었습니다. 다시 로그인한 뒤 같은 수정을 다시 저장해 주세요.',
+          conflict:
+            '다른 기기나 탭에서 프로필이 먼저 수정되었습니다. 최신 정보로 새로고침한 뒤 다시 저장해 주세요.',
+        },
+      )
       toast({
-        title: '오류',
-        description: `프로필 저장에 실패했습니다: ${errorMessage}`,
+        title: '프로필 저장 실패',
+        description: errorMessage,
         variant: 'destructive',
       })
     } finally {
@@ -399,10 +447,17 @@ export default function ProfilePage() {
         description: '북마크에서 제거되었습니다.',
       })
     } catch (err) {
-      console.error('북마크 제거 실패:', err)
       toast({
         title: '북마크 해제 실패',
-        description: '북마크 제거에 실패했습니다.',
+        description: getDomainErrorMessage(
+          err,
+          '북마크 해제 요청이 처리 대기 상태입니다. 목록 새로고침 후 남아 있으면 다시 해제해 주세요.',
+          {
+            unauthorized:
+              '로그인 세션이 끊겨 북마크를 해제하지 못했습니다. 재로그인 후 북마크 탭에서 다시 시도해 주세요.',
+            notFound: '이미 삭제된 게시글입니다. 목록을 새로고침해 주세요.',
+          },
+        ),
         variant: 'destructive',
       })
     }
@@ -510,7 +565,12 @@ export default function ProfilePage() {
 
         {/* Right Column */}
         <div className="space-y-8 lg:col-span-2">
-          <ProfileStatsSection stats={getStats()} isLoading={showProfileLoading} title={''} contained />
+          <ProfileStatsSection
+            stats={getStats()}
+            isLoading={showProfileLoading}
+            title={''}
+            contained
+          />
           <Card className="overflow-hidden border border-gray-100 bg-white">
             <CardHeader className="pb-2">
               <Tabs
@@ -537,12 +597,12 @@ export default function ProfilePage() {
                     : activeTab === 'liked'
                       ? showLikedLoading
                       : showBookmarkedLoading
-                const variantForTab: 'default' | 'bookmark' | 'trending' | 'user-posts' =
+                const variantForTab: 'default' | 'bookmark' | 'trending' | 'user-posts' | 'liked-posts' =
                   activeTab === 'bookmarked'
                     ? 'bookmark'
                     : activeTab === 'my'
                       ? 'user-posts'
-                      : 'default'
+                      : 'liked-posts'
                 return (
                   <ProfilePostsSection
                     posts={postsForTab}

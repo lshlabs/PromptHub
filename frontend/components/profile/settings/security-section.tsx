@@ -17,37 +17,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { authApi } from '@/lib/api'
 import type { UserSessionDTO } from '@/types/api'
 
-// 활성 세션 샘플 데이터
-const activeSessions = [
-  {
-    id: 1,
-    device: 'Windows PC',
-    browser: 'Chrome',
-    location: 'Seoul, South Korea',
-    lastActive: '현재 세션',
-    current: true,
-    icon: Monitor,
-  },
-  {
-    id: 2,
-    device: 'iPhone 15',
-    browser: 'Safari',
-    location: 'Seoul, South Korea',
-    lastActive: '2시간 전',
-    current: false,
-    icon: Smartphone,
-  },
-  {
-    id: 3,
-    device: 'iPad Pro',
-    browser: 'Safari',
-    location: 'Busan, South Korea',
-    lastActive: '1일 전',
-    current: false,
-    icon: Tablet,
-  },
-]
-
 interface SecuritySectionProps {
   twoFactorAuth: boolean
   onTwoFactorAuthChange: (value: boolean) => void
