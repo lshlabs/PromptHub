@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework import permissions
 from rest_framework.response import Response
@@ -7,15 +9,19 @@ from .filters import PostFilter
 from .search import SearchManager
 from .sorting import SortManager
 from posts.models import Post
+from posts.services.post_service import annotate_viewer_interaction_flags
 from .services import TrendingService, TrendingServiceError
 from django.core.exceptions import ValidationError
 from django.db import DatabaseError
+
+logger = logging.getLogger(__name__)
 
 
 @api_view(['GET'])
 @permission_classes([permissions.AllowAny])
 def search_posts(request):
     queryset = Post.objects.select_related('author', 'platform', 'model', 'category').all()
+    queryset = annotate_viewer_interaction_flags(queryset, getattr(request, "user", None))
 
     query = request.GET.get('q', '')
     search_type = request.GET.get('search_type', 'all')
@@ -95,7 +101,7 @@ def get_category_rankings(request):
 
 
 @api_view(['POST'])
-@permission_classes([permissions.AllowAny])
+@permission_classes([permissions.IsAdminUser])
 def refresh_trending_cache(request):
     result = TrendingService.refresh_cache()
     if result['status'] == 'error':
@@ -114,6 +120,7 @@ def get_trending_model_posts(request, model_name):
             }, status=status.HTTP_404_NOT_FOUND)
 
         posts_queryset = TrendingService.get_related_posts_by_model_name(model_name)
+        posts_queryset = annotate_viewer_interaction_flags(posts_queryset, getattr(request, "user", None))
         sort_by = request.GET.get('sort', 'latest')
         posts_queryset = SortManager.sort_posts(posts_queryset, sort_by)
 
@@ -128,9 +135,11 @@ def get_trending_model_posts(request, model_name):
             return Response(response_data)
 
         return Response({'error': '페이지네이션 오류'}, status=status.HTTP_400_BAD_REQUEST)
-    except (TrendingServiceError, DatabaseError, ValidationError) as error:
+    except (TrendingServiceError, DatabaseError, ValidationError):
+        logger.exception("Trending model posts fetch failed for model_name=%s", model_name)
         return Response({
-            'error': f'트렌딩 모델 게시글 조회 중 오류가 발생했습니다: {error}'
+            'error': '트렌딩 모델 게시글 조회 중 서버 오류가 발생했습니다.',
+            'error_code': 'TRENDING_MODEL_POSTS_FAILED',
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
@@ -148,8 +157,10 @@ def get_trending_model_info(request, model_name):
             'status': 'error',
             'message': '해당 트렌딩 모델을 찾을 수 없습니다.'
         }, status=status.HTTP_404_NOT_FOUND)
-    except (TrendingServiceError, DatabaseError) as error:
+    except (TrendingServiceError, DatabaseError):
+        logger.exception("Trending model info fetch failed for model_name=%s", model_name)
         return Response({
             'status': 'error',
-            'message': f'트렌딩 모델 정보 조회 중 오류가 발생했습니다: {error}'
+            'message': '트렌딩 모델 정보 조회 중 서버 오류가 발생했습니다.',
+            'error_code': 'TRENDING_MODEL_INFO_FAILED',
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

@@ -138,10 +138,11 @@ class UserLogoutView(APIView):
                 if updated == 0:
                     logger.info("Logout called with unknown session key for user_id=%s", request.user.id)
             return Response({'message': '로그아웃이 완료되었습니다.'}, status=status.HTTP_200_OK)
-        except (AttributeError, DatabaseError) as logout_error:
+        except (AttributeError, DatabaseError):
             logger.exception("Logout failed for user_id=%s", request.user.id)
             return Response({
-                'message': f'로그아웃 처리 중 오류가 발생했습니다: {logout_error}'
+                'message': '로그아웃 처리 중 서버 오류가 발생했습니다.',
+                'error_code': 'USER_LOGOUT_FAILED',
             }, status=status.HTTP_400_BAD_REQUEST)
 
 
@@ -168,13 +169,32 @@ class GoogleLoginView(APIView):
                 'session': UserSessionSerializer(session).data,
             }, status=status.HTTP_200_OK if not result.created else status.HTTP_201_CREATED)
         except OAuthValidationError as oauth_error:
-            return Response({'message': str(oauth_error)}, status=status.HTTP_400_BAD_REQUEST)
+            logger.info("Google login validation failed: %s", oauth_error)
+            return Response(
+                {
+                    'message': 'Google 인증 정보가 유효하지 않습니다.',
+                    'error_code': 'GOOGLE_AUTH_INVALID',
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         except OAuthProviderError as oauth_error:
             logger.warning("Google token verification request failed: %s", oauth_error)
-            return Response({'message': str(oauth_error)}, status=status.HTTP_502_BAD_GATEWAY)
-        except DatabaseError as oauth_error:
+            return Response(
+                {
+                    'message': 'Google 인증 서버 통신 오류가 발생했습니다.',
+                    'error_code': 'GOOGLE_PROVIDER_UNAVAILABLE',
+                },
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+        except DatabaseError:
             logger.exception("Google login failed.")
-            return Response({'message': f'Google 로그인 처리 중 오류가 발생했습니다: {oauth_error}'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {
+                    'message': 'Google 로그인 처리 중 서버 오류가 발생했습니다.',
+                    'error_code': 'GOOGLE_LOGIN_FAILED',
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
 
 class UserProfileView(APIView):
@@ -337,7 +357,12 @@ class PasswordChangeView(APIView):
                     token, _ = Token.objects.get_or_create(user=request.user)
             except DatabaseError as token_error:
                 logger.exception("Failed to rotate token after password change for user_id=%s", request.user.id)
-                raise APIException(f"비밀번호는 변경되었지만 토큰 재발급에 실패했습니다: {token_error}") from token_error
+                raise APIException(
+                    {
+                        "message": "비밀번호는 변경되었지만 토큰 재발급에 실패했습니다.",
+                        "error_code": "TOKEN_ROTATION_FAILED",
+                    }
+                ) from token_error
             response_payload = {'message': '비밀번호가 성공적으로 변경되었습니다.'}
             response_payload['token'] = token.key
             return Response(response_payload, status=status.HTTP_200_OK)

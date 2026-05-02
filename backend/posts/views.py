@@ -3,15 +3,17 @@ from django.db import transaction
 from django.db.utils import DatabaseError
 from django.db.models import F, Case, When, Value, IntegerField
 from django.core.exceptions import FieldError
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
-import json
+import logging
 from collections import Counter
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.response import Response
  
 
 from .models import Platform, AiModel, Category, Post
 from .serializers import (
-    PlatformSerializer, ModelSerializer, CategorySerializer,
+    PlatformSerializer, AiModelSerializer, CategorySerializer,
     PostCardSerializer, PostDetailSerializer, PostCreateSerializer, PostEditSerializer
 )
 from posts.services.post_service import (
@@ -20,7 +22,8 @@ from posts.services.post_service import (
     build_user_posts_page,
 )
 from posts.services import InteractionService, ModelSuggestService
-from core.utils.auth import token_required, attach_authenticated_user
+
+logger = logging.getLogger(__name__)
 
 
 def _default_model_payload(model):
@@ -36,7 +39,7 @@ def _default_model_payload(model):
 
 def _paginated_posts_response(posts_page, paginator, request):
     serializer = PostCardSerializer(posts_page, many=True, context={'request': request})
-    return JsonResponse({
+    return Response({
         'status': 'success',
         'data': {
             'results': serializer.data,
@@ -83,15 +86,15 @@ def models_list(request):
             platform__is_active=True,
         ).select_related('platform')
 
-    models = sorted(
-        qs,
-        key=lambda model: (
-            999999 if getattr(model, 'sort_order', 0) == 0 else getattr(model, 'sort_order', 0),
-            model.platform.name.lower(),
-            model.name.lower(),
-        ),
-    )
-    serializer = ModelSerializer(models, many=True)
+    models = qs.annotate(
+        sort_key=Case(
+            When(sort_order=0, then=Value(999999)),
+            default=F('sort_order'),
+            output_field=IntegerField(),
+        )
+    ).order_by('sort_key', 'platform__name', 'name')
+
+    serializer = AiModelSerializer(models, many=True)
     default_model = _default_model_payload(models[0]) if models else None
     
     return JsonResponse({
@@ -131,7 +134,7 @@ def platform_models_with_default(request, platform_id):
             is_deprecated=False,
             platform__is_active=True,
         ).order_by('name')
-    serializer = ModelSerializer(qs, many=True)
+    serializer = AiModelSerializer(qs, many=True)
     default_model = _default_model_payload(qs.first()) if qs.exists() else None
     
     return JsonResponse({
@@ -172,132 +175,124 @@ def tags_list(request):
     })
 
 
+@api_view(["GET"])
+@authentication_classes([TokenAuthentication])
+@permission_classes([AllowAny])
 def posts_list(request):
-    attach_authenticated_user(request)
     posts_page, paginator = build_posts_page(request)
     return _paginated_posts_response(posts_page, paginator, request)
 
 
+@api_view(["GET"])
+@authentication_classes([TokenAuthentication])
+@permission_classes([AllowAny])
 def post_detail(request, post_id):
-    attach_authenticated_user(request)
-
     post = get_post_and_increment_views(post_id)
     if not post:
-        return JsonResponse({
+        return Response({
             'status': 'error',
             'message': '게시글을 찾을 수 없습니다.'
         }, status=404)
     
     serializer = PostDetailSerializer(post, context={'request': request})
     
-    return JsonResponse({
+    return Response({
         'status': 'success',
         'data': serializer.data
     })
 
 
-@csrf_exempt
-@require_http_methods(["POST"])
-@token_required
+@api_view(["POST"])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def post_create(request):
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({
-            'status': 'error',
-            'message': '유효하지 않은 JSON 데이터입니다.'
-        }, status=400)
-    
+    data = request.data
     serializer = PostCreateSerializer(data=data, context={'request': request})
     
     if serializer.is_valid():
         try:
             post = serializer.save()
             detail_serializer = PostDetailSerializer(post, context={'request': request})
-            return JsonResponse({
+            return Response({
                 'status': 'success',
                 'message': '게시글이 성공적으로 생성되었습니다.',
                 'data': detail_serializer.data
             }, status=201)
             
-        except (DatabaseError, ValueError, TypeError) as e:
-            return JsonResponse({
+        except (DatabaseError, ValueError, TypeError):
+            logger.exception("Post creation failed for user_id=%s", request.user.id)
+            return Response({
                 'status': 'error',
-                'message': f'게시글 생성 중 오류가 발생했습니다: {str(e)}'
+                'message': '게시글 생성 중 서버 오류가 발생했습니다.',
+                'error_code': 'POST_CREATE_FAILED',
             }, status=500)
     else:
-        return JsonResponse({
+        return Response({
             'status': 'error',
             'message': '유효성 검사 실패',
             'errors': serializer.errors
         }, status=400)
 
 
-@csrf_exempt
-@require_http_methods(["PUT", "PATCH"])
-@token_required
+@api_view(["PUT", "PATCH"])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def post_update(request, post_id):
     try:
         post = Post.objects.select_related('author', 'platform', 'model', 'category').get(id=post_id)
     except Post.DoesNotExist:
-        return JsonResponse({
+        return Response({
             'status': 'error',
             'message': '게시글을 찾을 수 없습니다.'
         }, status=404)
     
     if post.author != request.user:
-        return JsonResponse({
+        return Response({
             'status': 'error',
             'message': '게시글을 수정할 권한이 없습니다.'
         }, status=403)
     
-    try:
-        data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({
-            'status': 'error',
-            'message': '유효하지 않은 JSON 데이터입니다.'
-        }, status=400)
-    
     partial = request.method == 'PATCH'
-    serializer = PostEditSerializer(post, data=data, partial=partial, context={'request': request})
+    serializer = PostEditSerializer(post, data=request.data, partial=partial, context={'request': request})
     
     if serializer.is_valid():
         try:
             updated_post = serializer.save()
             detail_serializer = PostDetailSerializer(updated_post, context={'request': request})
-            return JsonResponse({
+            return Response({
                 'status': 'success',
                 'message': '게시글이 성공적으로 수정되었습니다.',
                 'data': detail_serializer.data
             })
             
-        except (DatabaseError, ValueError, TypeError) as e:
-            return JsonResponse({
+        except (DatabaseError, ValueError, TypeError):
+            logger.exception("Post update failed for user_id=%s post_id=%s", request.user.id, post_id)
+            return Response({
                 'status': 'error',
-                'message': f'게시글 수정 중 오류가 발생했습니다: {str(e)}'
+                'message': '게시글 수정 중 서버 오류가 발생했습니다.',
+                'error_code': 'POST_UPDATE_FAILED',
             }, status=500)
     else:
-        return JsonResponse({
+        return Response({
             'status': 'error',
             'message': '유효성 검사 실패',
             'errors': serializer.errors
         }, status=400)
 
-@csrf_exempt
-@require_http_methods(["POST"])
-@token_required
+@api_view(["POST"])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def post_like(request, post_id):
     try:
         post = Post.objects.get(id=post_id)
     except Post.DoesNotExist:
-        return JsonResponse({
+        return Response({
             'status': 'error',
             'message': '게시글을 찾을 수 없습니다.'
         }, status=404)
     
     if post.author == request.user:
-        return JsonResponse({
+        return Response({
             'status': 'success',
             'message': '자신의 게시글에는 좋아요를 누를 수 없습니다.',
             'data': {
@@ -308,26 +303,26 @@ def post_like(request, post_id):
     
     like_result = InteractionService.toggle_like(request.user, post)
     
-    return JsonResponse({
+    return Response({
         'status': 'success',
         'data': like_result
     })
 
 
-@csrf_exempt
-@require_http_methods(["POST"])
-@token_required
+@api_view(["POST"])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def post_bookmark(request, post_id):
     try:
         post = Post.objects.get(id=post_id)
     except Post.DoesNotExist:
-        return JsonResponse({
+        return Response({
             'status': 'error',
             'message': '게시글을 찾을 수 없습니다.'
         }, status=404)
     
     if post.author == request.user:
-        return JsonResponse({
+        return Response({
             'status': 'success',
             'message': '자신의 게시글에는 북마크를 할 수 없습니다.',
             'data': {
@@ -338,12 +333,14 @@ def post_bookmark(request, post_id):
     
     bookmark_result = InteractionService.toggle_bookmark(request.user, post)
     
-    return JsonResponse({
+    return Response({
         'status': 'success',
         'data': bookmark_result
     })
 
-@token_required
+@api_view(["GET"])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def user_liked_posts(request):
     base_queryset = Post.objects.select_related('author', 'platform', 'model', 'category').filter(
         interactions__user=request.user,
@@ -359,7 +356,9 @@ def user_liked_posts(request):
     return _paginated_posts_response(posts_page, paginator, request)
 
 
-@token_required
+@api_view(["GET"])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def user_bookmarked_posts(request):
     base_queryset = Post.objects.select_related('author', 'platform', 'model', 'category').filter(
         interactions__user=request.user,
@@ -375,7 +374,9 @@ def user_bookmarked_posts(request):
     return _paginated_posts_response(posts_page, paginator, request)
 
 
-@token_required
+@api_view(["GET"])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def user_my_posts(request):
     base_queryset = Post.objects.select_related('author', 'platform', 'model', 'category').filter(
         author=request.user,
@@ -389,20 +390,20 @@ def user_my_posts(request):
     )
     return _paginated_posts_response(posts_page, paginator, request)
 
-@csrf_exempt
-@require_http_methods(["DELETE"])
-@token_required
+@api_view(["DELETE"])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def post_delete(request, post_id):
     try:
         post = Post.objects.get(id=post_id)
     except Post.DoesNotExist:
-        return JsonResponse({
+        return Response({
             'status': 'error',
             'message': '게시글을 찾을 수 없습니다.'
         }, status=404)
     
     if post.author != request.user:
-        return JsonResponse({
+        return Response({
             'status': 'error',
             'message': '게시글을 삭제할 권한이 없습니다.'
         }, status=403)
@@ -412,19 +413,21 @@ def post_delete(request, post_id):
             post_title = post.title
             post.delete()
             
-        return JsonResponse({
+        return Response({
             'status': 'success',
             'message': f'게시글 "{post_title}"이(가) 성공적으로 삭제되었습니다.'
         })
         
-    except DatabaseError as e:
-        return JsonResponse({
+    except DatabaseError:
+        logger.exception("Post delete failed for user_id=%s post_id=%s", request.user.id, post_id)
+        return Response({
             'status': 'error',
-            'message': f'게시글 삭제 중 오류가 발생했습니다: {str(e)}'
+            'message': '게시글 삭제 중 서버 오류가 발생했습니다.',
+            'error_code': 'POST_DELETE_FAILED',
         }, status=500)
 
-@csrf_exempt
-@require_http_methods(["GET"])
+@api_view(["GET"])
+@permission_classes([AllowAny])
 def models_suggest(request):
     try:
         query_raw = request.GET.get('query', '')
@@ -433,7 +436,7 @@ def models_suggest(request):
         limit = min(max(int(request.GET.get('limit', 10)), 1), 50)
 
         if not query:
-            return JsonResponse({
+            return Response({
                 'status': 'error',
                 'message': '검색어를 입력해주세요.'
             }, status=400)
@@ -443,7 +446,7 @@ def models_suggest(request):
             try:
                 parsed_platform_id = int(platform_id)
             except (ValueError, TypeError):
-                return JsonResponse({
+                return Response({
                     'status': 'error',
                     'message': '유효하지 않은 플랫폼 ID입니다.'
                 }, status=400)
@@ -454,7 +457,7 @@ def models_suggest(request):
             limit=limit,
         )
 
-        return JsonResponse({
+        return Response({
             'status': 'success',
             'data': {
                 'query': query,
@@ -463,8 +466,10 @@ def models_suggest(request):
             }
         })
 
-    except (DatabaseError, ValueError, TypeError) as e:
-        return JsonResponse({
+    except (DatabaseError, ValueError, TypeError):
+        logger.exception("Model suggest failed query=%r platform_id=%r", request.GET.get('query'), request.GET.get('platform_id'))
+        return Response({
             'status': 'error',
-            'message': f'모델 검색에 실패했습니다: {str(e)}'
+            'message': '모델 검색 중 서버 오류가 발생했습니다.',
+            'error_code': 'MODEL_SUGGEST_FAILED',
         }, status=500)

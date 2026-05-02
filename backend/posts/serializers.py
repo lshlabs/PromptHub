@@ -10,7 +10,7 @@ class PlatformSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'slug', 'is_active']
 
 
-class ModelSerializer(serializers.ModelSerializer):
+class AiModelSerializer(serializers.ModelSerializer):
     platformName = serializers.CharField(source='platform.name', read_only=True)
     variantFreeTextAllowed = serializers.BooleanField(source='variant_free_text_allowed', read_only=True)
     isActive = serializers.BooleanField(source='is_active', read_only=True)
@@ -155,17 +155,37 @@ class PostBaseSerializer(serializers.ModelSerializer):
     def get_relativeTime(self, obj):
         return format_relative_time(obj.created_at)
 
-    def get_isLiked(self, obj):
+    def _get_viewer_interaction_flag(self, obj, *, annotated_field: str, interaction_field: str):
         request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            return obj.interactions.filter(user=request.user, is_liked=True).exists()
-        return False
+        if not request or not request.user.is_authenticated:
+            return False
+
+        annotated_value = getattr(obj, annotated_field, None)
+        if annotated_value is not None:
+            return bool(annotated_value)
+
+        prefetched_interactions = getattr(obj, '_prefetched_objects_cache', {}).get('interactions')
+        if prefetched_interactions is not None:
+            return any(
+                interaction.user_id == request.user.id and getattr(interaction, interaction_field, False)
+                for interaction in prefetched_interactions
+            )
+
+        return obj.interactions.filter(user=request.user, **{interaction_field: True}).exists()
+
+    def get_isLiked(self, obj):
+        return self._get_viewer_interaction_flag(
+            obj,
+            annotated_field='viewer_is_liked',
+            interaction_field='is_liked',
+        )
 
     def get_isBookmarked(self, obj):
-        request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            return obj.interactions.filter(user=request.user, is_bookmarked=True).exists()
-        return False
+        return self._get_viewer_interaction_flag(
+            obj,
+            annotated_field='viewer_is_bookmarked',
+            interaction_field='is_bookmarked',
+        )
 
     def get_tags(self, obj):
         return obj.get_tags_list()

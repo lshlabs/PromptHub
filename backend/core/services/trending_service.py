@@ -2,7 +2,7 @@ from typing import Any, Dict, Optional
 import logging
 from django.core.cache import cache
 from django.db import DatabaseError
-from django.db.models import QuerySet
+from django.db.models import QuerySet, Prefetch
 from ..models.trending import TrendingCategory, TrendingRanking
 
 logger = logging.getLogger(__name__)
@@ -32,15 +32,20 @@ class TrendingService:
 
     @classmethod
     def _fetch_category_rankings(cls) -> Dict[str, Dict[str, Any]]:
-        categories = TrendingCategory.objects.filter(is_active=True).order_by("order", "name")
+        categories = (
+            TrendingCategory.objects.filter(is_active=True)
+            .prefetch_related(
+                Prefetch(
+                    "rankings",
+                    queryset=TrendingRanking.objects.filter(is_active=True).order_by("rank"),
+                    to_attr="active_rankings",
+                )
+            )
+            .order_by("order", "name")
+        )
         category_rankings = {}
 
         for category in categories:
-            rankings = TrendingRanking.objects.filter(
-                category=category,
-                is_active=True
-            ).order_by("rank")
-
             category_rankings[category.name] = {
                 "title": category.title,
                 "subtitle": category.subtitle,
@@ -52,7 +57,7 @@ class TrendingService:
                         "score": ranking.score,
                         "provider": ranking.provider,
                     }
-                    for ranking in rankings
+                    for ranking in category.active_rankings
                 ],
             }
 

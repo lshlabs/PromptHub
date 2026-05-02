@@ -3,14 +3,24 @@ from __future__ import annotations
 from typing import Optional, Tuple
 
 from django.db import transaction
-from django.db.models import F
+from django.db.models import F, Exists, OuterRef, QuerySet
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.db.models import Prefetch
 
 from core.filters import PostFilter
 from core.search import SearchManager
 from core.sorting import SortManager
 from posts.models import Post, PostInteraction
+
+
+def annotate_viewer_interaction_flags(queryset: QuerySet, user) -> QuerySet:
+    if user is None or not getattr(user, "is_authenticated", False):
+        return queryset
+
+    user_interactions = PostInteraction.objects.filter(user=user, post_id=OuterRef("pk"))
+    return queryset.annotate(
+        viewer_is_liked=Exists(user_interactions.filter(is_liked=True)),
+        viewer_is_bookmarked=Exists(user_interactions.filter(is_bookmarked=True)),
+    )
 
 
 def build_posts_page(request) -> Tuple:
@@ -46,13 +56,7 @@ def build_posts_page(request) -> Tuple:
         queryset = queryset.exclude(id=int(exclude_id))
 
     user = getattr(request, "user", None)
-    if user is not None and getattr(user, "is_authenticated", False):
-        queryset = queryset.prefetch_related(
-            Prefetch(
-                "interactions",
-                queryset=PostInteraction.objects.filter(user=user),
-            )
-        )
+    queryset = annotate_viewer_interaction_flags(queryset, user)
 
     paginator = Paginator(queryset, page_size)
     try:
@@ -114,13 +118,7 @@ def build_user_posts_page(
         queryset = SearchManager.search_posts(queryset, search, search_type)
 
     user = getattr(request, "user", None)
-    if user is not None and getattr(user, "is_authenticated", False):
-        queryset = queryset.prefetch_related(
-            Prefetch(
-                "interactions",
-                queryset=PostInteraction.objects.filter(user=user),
-            )
-        )
+    queryset = annotate_viewer_interaction_flags(queryset, user)
 
     paginator = Paginator(queryset, page_size)
     try:

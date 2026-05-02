@@ -14,71 +14,81 @@ class UserAuthAndProfileTests(APITestCase):
         self.register_url = reverse('users:user_register')
         self.login_url = reverse('users:user_login')
         self.profile_url = reverse('users:user_profile')
+        self.password_url = reverse('users:password_change')
+        self.delete_url = reverse('users:account_delete')
 
-    def test_register_login_and_profile_flow(self):
+    def _register(self, *, email: str, password: str = 'Str0ng-Passw0rd!') -> str:
         register_data = {
-            'email': 'test@example.com',
-            'password': 'Str0ng-Passw0rd!',
-            'password_confirm': 'Str0ng-Passw0rd!'
+            'email': email,
+            'password': password,
+            'password_confirm': password,
         }
         res = self.client.post(self.register_url, register_data, format='json')
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
         self.assertIn('token', res.data)
-        token = res.data['token']
+        return res.data['token']
 
+    def _auth_token(self, token: str):
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {token}')
+
+    def test_register_returns_token(self):
+        token = self._register(email='test@example.com')
+        self.assertTrue(token)
+
+    def test_profile_get_returns_authenticated_user(self):
+        token = self._register(email='profile-get@example.com')
+        self._auth_token(token)
+
         res = self.client.get(self.profile_url)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertIn('user', res.data)
-        self.assertEqual(res.data['user']['email'], 'test@example.com')
+        self.assertEqual(res.data['user']['email'], 'profile-get@example.com')
 
+    def test_profile_put_updates_bio(self):
+        token = self._register(email='profile-put@example.com')
+        self._auth_token(token)
         res = self.client.put(self.profile_url, {'bio': 'hello'}, format='json')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data['user']['bio'], 'hello')
 
+    def test_profile_patch_updates_location(self):
+        token = self._register(email='profile-patch@example.com')
+        self._auth_token(token)
         res = self.client.patch(self.profile_url, {'location': 'Seoul'}, format='json')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data['user']['location'], 'Seoul')
 
-    def test_change_password_and_delete_account(self):
-        register_data = {
-            'email': 'pwtest@example.com',
-            'password': 'Str0ng-Passw0rd!',
-            'password_confirm': 'Str0ng-Passw0rd!'
-        }
-        res = self.client.post(self.register_url, register_data, format='json')
-        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
-        token = res.data['token']
-
-        self.client.credentials(HTTP_AUTHORIZATION=f'Token {token}')
-        password_url = reverse('users:password_change')
-        res = self.client.post(password_url, {
+    def test_change_password_allows_login_with_new_password(self):
+        token = self._register(email='pwtest@example.com')
+        self._auth_token(token)
+        res = self.client.post(self.password_url, {
             'current_password': 'Str0ng-Passw0rd!',
             'new_password': 'NewStr0ng-Passw0rd!',
-            'new_password_confirm': 'NewStr0ng-Passw0rd!'
+            'new_password_confirm': 'NewStr0ng-Passw0rd!',
         }, format='json')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertIn('message', res.data)
 
         self.client.credentials()
-        login_url = reverse('users:user_login')
-        res = self.client.post(login_url, {
+        res = self.client.post(self.login_url, {
             'email': 'pwtest@example.com',
-            'password': 'NewStr0ng-Passw0rd!'
+            'password': 'NewStr0ng-Passw0rd!',
         }, format='json')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
-        new_token = res.data['token']
+        self.assertIn('token', res.data)
 
-        self.client.credentials(HTTP_AUTHORIZATION=f'Token {new_token}')
-        delete_url = reverse('users:account_delete')
-        res = self.client.delete(delete_url, {'confirmation': '계정 삭제'}, format='json')
+    def test_delete_account_blocks_subsequent_login(self):
+        token = self._register(email='delete@example.com')
+        self._auth_token(token)
+
+        res = self.client.delete(self.delete_url, {'confirmation': '계정 삭제'}, format='json')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertIn('message', res.data)
 
         self.client.credentials()
-        res = self.client.post(login_url, {
-            'email': 'pwtest@example.com',
-            'password': 'NewStr0ng-Passw0rd!'
+        res = self.client.post(self.login_url, {
+            'email': 'delete@example.com',
+            'password': 'Str0ng-Passw0rd!',
         }, format='json')
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
 

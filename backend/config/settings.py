@@ -1,1 +1,9 @@
-from .settings_dev import *  # 기본적으로 개발 설정 사용; 프로덕션용으로는 DJANGO_SETTINGS_MODULE 환경변수로 오버라이드
+import os
+
+from .settings_base import *  # noqa
+
+# Safety-first default:
+# - config.settings now inherits secure/base behavior by default.
+# - Development overrides are opt-in via DJANGO_USE_DEV_SETTINGS=true.
+if os.getenv("DJANGO_USE_DEV_SETTINGS", "").strip().lower() in {"1", "true", "yes", "on"}:
+    from .settings_dev import *  # noqa

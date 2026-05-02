@@ -3,14 +3,12 @@ from django.db import connection
 from django.db.utils import DatabaseError
 from django.http import JsonResponse
 from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 import logging
 
 logger = logging.getLogger(__name__)
 
 
-@csrf_exempt
 @require_http_methods(["GET"])
 def health_check(request):
     try:
@@ -34,10 +32,10 @@ def health_check(request):
             },
             status=200,
         )
-    except DatabaseError as db_error:
+    except DatabaseError:
         logger.exception("Health check failed due to database error.")
         return JsonResponse({
             "status": "unhealthy",
-            "error": str(db_error),
+            "error": "database_unavailable",
             "timestamp": timezone.now().isoformat(),
         }, status=503)

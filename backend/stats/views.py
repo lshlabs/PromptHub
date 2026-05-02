@@ -1,17 +1,21 @@
 from collections import Counter
 from datetime import timedelta
+import logging
 
 from django.contrib.auth import get_user_model
 from django.db import DatabaseError
 from django.db.models import Avg, Count, Sum
 from django.http import JsonResponse
 from django.utils import timezone
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
 
-from core.utils.auth import token_required
 from core.utils.cache import cache_value_or_set
 from posts.models import Category, Platform, Post, PostInteraction
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 def _serialize_recent_posts(limit: int = 5) -> list[dict]:
@@ -88,17 +92,21 @@ def dashboard_stats(request):
     try:
         data = cache_value_or_set("stats:dashboard", 60, _dashboard_payload)
         return JsonResponse({"status": "success", "data": data})
-    except DatabaseError as db_error:
+    except DatabaseError:
+        logger.exception("Failed to build dashboard stats")
         return JsonResponse(
             {
                 "status": "error",
-                "message": f"통계 조회 중 데이터베이스 오류가 발생했습니다: {db_error}",
+                "message": "통계 조회 중 서버 오류가 발생했습니다.",
+                "error_code": "DASHBOARD_STATS_FAILED",
             },
             status=500,
         )
 
 
-@token_required
+@api_view(["GET"])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
 def user_stats(request):
     try:
         user_posts = Post.objects.filter(author=request.user)
@@ -165,11 +173,13 @@ def user_stats(request):
                 },
             }
         )
-    except DatabaseError as db_error:
+    except DatabaseError:
+        logger.exception("Failed to build user stats for user_id=%s", getattr(request.user, "id", None))
         return JsonResponse(
             {
                 "status": "error",
-                "message": f"사용자 통계 조회 중 데이터베이스 오류가 발생했습니다: {db_error}",
+                "message": "사용자 통계 조회 중 서버 오류가 발생했습니다.",
+                "error_code": "USER_STATS_FAILED",
             },
             status=500,
         )

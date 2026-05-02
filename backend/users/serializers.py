@@ -2,7 +2,6 @@ from rest_framework import serializers
 from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from .models import CustomUser, UserSettings, UserSession
-from posts.serializers import PostCardSerializer
 from posts.models import PostInteraction
 from django.db import models
 
@@ -51,7 +50,6 @@ class UserLoginSerializer(serializers.Serializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    posts = PostCardSerializer(many=True, read_only=True, source='posts.all')
     posts_count = serializers.SerializerMethodField()
     total_likes = serializers.SerializerMethodField()
     total_views = serializers.SerializerMethodField()
@@ -62,7 +60,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'email', 'username', 'bio', 'location',
             'github_handle', 'profile_image', 'avatar_color1',
-            'avatar_color2', 'created_at', 'posts', 'posts_count',
+            'avatar_color2', 'created_at', 'posts_count',
             'total_likes', 'total_views', 'total_bookmarks'
         )
         read_only_fields = ('id', 'email', 'created_at')

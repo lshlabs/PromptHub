@@ -15,25 +15,40 @@ class PostFilter(filters.FilterSet):
             'author': ['exact'],
         }
 
+    @staticmethod
+    def _parse_int_ids(value: str) -> list[int]:
+        ids: list[int] = []
+        for raw_id in value.split(','):
+            stripped = raw_id.strip()
+            if not stripped:
+                continue
+            try:
+                ids.append(int(stripped))
+            except (ValueError, TypeError):
+                continue
+        return ids
+
     def categories_filter(self, queryset, name, value):
         if not value:
             return queryset
 
-        category_ids = [raw_id.strip() for raw_id in value.split(',') if raw_id.strip()]
-        if not category_ids:
+        parsed_ids = self._parse_int_ids(value)
+        if not parsed_ids:
             return queryset
 
+        category_rows = Category.objects.filter(id__in=parsed_ids).values_list('id', 'name')
+        other_category_ids = [category_id for category_id, name in category_rows if name == '기타']
+        normal_category_ids = [category_id for category_id, name in category_rows if name != '기타']
+
         conditions = Q()
-        for category_id in category_ids:
-            try:
-                parsed_id = int(category_id)
-                category = Category.objects.get(id=parsed_id)
-                if category.name == '기타':
-                    conditions |= Q(category=category, category_etc__isnull=False, category_etc__gt='')
-                else:
-                    conditions |= Q(category_id=parsed_id)
-            except (Category.DoesNotExist, ValueError, TypeError):
-                continue
+        if normal_category_ids:
+            conditions |= Q(category_id__in=normal_category_ids)
+        if other_category_ids:
+            conditions |= Q(
+                category_id__in=other_category_ids,
+                category_etc__isnull=False,
+                category_etc__gt='',
+            )
 
         return queryset.filter(conditions) if conditions else queryset
 
@@ -41,21 +56,23 @@ class PostFilter(filters.FilterSet):
         if not value:
             return queryset
 
-        model_ids = [raw_id.strip() for raw_id in value.split(',') if raw_id.strip()]
-        if not model_ids:
+        parsed_ids = self._parse_int_ids(value)
+        if not parsed_ids:
             return queryset
 
+        model_rows = AiModel.objects.filter(id__in=parsed_ids).values_list('id', 'name')
+        other_model_ids = [model_id for model_id, name in model_rows if name == '기타']
+        normal_model_ids = [model_id for model_id, name in model_rows if name != '기타']
+
         conditions = Q()
-        for model_id in model_ids:
-            try:
-                parsed_id = int(model_id)
-                model = AiModel.objects.get(id=parsed_id)
-                if model.name == '기타':
-                    conditions |= Q(model=model, model_etc__isnull=False, model_etc__gt='')
-                else:
-                    conditions |= Q(model_id=parsed_id)
-            except (AiModel.DoesNotExist, ValueError, TypeError):
-                continue
+        if normal_model_ids:
+            conditions |= Q(model_id__in=normal_model_ids)
+        if other_model_ids:
+            conditions |= Q(
+                model_id__in=other_model_ids,
+                model_etc__isnull=False,
+                model_etc__gt='',
+            )
 
         return queryset.filter(conditions) if conditions else queryset
 
@@ -63,16 +80,7 @@ class PostFilter(filters.FilterSet):
         if not value:
             return queryset
 
-        platform_ids = [raw_id.strip() for raw_id in value.split(',') if raw_id.strip()]
-        if not platform_ids:
-            return queryset
-
-        valid_ids = []
-        for platform_id in platform_ids:
-            try:
-                valid_ids.append(int(platform_id))
-            except (ValueError, TypeError):
-                continue
+        valid_ids = self._parse_int_ids(value)
 
         if not valid_ids:
             return queryset

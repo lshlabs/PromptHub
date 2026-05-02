@@ -40,10 +40,12 @@ class StatsApiTests(APITestCase):
         url = reverse('stats:user_stats')
         res = self.client.get(url)
         self.assertEqual(res.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_user_stats_returns_success_for_authenticated_user(self):
+        url = reverse('stats:user_stats')
         self.client.credentials(HTTP_AUTHORIZATION=f'Token {self.token.key}')
         res = self.client.get(url)
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         data = res.json()
         self.assertEqual(data['status'], 'success')
-
 
